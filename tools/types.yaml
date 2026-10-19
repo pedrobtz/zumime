@@ -14,6 +14,9 @@
 #   extensions   added extensions, without the dot, lower-case
 #   canonical    the canonical extension, when Apache's first is not it
 #   detected_by  signature, container, text or registered; default extension
+#   enum         the C enum name after ZUMIME_T_, for a type whose derived
+#                name collides with another's; the generator stops on a
+#                collision this field does not settle
 #
 # A type that is in neither source is created by appearing here.
 
@@ -561,3 +564,9 @@ types:
   inode/chardevice: {}
   inode/blockdevice: {}
   inode/socket: {}
+
+  # Enum names for types whose derived names collide with another's.
+  model/vnd.gs.gdl:
+    enum: MODEL_VND_GS_GDL_2
+  model/x3d-vrml:
+    enum: MODEL_X3D_VRML_2
