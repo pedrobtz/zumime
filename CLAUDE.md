@@ -29,10 +29,10 @@ the maintainer until a stage records it.
 
 ## Current state
 
-Scaffolded 2026-10-18 with `create-pkg.sh`; no functionality yet.
-`DESCRIPTION` still carries the scaffold’s placeholder title,
-description and author. The roadmap in `.agents/roadmap.md` takes it to
-v0.1.0 once `pkg-roadmap` has written it from the design.
+Stages 0 to 6 of `.agents/roadmap.md` implement the design’s v0.1.0
+scope; `Full CI` and `v0.1.0 readiness` remain. The README is
+`README.Rmd`; the one article is `vignettes/checking-an-upload.Rmd`,
+built by pkgdown only.
 
 ## Stage tracking
 
@@ -106,6 +106,7 @@ Rscript tools/generate-tables.R --fetch    # download the sources again, record 
 tools/fetch-fixtures                       # oracle fixtures into tests/testthat/fixtures/
 tools/fuzz/run-local 60                    # the fuzz harness under ASan+UBSan, 60 s
 Rscript tools/fuzz/make-seeds.R            # rewrite tools/fuzz/seeds/
+Rscript -e 'devtools::build_readme()'      # README.Rmd -> README.md
 ```
 
 The registry is generated: edit `tools/types.yaml` (parents, aliases,

@@ -24,6 +24,7 @@ encrypted or truncated, its line endings, and a script's interpreter."></head><b
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -145,14 +146,14 @@ sniffers are installed, listed by <code>zumime_info()$family</code>.</p>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"logo.txt"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">mime_type</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">dir</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;zumime_result: 3 rows&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                                        path              type confidence</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /tmp/RtmpeZRTNS/file19955b60ed83/cars.rds application/x-rds   definite</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 /tmp/RtmpeZRTNS/file19955b60ed83/data.csv        text/plain   probable</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /tmp/RtmpeZRTNS/file19955b60ed83/logo.txt         image/png   definite</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   charset           by_name agree inner encrypted complete newline interpreter</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1    &lt;NA&gt; application/x-rds  TRUE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   UTF-8          text/csv  TRUE  &lt;NA&gt;        NA       NA      lf        &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    &lt;NA&gt;        text/plain FALSE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                       path              type confidence charset</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /tmp/RtmpoThqiy/file19867f8c355/cars.rds application/x-rds   definite    &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 /tmp/RtmpoThqiy/file19867f8c355/data.csv        text/plain   probable   UTF-8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /tmp/RtmpoThqiy/file19867f8c355/logo.txt         image/png   definite    &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             by_name agree inner encrypted complete newline interpreter</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 application/x-rds  TRUE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2          text/csv  TRUE  &lt;NA&gt;        NA       NA      lf        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3        text/plain FALSE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">dir</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>

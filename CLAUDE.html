@@ -16,6 +16,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
@@ -43,7 +44,7 @@
 </div>
 <div class="section level2">
 <h2 id="current-state">Current state<a class="anchor" aria-label="anchor" href="#current-state"></a></h2>
-<p>Scaffolded 2026-10-18 with <code>create-pkg.sh</code>; no functionality yet. <code>DESCRIPTION</code> still carries the scaffold’s placeholder title, description and author. The roadmap in <code>.agents/roadmap.md</code> takes it to v0.1.0 once <code>pkg-roadmap</code> has written it from the design.</p>
+<p>Stages 0 to 6 of <code>.agents/roadmap.md</code> implement the design’s v0.1.0 scope; <code>Full CI</code> and <code>v0.1.0 readiness</code> remain. The README is <code>README.Rmd</code>; the one article is <code>vignettes/checking-an-upload.Rmd</code>, built by pkgdown only.</p>
 </div>
 <div class="section level2">
 <h2 id="stage-tracking">Stage tracking<a class="anchor" aria-label="anchor" href="#stage-tracking"></a></h2>
@@ -86,7 +87,8 @@
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R <span class="at">--fetch</span>    <span class="co"># download the sources again, record sha256</span></span>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="ex">tools/fetch-fixtures</span>                       <span class="co"># oracle fixtures into tests/testthat/fixtures/</span></span>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="ex">tools/fuzz/run-local</span> 60                    <span class="co"># the fuzz harness under ASan+UBSan, 60 s</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="ex">Rscript</span> tools/fuzz/make-seeds.R            <span class="co"># rewrite tools/fuzz/seeds/</span></span></code></pre></div>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="ex">Rscript</span> tools/fuzz/make-seeds.R            <span class="co"># rewrite tools/fuzz/seeds/</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::build_readme()'</span>      <span class="co"># README.Rmd -&gt; README.md</span></span></code></pre></div>
 <p>The registry is generated: edit <code>tools/types.yaml</code> (parents, aliases, extensions, <code>detected_by</code>) and regenerate, never the outputs. The tests that need fixtures skip without them; <code>oracles.yaml</code> fetches and runs them in CI.</p>
 </div>
 <div class="section level2">

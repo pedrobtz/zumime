@@ -16,6 +16,7 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../articles/index.html">Articles</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -32,7 +33,23 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="from-bytes">From bytes<a class="anchor" aria-label="anchor" href="#from-bytes"></a></h2>
+
+      <div class="section-desc"><p>The WHATWG sniffing algorithm, with zumime’s containers and formats.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="mime_sniff.html">mime_sniff()</a></code>
+
+        </dt>
+        <dd>Sniff a type from bytes</dd>
+      </dl></div><div class="section level2">
+      <h2 id="from-the-name">From the name<a class="anchor" aria-label="anchor" href="#from-the-name"></a></h2>
 
 
 
@@ -43,10 +60,10 @@
 
       <dl><dt>
 
-          <code><a href="mime_check.html">mime_check()</a></code>
+          <code><a href="mime_guess.html">mime_guess()</a></code>
 
         </dt>
-        <dd>Is a file one of these types?</dd>
+        <dd>Guess a type from a file name</dd>
 
         <dt>
 
@@ -54,13 +71,45 @@
 
         </dt>
         <dd>Extensions of a type</dd>
+      </dl></div><div class="section level2">
+      <h2 id="both-with-the-how-to-open-columns">Both, with the how-to-open columns<a class="anchor" aria-label="anchor" href="#both-with-the-how-to-open-columns"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="mime_type.html">mime_type()</a></code>
+
+        </dt>
+        <dd>Type files from their bytes and their names</dd>
 
         <dt>
 
-          <code><a href="mime_guess.html">mime_guess()</a></code>
+          <code><a href="mime_check.html">mime_check()</a></code>
 
         </dt>
-        <dd>Guess a type from a file name</dd>
+        <dd>Is a file one of these types?</dd>
+      </dl></div><div class="section level2">
+      <h2 id="the-hierarchy">The hierarchy<a class="anchor" aria-label="anchor" href="#the-hierarchy"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="mime_parent.html">mime_parent()</a></code>
+
+        </dt>
+        <dd>The lineage of a type</dd>
 
         <dt>
 
@@ -71,61 +120,84 @@
 
         <dt>
 
-          <code><a href="mime_parent.html">mime_parent()</a></code>
+          <code><a href="mime_types.html">mime_types()</a></code>
 
         </dt>
-        <dd>The lineage of a type</dd>
+        <dd>The type registry</dd>
+      </dl></div><div class="section level2">
+      <h2 id="the-mime-type-record">The MIME type record<a class="anchor" aria-label="anchor" href="#the-mime-type-record"></a></h2>
 
-        <dt>
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="mime_parse.html">mime_parse()</a></code> <code><a href="mime_parse.html">mime_format()</a></code>
 
         </dt>
         <dd>Parse and serialise MIME types</dd>
+      </dl></div><div class="section level2">
+      <h2 id="detectors-for-the-session">Detectors for the session<a class="anchor" aria-label="anchor" href="#detectors-for-the-session"></a></h2>
 
-        <dt>
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
 
           <code><a href="mime_register.html">mime_register()</a></code> <code><a href="mime_register.html">mime_unregister()</a></code>
 
         </dt>
         <dd>Register a type for the session</dd>
+      </dl></div><div class="section level2">
+      <h2 id="streams">Streams<a class="anchor" aria-label="anchor" href="#streams"></a></h2>
 
-        <dt>
 
-          <code><a href="mime_sniff.html">mime_sniff()</a></code>
 
-        </dt>
-        <dd>Sniff a type from bytes</dd>
+      <dl></dl></div><div class="section level2">
 
-        <dt>
+
+
+
+      <dl><dt>
 
           <code><a href="mime_sniffer.html">mime_sniffer()</a></code> <code><a href="mime_sniffer.html">mime_push()</a></code> <code><a href="mime_sniffer.html">mime_finish()</a></code>
 
         </dt>
         <dd>Sniff a stream chunk by chunk</dd>
+      </dl></div><div class="section level2">
+      <h2 id="the-package">The package<a class="anchor" aria-label="anchor" href="#the-package"></a></h2>
 
-        <dt>
 
-          <code><a href="mime_type.html">mime_type()</a></code>
 
-        </dt>
-        <dd>Type files from their bytes and their names</dd>
+      <dl></dl></div><div class="section level2">
 
-        <dt>
 
-          <code><a href="mime_types.html">mime_types()</a></code>
 
-        </dt>
-        <dd>The type registry</dd>
 
-        <dt>
+      <dl><dt>
 
           <code><a href="zumime_info.html">zumime_info()</a></code>
 
         </dt>
         <dd>Build information</dd>
+
+        <dt>
+
+          <code><a href="zumime-package.html">zumime</a></code> <code><a href="zumime-package.html">zumime-package</a></code>
+
+        </dt>
+        <dd>zumime: Media Type Detection from Bytes and File Names</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">
