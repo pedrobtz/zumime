@@ -89,8 +89,10 @@ of one raw vector.</p></dd>
 have been typed as the parent, costs what a built-in signature costs,
 and is reported at <code>"definite"</code>. A function rule is called from R with
 the bytes read and must return <code>TRUE</code> or <code>FALSE</code>; it runs last, only when
-the parent matched, and is reported at <code>"probable"</code>. A data rule cannot sit
-under a type that a function rule decides, since data rules run first.</p>
+the parent matched, and is reported at <code>"probable"</code>. A function rule that
+raises an error counts as <code>FALSE</code>, and the call warns once with a
+<code>zumime_rule_warning</code> naming the type. A data rule cannot sit under a type
+that a function rule decides, since data rules run first.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

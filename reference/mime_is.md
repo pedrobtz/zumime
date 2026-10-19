@@ -30,6 +30,12 @@ A logical vector the length of `x`, `NA` where `x` is `NA`.
 [`mime_parent()`](https://pedrobtz.github.io/zumime/reference/mime_parent.md)
 for the lineage.
 
+Other registry:
+[`mime_extensions()`](https://pedrobtz.github.io/zumime/reference/mime_extensions.md),
+[`mime_guess()`](https://pedrobtz.github.io/zumime/reference/mime_guess.md),
+[`mime_parent()`](https://pedrobtz.github.io/zumime/reference/mime_parent.md),
+[`mime_types()`](https://pedrobtz.github.io/zumime/reference/mime_types.md)
+
 ## Examples
 
 ``` r

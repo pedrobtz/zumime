@@ -52,7 +52,8 @@ mime_type(
 - text:
 
   `"whatwg"` keeps the standard's answer for text; `"family"` offers a
-  still generic `text/plain` to the family's sniffers.
+  still generic `text/plain` to the family's sniffers, which read whole
+  files.
 
 - charset:
 
@@ -83,11 +84,14 @@ named `.txt`; and `NA` when either is unknown. A disagreement is a
 finding, not an error.
 
 The default answer depends on nothing outside the package. Three
-arguments ask for a suggested package: `inner = "decompress"` (zukomp),
-`text = "family"` (zucsv, zujson and zutoml, each used when installed),
-and `charset = "detect"` (zuutf). An argument whose package is absent
-raises `zumime_dependency_error`; `text = "family"` uses whichever
-sniffers are installed, listed by `zumime_info()$family`.
+arguments ask for an optional family package. `inner = "decompress"`
+uses zukomp. `charset = "detect"` uses zuutf. `text = "family"` uses
+zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
+yet on CRAN; install them from GitHub. An argument whose package is
+absent raises `zumime_dependency_error`. `text = "family"` uses
+whichever sniffers are installed, listed by `zumime_info()$family`. An
+error inside an optional package leaves that answer as it was, so a
+corrupt stream keeps the name's `inner`.
 
 ## See also
 
@@ -107,13 +111,13 @@ writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)),
   file.path(dir, "logo.txt"))
 mime_type(list.files(dir, full.names = TRUE))
 #> <zumime_result: 3 rows>
-#>                                        path              type confidence
-#> 1 /tmp/RtmpyMUIcG/file198f4429c114/cars.rds application/x-rds   definite
-#> 2 /tmp/RtmpyMUIcG/file198f4429c114/data.csv        text/plain   probable
-#> 3 /tmp/RtmpyMUIcG/file198f4429c114/logo.txt         image/png   definite
-#>   charset           by_name agree inner encrypted complete newline interpreter
-#> 1    <NA> application/x-rds  TRUE  <NA>        NA       NA    <NA>        <NA>
-#> 2   UTF-8          text/csv  TRUE  <NA>        NA       NA      lf        <NA>
-#> 3    <NA>        text/plain FALSE  <NA>        NA       NA    <NA>        <NA>
+#>                                       path              type confidence charset
+#> 1 /tmp/RtmphPx8Rg/file198ebc8cae8/cars.rds application/x-rds   definite    <NA>
+#> 2 /tmp/RtmphPx8Rg/file198ebc8cae8/data.csv        text/plain   probable   UTF-8
+#> 3 /tmp/RtmphPx8Rg/file198ebc8cae8/logo.txt         image/png   definite    <NA>
+#>             by_name agree inner encrypted complete newline interpreter
+#> 1 application/x-rds  TRUE  <NA>        NA       NA    <NA>        <NA>
+#> 2          text/csv  TRUE  <NA>        NA       NA      lf        <NA>
+#> 3        text/plain FALSE  <NA>        NA       NA    <NA>        <NA>
 unlink(dir, recursive = TRUE)
 ```

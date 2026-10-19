@@ -95,7 +95,8 @@ the name for other wrappers and for files over 16 MiB.</p></dd>
 
 <dt id="arg-text">text<a class="anchor" aria-label="anchor" href="#arg-text"></a></dt>
 <dd><p><code>"whatwg"</code> keeps the standard's answer for text; <code>"family"</code>
-offers a still generic <code>text/plain</code> to the family's sniffers.</p></dd>
+offers a still generic <code>text/plain</code> to the family's sniffers, which
+read whole files.</p></dd>
 
 
 <dt id="arg-charset">charset<a class="anchor" aria-label="anchor" href="#arg-charset"></a></dt>
@@ -125,11 +126,14 @@ ZIP agrees with a <code>.docx</code> name; <code>FALSE</code> when they differ, 
 named <code>.txt</code>; and <code>NA</code> when either is unknown. A disagreement is a
 finding, not an error.</p>
 <p>The default answer depends on nothing outside the package. Three
-arguments ask for a suggested package: <code>inner = "decompress"</code> (zukomp),
-<code>text = "family"</code> (zucsv, zujson and zutoml, each used when installed),
-and <code>charset = "detect"</code> (zuutf). An argument whose package is absent
-raises <code>zumime_dependency_error</code>; <code>text = "family"</code> uses whichever
-sniffers are installed, listed by <code>zumime_info()$family</code>.</p>
+arguments ask for an optional family package. <code>inner = "decompress"</code>
+uses zukomp. <code>charset = "detect"</code> uses zuutf. <code>text = "family"</code> uses
+zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
+yet on CRAN; install them from GitHub. An argument whose package is
+absent raises <code>zumime_dependency_error</code>. <code>text = "family"</code> uses whichever
+sniffers are installed, listed by <code>zumime_info()$family</code>. An error inside
+an optional package leaves that answer as it was, so a corrupt stream
+keeps the name's <code>inner</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -147,14 +151,14 @@ sniffers are installed, listed by <code>zumime_info()$family</code>.</p>
 <span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"logo.txt"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">mime_type</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">dir</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;zumime_result: 3 rows&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                                        path              type confidence</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /tmp/RtmpyMUIcG/file198f4429c114/cars.rds application/x-rds   definite</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 /tmp/RtmpyMUIcG/file198f4429c114/data.csv        text/plain   probable</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /tmp/RtmpyMUIcG/file198f4429c114/logo.txt         image/png   definite</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   charset           by_name agree inner encrypted complete newline interpreter</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1    &lt;NA&gt; application/x-rds  TRUE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   UTF-8          text/csv  TRUE  &lt;NA&gt;        NA       NA      lf        &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    &lt;NA&gt;        text/plain FALSE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                       path              type confidence charset</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /tmp/RtmphPx8Rg/file198ebc8cae8/cars.rds application/x-rds   definite    &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 /tmp/RtmphPx8Rg/file198ebc8cae8/data.csv        text/plain   probable   UTF-8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /tmp/RtmphPx8Rg/file198ebc8cae8/logo.txt         image/png   definite    &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             by_name agree inner encrypted complete newline interpreter</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 application/x-rds  TRUE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2          text/csv  TRUE  &lt;NA&gt;        NA       NA      lf        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3        text/plain FALSE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">dir</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>

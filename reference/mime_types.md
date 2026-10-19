@@ -23,6 +23,12 @@ first), `category` (the top-level type) and `detected_by`
 [`mime_parent()`](https://pedrobtz.github.io/zumime/reference/mime_parent.md)
 for one type's lineage.
 
+Other registry:
+[`mime_extensions()`](https://pedrobtz.github.io/zumime/reference/mime_extensions.md),
+[`mime_guess()`](https://pedrobtz.github.io/zumime/reference/mime_guess.md),
+[`mime_is()`](https://pedrobtz.github.io/zumime/reference/mime_is.md),
+[`mime_parent()`](https://pedrobtz.github.io/zumime/reference/mime_parent.md)
+
 ## Examples
 
 ``` r

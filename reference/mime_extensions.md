@@ -24,6 +24,12 @@ first, without the dot. An unknown type gives `character(0)`.
 [`mime_guess()`](https://pedrobtz.github.io/zumime/reference/mime_guess.md)
 for the reverse.
 
+Other registry:
+[`mime_guess()`](https://pedrobtz.github.io/zumime/reference/mime_guess.md),
+[`mime_is()`](https://pedrobtz.github.io/zumime/reference/mime_is.md),
+[`mime_parent()`](https://pedrobtz.github.io/zumime/reference/mime_parent.md),
+[`mime_types()`](https://pedrobtz.github.io/zumime/reference/mime_types.md)
+
 ## Examples
 
 ``` r

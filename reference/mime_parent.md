@@ -27,6 +27,12 @@ empty for the root and `NA` for an unknown type.
 [`mime_is()`](https://pedrobtz.github.io/zumime/reference/mime_is.md) to
 test membership.
 
+Other registry:
+[`mime_extensions()`](https://pedrobtz.github.io/zumime/reference/mime_extensions.md),
+[`mime_guess()`](https://pedrobtz.github.io/zumime/reference/mime_guess.md),
+[`mime_is()`](https://pedrobtz.github.io/zumime/reference/mime_is.md),
+[`mime_types()`](https://pedrobtz.github.io/zumime/reference/mime_types.md)
+
 ## Examples
 
 ``` r

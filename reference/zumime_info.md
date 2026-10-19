@@ -14,8 +14,14 @@ zumime_info()
 
 A list with `version`, the package version as a string; `table_version`,
 the date of the table sources as a string (`"YYYY-MM-DD"`); and
-`family`, the family sniffers this session can offer text to with
-`mime_type(text = "family")`.
+`family`, the optional family packages this session can offer text to
+with `mime_type(text = "family")`. zutoml is not yet on CRAN; install it
+from GitHub.
+
+## See also
+
+[`mime_type()`](https://pedrobtz.github.io/zumime/reference/mime_type.md)
+for the arguments that use the family.
 
 ## Examples
 

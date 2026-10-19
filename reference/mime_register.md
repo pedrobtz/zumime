@@ -50,9 +50,10 @@ A data rule, `list(offset, bytes, mask)`, runs in C whenever the bytes
 have been typed as the parent, costs what a built-in signature costs,
 and is reported at `"definite"`. A function rule is called from R with
 the bytes read and must return `TRUE` or `FALSE`; it runs last, only
-when the parent matched, and is reported at `"probable"`. A data rule
-cannot sit under a type that a function rule decides, since data rules
-run first.
+when the parent matched, and is reported at `"probable"`. A function
+rule that raises an error counts as `FALSE`, and the call warns once
+with a `zumime_rule_warning` naming the type. A data rule cannot sit
+under a type that a function rule decides, since data rules run first.
 
 ## See also
 

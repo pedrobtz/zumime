@@ -3,11 +3,17 @@
 the next chunk and returns NULL while the bytes seen cannot yet decide
 the type, or the result row once they can. mime_finish() forces an
 answer from what has been seen, as the end of a short stream would. The
-answer is the one mime_sniff() gives for the same first limit bytes."><meta property="og:description" content="mime_sniffer() starts an incremental sniffer; mime_push() hands it
+answer is the one mime_sniff() gives for the whole stream with the same
+limit. A stream exactly limit bytes long is read as one that goes on,
+since the sniffer cannot know it has ended, so a character cut at the
+end does not count against UTF-8."><meta property="og:description" content="mime_sniffer() starts an incremental sniffer; mime_push() hands it
 the next chunk and returns NULL while the bytes seen cannot yet decide
 the type, or the result row once they can. mime_finish() forces an
 answer from what has been seen, as the end of a short stream would. The
-answer is the one mime_sniff() gives for the same first limit bytes."></head><body>
+answer is the one mime_sniff() gives for the whole stream with the same
+limit. A stream exactly limit bytes long is read as one that goes on,
+since the sniffer cannot know it has ended, so a character cut at the
+end does not count against UTF-8."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -47,7 +53,10 @@ answer is the one mime_sniff() gives for the same first limit bytes."></head><bo
 the next chunk and returns <code>NULL</code> while the bytes seen cannot yet decide
 the type, or the result row once they can. <code>mime_finish()</code> forces an
 answer from what has been seen, as the end of a short stream would. The
-answer is the one <code><a href="mime_sniff.html">mime_sniff()</a></code> gives for the same first <code>limit</code> bytes.</p>
+answer is the one <code><a href="mime_sniff.html">mime_sniff()</a></code> gives for the whole stream with the same
+<code>limit</code>. A stream exactly <code>limit</code> bytes long is read as one that goes on,
+since the sniffer cannot know it has ended, so a character cut at the
+end does not count against UTF-8.</p>
     </div>
 
     <div class="section level2">
@@ -110,14 +119,16 @@ returns the result.</p>
 return the same row. Once it has finished, a push raises a
 <code>zumime_state_error</code>; <code>mime_finish()</code> can still be called and returns
 the same row.</p>
-<p>The bytes decide when no longer signature could still override the
-match, the container reader for the type has what it needs, or <code>limit</code>
-bytes have arrived. Text decides only at <code>limit</code> or at the finish, since
-a later byte can still change it. The tail-reading columns (<code>complete</code>)
-are <code>NA</code> for a stream.</p>
-<p>The sniffer keeps its bytes in an R raw vector. A sniffer saved and
-loaded again keeps those bytes but forgets its decision, and is
-undecided until the next push.</p>
+<p>The bytes decide as soon as one of three things holds. No longer
+signature could still override the match. The container reader for the
+type has what it needs. Or <code>limit</code> bytes have arrived. Text decides only
+at <code>limit</code> or at the finish, since a later byte can still change it. The
+tail-reading column, <code>complete</code>, is <code>NA</code> for a stream.</p>
+<p>The sniffer keeps its bytes in an R raw vector, grown as they arrive up to
+<code>limit</code>. With <code>limit = 0</code> text never decides before the finish, so the
+sniffer holds the whole stream until <code>mime_finish()</code>. A sniffer saved and
+loaded again keeps those bytes but forgets its decision, and is undecided
+until the next push.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

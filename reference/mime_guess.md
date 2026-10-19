@@ -25,6 +25,12 @@ A character vector of canonical types, `NA` where no suffix is known.
 [`mime_extensions()`](https://pedrobtz.github.io/zumime/reference/mime_extensions.md)
 for the reverse.
 
+Other registry:
+[`mime_extensions()`](https://pedrobtz.github.io/zumime/reference/mime_extensions.md),
+[`mime_is()`](https://pedrobtz.github.io/zumime/reference/mime_is.md),
+[`mime_parent()`](https://pedrobtz.github.io/zumime/reference/mime_parent.md),
+[`mime_types()`](https://pedrobtz.github.io/zumime/reference/mime_types.md)
+
 ## Examples
 
 ``` r

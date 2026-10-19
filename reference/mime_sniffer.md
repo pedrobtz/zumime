@@ -6,7 +6,10 @@ the type, or the result row once they can. `mime_finish()` forces an
 answer from what has been seen, as the end of a short stream would. The
 answer is the one
 [`mime_sniff()`](https://pedrobtz.github.io/zumime/reference/mime_sniff.md)
-gives for the same first `limit` bytes.
+gives for the whole stream with the same `limit`. A stream exactly
+`limit` bytes long is read as one that goes on, since the sniffer cannot
+know it has ended, so a character cut at the end does not count against
+UTF-8.
 
 ## Usage
 
@@ -66,15 +69,17 @@ return the same row. Once it has finished, a push raises a
 `zumime_state_error`; `mime_finish()` can still be called and returns
 the same row.
 
-The bytes decide when no longer signature could still override the
-match, the container reader for the type has what it needs, or `limit`
-bytes have arrived. Text decides only at `limit` or at the finish, since
-a later byte can still change it. The tail-reading columns (`complete`)
-are `NA` for a stream.
+The bytes decide as soon as one of three things holds. No longer
+signature could still override the match. The container reader for the
+type has what it needs. Or `limit` bytes have arrived. Text decides only
+at `limit` or at the finish, since a later byte can still change it. The
+tail-reading column, `complete`, is `NA` for a stream.
 
-The sniffer keeps its bytes in an R raw vector. A sniffer saved and
-loaded again keeps those bytes but forgets its decision, and is
-undecided until the next push.
+The sniffer keeps its bytes in an R raw vector, grown as they arrive up
+to `limit`. With `limit = 0` text never decides before the finish, so
+the sniffer holds the whole stream until `mime_finish()`. A sniffer
+saved and loaded again keeps those bytes but forgets its decision, and
+is undecided until the next push.
 
 ## See also
 

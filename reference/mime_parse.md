@@ -42,6 +42,11 @@ for input that fails to parse and for `NA`.
 
 <https://mimesniff.spec.whatwg.org/#parsing-a-mime-type>
 
+## See also
+
+[`mime_sniff()`](https://pedrobtz.github.io/zumime/reference/mime_sniff.md),
+which takes a supplied type in this grammar.
+
 ## Examples
 
 ``` r
