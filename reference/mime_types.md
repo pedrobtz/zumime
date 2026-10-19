@@ -28,7 +28,7 @@ for one type's lineage.
 ``` r
 types <- mime_types()
 nrow(types)
-#> [1] 2628
+#> [1] 2632
 types[types$type == "application/zip", ]
 #>                 type                   parent
 #> 1992 application/zip application/octet-stream
