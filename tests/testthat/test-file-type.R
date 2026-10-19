@@ -11,9 +11,10 @@ test_that("every claimed file-type fixture is typed as file-type types it", {
   answers <- file_type_answers()
   unclaimed <- unclaimed_fixtures()
   expect_true(all(unclaimed %in% answers$file))
+  # mime_type() reads 4 KiB and the tails and offsets a result asks for.
+  types <- mime_type(file.path(dir, answers$file))$type
   for (i in seq_len(nrow(answers))) {
-    path <- file.path(dir, answers$file[i])
-    got <- mime_sniff(readBin(path, "raw", file.size(path)), limit = 0)$type
+    got <- types[i]
     agrees <- mime_is(got, answers$mime[i])
     if (answers$file[i] %in% unclaimed) {
       expect_false(agrees, info = paste(answers$file[i], "now agrees:", got))

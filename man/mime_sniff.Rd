@@ -13,7 +13,9 @@ mime_sniff(
 )
 }
 \arguments{
-\item{x}{A raw vector.}
+\item{x}{A raw vector, or a character vector of paths, which are read as
+\code{\link[=mime_type]{mime_type()}} reads them; an unreadable path gives a row with \code{type}
+\code{NA}.}
 
 \item{type}{The supplied type, such as a \code{Content-Type} header value, or
 \code{NULL} when there is none. A value that does not parse as a MIME type
@@ -30,8 +32,8 @@ returned as is.}
 vector longer than \code{limit} is sniffed on its first \code{limit} bytes.}
 }
 \value{
-A \code{zumime_result} data frame with one row and columns \code{path}
-(\code{NA} for a raw vector), \code{type} (a canonical type), \code{confidence} (an
+A \code{zumime_result} data frame with one row per path (one for a
+raw vector) and columns \code{path} (\code{NA} for a raw vector), \code{type} (a canonical type), \code{confidence} (an
 ordered factor: \verb{none < extension < probable < definite}), \code{charset},
 \code{inner}, \code{encrypted}, \code{complete}, \code{newline} (\code{"lf"}, \code{"crlf"}, \code{"cr"},
 \code{"mixed"}, or \code{NA}) and \code{interpreter}.

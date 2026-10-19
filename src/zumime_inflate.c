@@ -1,25 +1,54 @@
-/* A bounded DEFLATE decoder (RFC 1951), written for zumime: it inflates the
- * first few bytes of a gzip member, enough to see an RDS or RData header
- * (design section 6.2), and stops as soon as its small output buffer is
- * full. Stored, fixed and dynamic Huffman blocks; a canonical-code decoder
- * that reads one bit at a time, which is plenty for 64 output bytes. */
+/* A DEFLATE decoder (RFC 1951), written for zumime. It has two uses: the
+ * first bytes of a stream, enough to see an RDS or RData header or an
+ * OOXML [Content_Types].xml (design section 6.2), stopping as soon as the
+ * caller's buffer is full; and the gzip completeness check of
+ * `complete = TRUE` (design section 6.7), which inflates a whole stream
+ * through a 32 KiB window, discarding the output, to find its trailer.
+ * Stored, fixed and dynamic Huffman blocks; a canonical-code decoder that
+ * reads one bit at a time. */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "zumime_sniff.h"
 
 #define MAXBITS 15
 
+#define WSIZE 32768u
+
 typedef struct {
   const unsigned char *in;
   size_t inlen, inpos;
+  zumime_reader refill; /* NULL: the input is all in `in` */
+  void *ctx;
+  unsigned char *inbuf; /* refill target */
+  size_t inbuf_cap;
   uint32_t bitbuf;
   int bitcnt;
-  unsigned char *out;
-  size_t outlen, outpos;
+  unsigned char window[WSIZE];
+  uint64_t total;       /* bytes produced */
+  unsigned char *out;   /* the first outlen bytes are captured here */
+  size_t outlen;
+  int stop_when_full;
   int err;  /* input ran out or the stream is invalid */
-  int full; /* the output buffer is full */
+  int full; /* the capture buffer is full and the caller wants no more */
 } state;
+
+static int more_input(state *s) {
+  if (s->refill == NULL) return 0;
+  size_t n = s->refill(s->ctx, s->inbuf, s->inbuf_cap);
+  if (n == 0) return 0;
+  s->in = s->inbuf;
+  s->inlen = n;
+  s->inpos = 0;
+  return 1;
+}
+
+static int next_byte(state *s, unsigned char *c) {
+  if (s->inpos >= s->inlen && !more_input(s)) return 0;
+  *c = s->in[s->inpos++];
+  return 1;
+}
 
 typedef struct {
   short count[MAXBITS + 1];
@@ -29,11 +58,12 @@ typedef struct {
 static int bits(state *s, int need) {
   uint32_t val = s->bitbuf;
   while (s->bitcnt < need) {
-    if (s->inpos >= s->inlen) {
+    unsigned char c;
+    if (!next_byte(s, &c)) {
       s->err = 1;
       return 0;
     }
-    val |= (uint32_t) s->in[s->inpos++] << s->bitcnt;
+    val |= (uint32_t) c << s->bitcnt;
     s->bitcnt += 8;
   }
   s->bitbuf = val >> need;
@@ -75,8 +105,10 @@ static int decode(state *s, const huffman *h) {
 }
 
 static void put(state *s, unsigned char c) {
-  if (s->outpos < s->outlen) s->out[s->outpos++] = c;
-  if (s->outpos == s->outlen) s->full = 1;
+  s->window[s->total & (WSIZE - 1u)] = c;
+  if (s->total < s->outlen) s->out[s->total] = c;
+  s->total++;
+  if (s->stop_when_full && s->total >= s->outlen) s->full = 1;
 }
 
 static const short lbase[29] = {3,  4,  5,  6,  7,  8,  9,  10, 11,  13,
@@ -115,13 +147,13 @@ static void codes(state *s, const huffman *lencode, const huffman *distcode) {
         s->err = 1;
         return;
       }
-      size_t dist = (size_t) (dbase[dsym] + bits(s, dext[dsym]));
-      if (s->err || dist > s->outpos) {
+      uint64_t dist = (uint64_t) (dbase[dsym] + bits(s, dext[dsym]));
+      if (s->err || dist > s->total || dist > WSIZE) {
         s->err = 1;
         return;
       }
       while (len-- > 0) {
-        put(s, s->out[s->outpos - dist]);
+        put(s, s->window[(s->total - dist) & (WSIZE - 1u)]);
         if (s->full) return;
       }
     }
@@ -131,23 +163,26 @@ static void codes(state *s, const huffman *lencode, const huffman *distcode) {
 static void stored(state *s) {
   s->bitbuf = 0;
   s->bitcnt = 0;
-  if (s->inpos + 4 > s->inlen) {
-    s->err = 1;
-    return;
+  unsigned char h[4];
+  for (int i = 0; i < 4; i++) {
+    if (!next_byte(s, &h[i])) {
+      s->err = 1;
+      return;
+    }
   }
-  unsigned len = s->in[s->inpos] | (s->in[s->inpos + 1] << 8);
-  unsigned nlen = s->in[s->inpos + 2] | (s->in[s->inpos + 3] << 8);
-  s->inpos += 4;
+  unsigned len = h[0] | (h[1] << 8);
+  unsigned nlen = h[2] | (h[3] << 8);
   if (len != (~nlen & 0xFFFFu)) {
     s->err = 1;
     return;
   }
   while (len-- > 0) {
-    if (s->inpos >= s->inlen) {
+    unsigned char c;
+    if (!next_byte(s, &c)) {
       s->err = 1;
       return;
     }
-    put(s, s->in[s->inpos++]);
+    put(s, c);
     if (s->full) return;
   }
 }
@@ -236,28 +271,105 @@ static void dynamic(state *s) {
   codes(s, &lencode, &distcode);
 }
 
-size_t zumime_inflate(const unsigned char *src, size_t slen, unsigned char *dst,
-                      size_t dlen) {
-  state s;
-  memset(&s, 0, sizeof(s));
-  s.in = src;
-  s.inlen = slen;
-  s.out = dst;
-  s.outlen = dlen;
-  if (dlen == 0) return 0;
+/* Run blocks until the last one ends, the capture is full (when asked),
+ * or an error. Returns 1 when the final block ended cleanly. */
+static int run(state *s) {
   int last;
   do {
-    last = bits(&s, 1);
-    int type = bits(&s, 2);
-    if (s.err) break;
+    last = bits(s, 1);
+    int type = bits(s, 2);
+    if (s->err) return 0;
     if (type == 0)
-      stored(&s);
+      stored(s);
     else if (type == 1)
-      fixed(&s);
+      fixed(s);
     else if (type == 2)
-      dynamic(&s);
+      dynamic(s);
     else
-      s.err = 1;
-  } while (!last && !s.err && !s.full);
-  return s.outpos;
+      s->err = 1;
+  } while (!last && !s->err && !s->full);
+  return last && !s->err && !s->full;
+}
+
+size_t zumime_inflate(const unsigned char *src, size_t slen, unsigned char *dst,
+                      size_t dlen) {
+  if (dlen == 0) return 0;
+  state *s = (state *) calloc(1, sizeof(state));
+  if (s == NULL) return 0;
+  s->in = src;
+  s->inlen = slen;
+  s->out = dst;
+  s->outlen = dlen;
+  s->stop_when_full = 1;
+  run(s);
+  size_t n = s->total < dlen ? (size_t) s->total : dlen;
+  free(s);
+  return n;
+}
+
+/* --- gzip completeness (RFC 1952) ----------------------------------------- */
+
+static int skip_zstr(state *s) {
+  unsigned char c;
+  do {
+    if (!next_byte(s, &c)) return 0;
+  } while (c != 0);
+  return 1;
+}
+
+/* One member: header, deflate stream, trailer. 1 when complete. */
+static int gzip_member(state *s, unsigned char id1) {
+  unsigned char h[10];
+  h[0] = id1;
+  for (int i = 1; i < 10; i++)
+    if (!next_byte(s, &h[i])) return 0;
+  if (h[0] != 0x1F || h[1] != 0x8B || h[2] != 8) return 0;
+  unsigned flg = h[3];
+  if (flg & 4u) {
+    unsigned char x[2];
+    if (!next_byte(s, &x[0]) || !next_byte(s, &x[1])) return 0;
+    unsigned xlen = x[0] | (x[1] << 8);
+    for (unsigned i = 0; i < xlen; i++) {
+      unsigned char c;
+      if (!next_byte(s, &c)) return 0;
+    }
+  }
+  if ((flg & 8u) && !skip_zstr(s)) return 0;
+  if ((flg & 16u) && !skip_zstr(s)) return 0;
+  if (flg & 2u) {
+    unsigned char c;
+    if (!next_byte(s, &c) || !next_byte(s, &c)) return 0;
+  }
+  s->bitbuf = 0;
+  s->bitcnt = 0;
+  s->total = 0;
+  if (!run(s)) return 0;
+  unsigned char t[8];
+  for (int i = 0; i < 8; i++)
+    if (!next_byte(s, &t[i])) return 0;
+  return zumime_le32(t + 4) == (uint32_t) (s->total & 0xFFFFFFFFu);
+}
+
+int zumime_gzip_complete(zumime_reader read, void *ctx) {
+  state *s = (state *) calloc(1, sizeof(state));
+  unsigned char *buf = (unsigned char *) malloc(65536);
+  if (s == NULL || buf == NULL) {
+    free(s);
+    free(buf);
+    return -1;
+  }
+  s->refill = read;
+  s->ctx = ctx;
+  s->inbuf = buf;
+  s->inbuf_cap = 65536;
+  unsigned char c;
+  int ok = next_byte(s, &c) && gzip_member(s, c);
+  /* Further members must be complete too; trailing zero padding is fine. */
+  while (ok && next_byte(s, &c)) {
+    if (c == 0) continue;
+    ok = gzip_member(s, c);
+  }
+  free(buf);
+  free(s);
+  return ok;
 }

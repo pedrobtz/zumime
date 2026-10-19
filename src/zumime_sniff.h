@@ -114,6 +114,9 @@ typedef struct {
   const unsigned char *tail;
   size_t tail_len;
   uint64_t tail_off;
+  /* mime_check()'s first pass: the standard's answer and the extra rows
+   * only, without readers, registered rules, charset or tail reads. */
+  int base_only;
 } zumime_input;
 
 typedef struct {
@@ -140,6 +143,34 @@ int zumime_type_is(int type, int ancestor);
 /* Registry id of a canonical type name, or -1. */
 int zumime_type_lookup(const char *name);
 
+/* --- Registered types (registry.c) ---------------------------------------- */
+
+#define ZUMIME_MAX_REGISTERED 256
+#define ZUMIME_RULE_MAX 64
+
+typedef struct {
+  char name[128];
+  int parent;
+  int has_rule; /* a data rule; function rules live in R */
+  uint32_t offset;
+  uint8_t len;
+  unsigned char bytes[ZUMIME_RULE_MAX]; /* stored masked */
+  unsigned char mask[ZUMIME_RULE_MAX];
+  int active;
+} zumime_registered;
+
+extern zumime_registered zumime_reg[ZUMIME_MAX_REGISTERED];
+
+/* Returns the new id, or -1 when the table is full or the rule too long. */
+int zumime_reg_add(const char *name, int parent, int has_rule, uint32_t offset,
+                   const unsigned char *bytes, const unsigned char *mask,
+                   size_t len);
+void zumime_reg_remove(int id);
+int zumime_type_parent(int id);     /* generated or registered; -1 for none */
+const char *zumime_type_name(int id); /* generated or registered; NULL */
+void zumime_apply_registered(const unsigned char *buf, size_t len,
+                             zumime_result *out);
+
 /* --- Container and text readers (design section 4, layer 3) -------------
  * Each takes the bytes in hand and returns a registry id that refines the
  * current type, or -1. zumime_refine() (zumime_refine.c) chooses the reader
@@ -151,6 +182,8 @@ void zumime_refine(const unsigned char *buf, size_t len, const zumime_input *in,
 int zumime_read_zip(const unsigned char *head, size_t hlen, int head_is_whole,
                     const unsigned char *tail, size_t tail_len,
                     uint64_t tail_off, int *encrypted);
+int zumime_zip_cd_offset(const unsigned char *buf, size_t len, uint64_t buf_off,
+                         uint64_t *cd_off);
 int zumime_read_ole2(const unsigned char *buf, size_t len, int *encrypted);
 int zumime_read_bmff(const unsigned char *buf, size_t len);
 int zumime_read_png(const unsigned char *buf, size_t len);
@@ -164,6 +197,14 @@ int zumime_read_text(const unsigned char *buf, size_t len, int current,
  * stream ends, or the input runs out. Returns the bytes written. */
 size_t zumime_inflate(const unsigned char *src, size_t slen, unsigned char *dst,
                       size_t dlen);
+
+/* A pull-based byte source: fill buf with up to n bytes, return how many;
+ * 0 at the end. */
+typedef size_t (*zumime_reader)(void *ctx, unsigned char *buf, size_t n);
+
+/* 1 when every gzip member read from `read` inflates to its end and its
+ * trailer's size matches; 0 when cut or corrupt; -1 out of memory. */
+int zumime_gzip_complete(zumime_reader read, void *ctx);
 
 /* Little helpers shared by the readers. */
 static inline uint16_t zumime_le16(const unsigned char *p) {

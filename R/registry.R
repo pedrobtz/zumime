@@ -30,7 +30,18 @@ canonical_type <- function(x) {
 #' nrow(types)
 #' types[types$type == "application/zip", ]
 mime_types <- function() {
-  types_registry
+  reg <- session$types
+  if (!nrow(reg)) return(types_registry)
+  extra <- data.frame(
+    type = reg$type,
+    parent = reg$parent,
+    category = sub("/.*$", "", reg$type),
+    detected_by = "registered",
+    stringsAsFactors = FALSE
+  )
+  extra$aliases <- rep(list(character()), nrow(reg))
+  extra$extensions <- unname(session$extensions[reg$type])
+  rbind(types_registry, extra[names(types_registry)])
 }
 
 #' Extensions of a type
@@ -47,8 +58,9 @@ mime_types <- function() {
 mime_extensions <- function(type) {
   type <- canonical_type(check_character(type))
   hit <- match(type, types_registry$type)
-  out <- lapply(hit, function(i) {
-    if (is.na(i)) character() else types_registry$extensions[[i]]
+  out <- lapply(seq_along(type), function(k) {
+    if (!is.na(hit[k])) return(types_registry$extensions[[hit[k]]])
+    session$extensions[[type[k]]] %||% character()
   })
   out
 }
@@ -74,18 +86,47 @@ mime_guess <- function(path) {
   miss <- is.na(hit)
   hit[miss] <- match(suffix[[1]][miss], keys)
   out <- types_ext_map[hit]
+  if (length(session$extensions)) {
+    ext <- unlist(session$extensions, use.names = FALSE)
+    owner <- rep(names(session$extensions), lengths(session$extensions))
+    reg <- match(suffix[[2]], ext)
+    one <- match(suffix[[1]], ext)
+    reg[is.na(reg)] <- one[is.na(reg)]
+    out[!is.na(reg)] <- owner[reg[!is.na(reg)]]
+  }
   unname(out)
 }
 
 # Lineage of one canonical type, nearest first, from the registry and any
-# registered types.
+# registered types. Every known type's lineage is computed once per
+# registry version and kept in `session`.
 lineage <- function(type) {
-  out <- character()
-  parent <- types_registry$parent[match(type, types_registry$type)]
-  while (length(parent) && !is.na(parent)) {
-    out <- c(out, parent)
-    parent <- types_registry$parent[match(parent, types_registry$type)]
+  table <- lineage_table()
+  out <- table[[type]]
+  if (is.null(out)) character() else out
+}
+
+lineage_table <- function() {
+  if (identical(session$lineage_version, session$version)) {
+    return(session$lineage)
   }
+  types <- all_types()
+  parents <- type_parent(types)
+  idx <- match(parents, types)
+  out <- vector("list", length(types))
+  names(out) <- types
+  # Walk all types up one level at a time.
+  cur <- idx
+  acc <- lapply(seq_along(types), function(i) character())
+  for (depth in seq_len(64)) {
+    live <- which(!is.na(cur))
+    if (!length(live)) break
+    for (i in live) acc[[i]] <- c(acc[[i]], types[cur[i]])
+    cur[live] <- idx[cur[live]]
+  }
+  out[] <- acc
+  session$lineage <- out
+  session$lineage_version <- session$version
   out
 }
 
@@ -108,8 +149,7 @@ lineage <- function(type) {
 mime_parent <- function(type) {
   type <- canonical_type(check_character(type))
   lapply(type, function(t) {
-    if (is.na(t) || !(t %in% types_registry$type)) NA_character_ else
-      lineage(t)
+    if (is.na(t) || !(t %in% all_types())) NA_character_ else lineage(t)
   })
 }
 
@@ -136,7 +176,7 @@ mime_is <- function(x, what) {
   u <- unique(x)
   hit <- vapply(u, function(t) {
     if (is.na(t)) return(NA)
-    known <- t %in% types_registry$type
+    known <- t %in% all_types()
     family <- c(t, if (known) lineage(t) else "application/octet-stream")
     any(family %in% what) || sub("/.*$", "", t) %in% what
   }, logical(1), USE.NAMES = FALSE)

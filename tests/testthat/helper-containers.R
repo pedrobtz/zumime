@@ -127,3 +127,65 @@ sniff_type <- function(x, ...) mime_sniff(bytes(x), ...)$type
 docx_type <- function() {
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 }
+
+# A small tree under a temporary directory, removed when `env` ends. Each
+# file is written from bytes; returns the directory.
+local_tree <- function(files, env = parent.frame()) {
+  dir <- withr::local_tempdir(.local_envir = env)
+  for (name in names(files)) {
+    path <- file.path(dir, name)
+    dir.create(dirname(path), showWarnings = FALSE, recursive = TRUE)
+    writeBin(bytes(files[[name]]), path)
+  }
+  dir
+}
+
+gzip_bytes <- function(x) {
+  f <- tempfile(fileext = ".gz")
+  on.exit(unlink(f))
+  con <- gzfile(f, "wb")
+  writeBin(bytes(x), con)
+  close(con)
+  readBin(f, "raw", file.size(f))
+}
+
+pdf_bytes <- function(encrypt = FALSE, eof = TRUE) {
+  body <- paste0("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n",
+    "trailer << /Root 1 0 R", if (encrypt) " /Encrypt 2 0 R" else "",
+    " >>\nstartxref\n0\n", if (eof) "%%EOF\n" else "")
+  charToRaw(body)
+}
+
+# A tree with one file per kind of answer, for the D15 equivalence.
+check_tree <- function(env = parent.frame()) {
+  local_tree(list(
+    "a.pdf" = pdf_bytes(), "b.png" = png_bytes(),
+    "c.docx" = build_zip(ooxml_entries("word")),
+    "d.zip" = build_zip(list(a = "x")), "e.json" = "{\"a\": 1}",
+    "f.txt" = "plain words\n", "g.svg" = "<?xml version=\"1.0\"?><svg/>",
+    "h.bin" = as.raw(c(0, 1, 2, 3)), "i.html" = "<html><body>",
+    "j.ogg" = build_ogg("OpusHead"), "k.doc" = build_ole2("WordDocument"),
+    "l.c1" = c(charToRaw("caf"), as.raw(0xe9)),
+    "m.rds" = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20)))
+  ), env = env)
+}
+
+check_candidates <- function() {
+  c("application/pdf", "image/png", "image", "application/zip", docx_type(),
+    "application/json", "text/plain", "application/xml", "audio/ogg",
+    "application/x-ole-storage", "application/x-rds",
+    "application/octet-stream")
+}
+
+# design D15: mime_check(x, a, m) == mime_is(t$type, a) & t$confidence >= m.
+expect_check_equivalence <- function(paths, allowed_sets, levels) {
+  t <- mime_type(paths)
+  for (a in allowed_sets) {
+    for (m in levels) {
+      want <- mime_is(t$type, a) &
+        t$confidence >= factor(m, levels = levels(t$confidence), ordered = TRUE)
+      expect_identical(mime_check(paths, a, m), want,
+        info = paste(paste(a, collapse = ", "), m))
+    }
+  }
+}

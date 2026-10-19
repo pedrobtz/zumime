@@ -7,6 +7,14 @@ new_result <- function(path, type, confidence, charset = NA_character_,
                        inner = NA_character_, encrypted = NA,
                        complete = NA, newline = NA_character_,
                        interpreter = NA_character_) {
+  n <- length(path)
+  fill <- function(x) if (length(x) == n) x else rep_len(x, n)
+  inner <- fill(inner)
+  encrypted <- fill(encrypted)
+  complete <- fill(complete)
+  charset <- fill(charset)
+  newline <- fill(newline)
+  interpreter <- fill(interpreter)
   out <- data.frame(
     path = as.character(path),
     type = as.character(type),

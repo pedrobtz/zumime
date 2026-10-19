@@ -21,7 +21,7 @@ lands in Stage 1 with the tables it covers.
 | 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | [#14](https://github.com/pedrobtz/zumime/pull/14) | 2026-10-19 |
 | 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | [#15](https://github.com/pedrobtz/zumime/pull/15) | 2026-10-19 |
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | [#16](https://github.com/pedrobtz/zumime/pull/16) | 2026-10-19 |
-| 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | | |
+| 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | [#17](https://github.com/pedrobtz/zumime/pull/17) | 2026-10-19 |
 | 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | | |
 | 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | | |
 | 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | | |
@@ -370,6 +370,39 @@ needs to open each file.
 - A missing path is an `NA` row by default and `zumime_io_error` with
   `strict = TRUE`.
 - Quick profile green.
+
+**Decisions (2026-10-19).**
+
+- **`agree` is `TRUE` when the byte type and the name type lie on one
+  lineage**, either descending from the other. Design §6.7 says "equals or
+  descends from" the name answer, under which every CSV (bytes
+  `text/plain`, name `text/csv`) and every ZIP named `.docx` read before
+  its tail would disagree. `FALSE` still flags a PNG named `.txt`. Bytes
+  at the floor (`application/octet-stream`, `none`) count as unknown.
+- **`inner = "decompress"`** decompresses gzip whole through
+  `zukomp::komp_decompress()` for files up to 16 MiB, because zukomp has no
+  streaming or partial-output API; larger files, the other wrappers, and
+  failures fall back to the name.
+- **`complete = TRUE`** checks gzip, and RDS or RData in gzip, by
+  inflating the whole stream through a 32 KiB window with zumime's own
+  inflater and comparing the trailer's size; the stream is read in 64 KiB
+  pieces, never whole.
+- **The ZIP tail** is the last 66 KiB; when its end record points at a
+  central directory that starts earlier (an archive of thousands of
+  entries), the directory is read from its start, up to 8 MiB.
+- **`mime_check()`'s shortcut** computes the standard's answer and the
+  extra rows for every input, which exactness needs, and skips the
+  readers, tail reads and the frame for an input whose answer is related
+  to no allowed type. A probe is one allowed type tested for one input.
+  The D15 property holds over a test tree for every subset of three of
+  twelve candidate types at three confidence levels, and over the
+  `file-type` corpus.
+- **Registered types** live in a fixed C table of 256 entries with rules of
+  at most 64 bytes, and appear in `mime_types()` by default with
+  `detected_by = "registered"` (design §16 left this open).
+- **`zumime_info()$family`** lists the family sniffers the session can
+  use. `zuutf` and `zutoml` are reached by name at run time, since they are
+  not on CRAN and so not in `Suggests` (Stage 0).
 
 **Design.** §4 layer 4, §5 Results, §6.7, §6.9, D5, D6, D12, D13, D15.
 

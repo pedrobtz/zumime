@@ -12,6 +12,11 @@ static const R_CallMethodDef call_methods[] = {
   {"zumime_suffixes", (DL_FUNC) &zumime_suffixes, 1},
   {"zumime_sniff_raw", (DL_FUNC) &zumime_sniff_raw, 6},
   {"zumime_signature_rows", (DL_FUNC) &zumime_signature_rows, 0},
+  {"zumime_sniff_paths", (DL_FUNC) &zumime_sniff_paths, 7},
+  {"zumime_register_type", (DL_FUNC) &zumime_register_type, 5},
+  {"zumime_unregister_type", (DL_FUNC) &zumime_unregister_type, 1},
+  {"zumime_check", (DL_FUNC) &zumime_check, 3},
+  {"zumime_probe_count", (DL_FUNC) &zumime_probe_count, 0},
   {NULL, NULL, 0}
 };
 

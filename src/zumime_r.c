@@ -1,20 +1,24 @@
 /* R glue for the sniffer core. The only place a type id becomes a CHARSXP
- * is type_charsxp() (design section 4). */
+ * is zumime_type_charsxp() (design section 4). */
 
 #include <string.h>
 
 #include "zumime_r.h"
 #include "zumime_sniff.h"
 
-static SEXP type_charsxp(int id) {
-  if (id < 0 || id >= ZUMIME_N_TYPES) return NA_STRING;
-  return Rf_mkChar(zumime_type_names[id]);
+SEXP zumime_type_charsxp(int id) {
+  const char *name = zumime_type_name(id);
+  return name ? Rf_mkChar(name) : NA_STRING;
 }
 
 static const char *const confidence_names[] = {"none", "extension",
                                                "probable", "definite"};
 
-static SEXP charset_charsxp(const zumime_result *r) {
+SEXP zumime_confidence_charsxp(int confidence) {
+  return Rf_mkChar(confidence_names[confidence]);
+}
+
+SEXP zumime_charset_charsxp(const zumime_result *r) {
   switch (r->charset) {
   case ZUMIME_CS_UTF8:
     return Rf_mkChar("UTF-8");
@@ -38,7 +42,7 @@ static SEXP charset_charsxp(const zumime_result *r) {
   }
 }
 
-static SEXP newline_charsxp(int nl) {
+SEXP zumime_newline_charsxp(int nl) {
   switch (nl) {
   case ZUMIME_NL_LF:
     return Rf_mkChar("lf");
@@ -68,6 +72,7 @@ SEXP zumime_sniff_raw(SEXP x, SEXP limit, SEXP supplied, SEXP apache_bug,
   }
 
   zumime_input in;
+  memset(&in, 0, sizeof(in));
   in.supplied = Rf_isNull(supplied) ? NULL : CHAR(STRING_ELT(supplied, 0));
   in.supplied_id = in.supplied ? zumime_type_lookup(in.supplied) : -1;
   in.apache_bug = LOGICAL(apache_bug)[0];
@@ -84,10 +89,10 @@ SEXP zumime_sniff_raw(SEXP x, SEXP limit, SEXP supplied, SEXP apache_bug,
   SEXP out = PROTECT(Rf_allocVector(VECSXP, 7));
   SET_VECTOR_ELT(out, 0,
                  zumime_scalar_string(r.type == ZUMIME_SUPPLIED ? NA_STRING
-                                                          : type_charsxp(r.type)));
-  SET_VECTOR_ELT(out, 1, Rf_mkString(confidence_names[r.confidence]));
-  SET_VECTOR_ELT(out, 2, zumime_scalar_string(charset_charsxp(&r)));
-  SET_VECTOR_ELT(out, 3, zumime_scalar_string(newline_charsxp(r.newline)));
+                                                          : zumime_type_charsxp(r.type)));
+  SET_VECTOR_ELT(out, 1, zumime_scalar_string(zumime_confidence_charsxp(r.confidence)));
+  SET_VECTOR_ELT(out, 2, zumime_scalar_string(zumime_charset_charsxp(&r)));
+  SET_VECTOR_ELT(out, 3, zumime_scalar_string(zumime_newline_charsxp(r.newline)));
   int is_text = r.charset != ZUMIME_CS_NONE || r.newline != ZUMIME_NL_NONE;
   if (r.type == ZUMIME_SUPPLIED)
     is_text = in.supplied_id >= 0
@@ -124,7 +129,7 @@ SEXP zumime_signature_rows(void) {
       memcpy(RAW(m), row->mask, row->len);
     else
       memset(RAW(m), 0xFF, row->len);
-    SET_STRING_ELT(type, i, type_charsxp(row->type));
+    SET_STRING_ELT(type, i, zumime_type_charsxp(row->type));
     INTEGER(group)[i] = row->group;
     INTEGER(flags)[i] = (int) row->flags;
   }
@@ -141,4 +146,23 @@ SEXP zumime_signature_rows(void) {
   Rf_setAttrib(out, R_NamesSymbol, names);
   UNPROTECT(8);
   return out;
+}
+
+/* mime_register(): name and parent are canonical; bytes and mask are raw
+ * or NULL. Returns the id, or NA when the table is full. */
+SEXP zumime_register_type(SEXP name, SEXP parent, SEXP offset, SEXP bytes,
+                          SEXP mask) {
+  int pid = zumime_type_lookup(CHAR(STRING_ELT(parent, 0)));
+  int has_rule = !Rf_isNull(bytes);
+  size_t len = has_rule ? (size_t) XLENGTH(bytes) : 0;
+  int id = zumime_reg_add(CHAR(STRING_ELT(name, 0)), pid, has_rule,
+                          (uint32_t) REAL(offset)[0], has_rule ? RAW(bytes) : NULL,
+                          Rf_isNull(mask) ? NULL : RAW(mask), len);
+  return Rf_ScalarInteger(id < 0 ? NA_INTEGER : id);
+}
+
+SEXP zumime_unregister_type(SEXP name) {
+  int id = zumime_type_lookup(CHAR(STRING_ELT(name, 0)));
+  if (id >= ZUMIME_N_TYPES) zumime_reg_remove(id);
+  return R_NilValue;
 }

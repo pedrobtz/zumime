@@ -252,3 +252,20 @@ int zumime_read_zip(const unsigned char *head, size_t hlen, int head_is_whole,
   if (z.manifest) return ZUMIME_T_APPLICATION_JAVA_ARCHIVE;
   return -1;
 }
+
+/* Where the central directory starts, from the end-of-central-directory
+ * record in a buffer that ends at file offset buf_off + len. 1 when found. */
+int zumime_zip_cd_offset(const unsigned char *buf, size_t len, uint64_t buf_off,
+                         uint64_t *cd_off) {
+  (void) buf_off;
+  if (len < 22) return 0;
+  size_t lo = len > EOCD_SEARCH ? len - EOCD_SEARCH : 0;
+  for (size_t i = len - 22 + 1; i-- > lo;) {
+    if (memcmp(buf + i, "PK\x05\x06", 4) != 0) continue;
+    uint32_t off = zumime_le32(buf + i + 16);
+    if (off == 0xFFFFFFFFu) return 0;
+    *cd_off = off;
+    return 1;
+  }
+  return 0;
+}

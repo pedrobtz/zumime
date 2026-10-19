@@ -19,7 +19,9 @@
 #' (`windows-1252` when a byte in 0x80 to 0x9F appears, else
 #' `ISO-8859-1`), which lowers `confidence` to `"probable"`.
 #'
-#' @param x A raw vector.
+#' @param x A raw vector, or a character vector of paths, which are read as
+#'   [mime_type()] reads them; an unreadable path gives a row with `type`
+#'   `NA`.
 #' @param type The supplied type, such as a `Content-Type` header value, or
 #'   `NULL` when there is none. A value that does not parse as a MIME type
 #'   is treated as `NULL`.
@@ -30,8 +32,8 @@
 #'   `"audio_video"` or `"font"`.
 #' @param limit The number of bytes to read; `0` reads them all. A raw
 #'   vector longer than `limit` is sniffed on its first `limit` bytes.
-#' @return A `zumime_result` data frame with one row and columns `path`
-#'   (`NA` for a raw vector), `type` (a canonical type), `confidence` (an
+#' @return A `zumime_result` data frame with one row per path (one for a
+#'   raw vector) and columns `path` (`NA` for a raw vector), `type` (a canonical type), `confidence` (an
 #'   ordered factor: `none < extension < probable < definite`), `charset`,
 #'   `inner`, `encrypted`, `complete`, `newline` (`"lf"`, `"crlf"`, `"cr"`,
 #'   `"mixed"`, or `NA`) and `interpreter`.
@@ -52,13 +54,18 @@ mime_sniff <- function(x, type = NULL, no_sniff = FALSE,
                        context = c("none", "browsing", "image", "audio_video",
                          "font"),
                        limit = 4096L) {
-  if (!is.raw(x)) {
-    zumime_abort("type", "`x` must be a raw vector.")
+  if (!is.raw(x) && !is.character(x)) {
+    zumime_abort("type", "`x` must be a raw vector or a character vector of paths.")
   }
   supplied <- supplied_type(type)
   check_flag(no_sniff)
   context <- check_context(context)
   limit <- check_limit(limit)
+  if (is.character(x)) {
+    res <- sniff_paths(x, limit, FALSE, supplied, no_sniff, context)
+    out <- path_result(x, res, supplied)
+    return(apply_registered(out, x, limit))
+  }
 
   res <- .Call(zumime_sniff_raw, x, limit, supplied$essence,
     supplied$apache_bug, no_sniff, context)
@@ -68,7 +75,7 @@ mime_sniff <- function(x, type = NULL, no_sniff = FALSE,
   if (isTRUE(res[[5]]) && !is.null(supplied$charset)) {
     charset <- supplied$charset
   }
-  new_result(
+  out <- new_result(
     path = NA_character_,
     type = out_type,
     confidence = res[[2]],
@@ -77,6 +84,7 @@ mime_sniff <- function(x, type = NULL, no_sniff = FALSE,
     newline = res[[4]],
     interpreter = res[[7]]
   )
+  apply_registered(out, x, limit)
 }
 
 # The supplied MIME type detection algorithm's outcome: the canonical
