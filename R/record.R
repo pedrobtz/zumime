@@ -86,10 +86,6 @@ is_record <- function(r) {
     (length(r$parameters) == 0L || !is.null(names(r$parameters)))
 }
 
-is_string <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
-
-`%||%` <- function(x, y) if (is.null(x)) y else x
-
 # x in UTF-8 for the parser. enc2utf8() turns a byte the native encoding
 # cannot hold into the text "<c3>", which then parses as a value; the
 # standard decodes it to U+FFFD, which no token or value may hold.

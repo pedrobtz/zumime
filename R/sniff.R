@@ -125,31 +125,3 @@ check_context <- function(context) {
   context <- check_choice(context, contexts, call = sys.call(-1L))
   match(context, contexts) - 1L
 }
-
-check_flag <- function(x, arg = deparse(substitute(x))) {
-  if (!isTRUE(x) && !isFALSE(x)) {
-    zumime_abort(
-      "type",
-      sprintf("`%s` must be TRUE or FALSE.", arg),
-      call = sys.call(-1L)
-    )
-  }
-}
-
-check_limit <- function(limit) {
-  if (
-    !is.numeric(limit) ||
-      length(limit) != 1L ||
-      is.na(limit) ||
-      limit < 0 ||
-      limit > .Machine$integer.max ||
-      limit != floor(limit)
-  ) {
-    zumime_abort(
-      "type",
-      "`limit` must be a whole number from 0 to .Machine$integer.max.",
-      call = sys.call(-1L)
-    )
-  }
-  as.double(limit)
-}
