@@ -19,7 +19,7 @@ lands in Stage 1 with the tables it covers.
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | [#13](https://github.com/pedrobtz/zumime/pull/13) | 2026-10-19 |
 | 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | [#14](https://github.com/pedrobtz/zumime/pull/14) | 2026-10-19 |
-| 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | | 2026-10-19 |
+| 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | [#15](https://github.com/pedrobtz/zumime/pull/15) | 2026-10-19 |
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | | |
 | 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | | |
 | 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | | |
