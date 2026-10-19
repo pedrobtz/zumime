@@ -97,6 +97,45 @@ test_that("inner comes from the rest of the name by default", {
   expect_identical(t$agree[1:4], rep(TRUE, 4))
 })
 
+test_that("inner comes from the name for xz and bzip2 too", {
+  # Only the magic numbers matter; memCompress() is avoided, as in
+  # deflate_raw(), to keep valgrind runs clean.
+  dir <- local_tree(list(
+    "data.csv.xz" = xz_header(),
+    "files.tar.bz2" = c(charToRaw("BZh91AY&SY"), raw(20))
+  ))
+  t <- mime_type(file.path(dir, c("data.csv.xz", "files.tar.bz2")))
+  expect_identical(t$type, c("application/x-xz", "application/x-bzip2"))
+  expect_identical(t$inner, c("text/csv", "application/x-tar"))
+})
+
+test_that("inner = \"decompress\" falls back to the name", {
+  big <- c(gzip_bytes("a,b\n"), raw(16 * 1024^2))
+  dir <- local_tree(list(
+    "bad.csv.gz" = gzip_bytes("a,b\n1,2\n"),
+    "big.csv.gz" = big,
+    "data.csv.xz" = xz_header()
+  ))
+  calls <- character()
+  local_mocked_bindings(
+    has_package = function(pkg) TRUE,
+    suggested_fun = function(pkg, name) {
+      function(x, codec, max_output) {
+        calls <<- c(calls, codec)
+        stop("corrupt")
+      }
+    }
+  )
+  t <- mime_type(
+    file.path(dir, c("bad.csv.gz", "big.csv.gz", "data.csv.xz")),
+    inner = "decompress"
+  )
+  # A decompression error, a file over 16 MiB and a wrapper other than
+  # gzip all keep the name's answer; only the first reaches zukomp.
+  expect_identical(t$inner, rep("text/csv", 3))
+  expect_identical(calls, "gzip")
+})
+
 test_that("inner = \"decompress\" sniffs what zukomp inflates", {
   skip_if_not_installed("zukomp")
   dir <- local_tree(list("blob.gz" = gzip_bytes("{\"a\": [1, 2]}")))

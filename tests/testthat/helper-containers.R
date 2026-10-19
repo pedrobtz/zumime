@@ -444,3 +444,8 @@ stream_bytewise <- function(
   }
   got
 }
+
+# The start of an xz stream: its magic number and stream flags.
+xz_header <- function() {
+  c(as.raw(c(0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00, 0x00, 0x04)), raw(20))
+}
