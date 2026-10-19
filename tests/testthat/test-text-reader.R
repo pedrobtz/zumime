@@ -191,3 +191,35 @@ test_that("an SPSS portable file is found by its SPSSPORT marker", {
   por <- paste0(paste(lines, collapse = "\r\n"), "SPSSPORT", "A8/...")
   expect_identical(sniff_type(por), "application/x-spss-por")
 })
+
+test_that("XHTML without an XML declaration stays text/html", {
+  # As Go's net/http, libmagic and puremagic answer: the standard's HTML
+  # rows decide, and the text reader does not run after text/html.
+  body <- "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body/></html>"
+  doctype <- paste0(
+    "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" ",
+    "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
+  )
+  for (x in c(body, paste0(doctype, "\n", body))) {
+    r <- mime_sniff(charToRaw(x))
+    expect_identical(r$type, "text/html")
+    expect_identical(as.character(r$confidence), "definite")
+  }
+  r <- mime_sniff(charToRaw(paste0("<?xml version=\"1.0\"?>\n", body)))
+  expect_identical(r$type, "application/xhtml+xml")
+})
+
+test_that("JSON nested past the depth limit is still JSON when it closes", {
+  deep <- function(d, inner = "1") {
+    charToRaw(paste0(strrep("[", d), inner, strrep("]", d)))
+  }
+  expect_identical(sniff_type(deep(30)), "application/json")
+  expect_identical(sniff_type(deep(70)), "application/json")
+  # Brackets inside a string past the limit do not count.
+  expect_identical(sniff_type(deep(70, "\"]]\\\"[\"")), "application/json")
+  # Unclosed and whole: not JSON.
+  expect_identical(sniff_type(charToRaw(strrep("[", 70))), "text/plain")
+  # Unclosed but cut by the limit: JSON so far.
+  long <- deep(3000)
+  expect_identical(mime_sniff(long, limit = 4096)$type, "application/json")
+})

@@ -44,6 +44,7 @@ SEXP zumime_stream_buffer(SEXP s);
 SEXP zumime_stream_push(SEXP s, SEXP chunk, SEXP final, SEXP limit,
                         SEXP supplied, SEXP apache_bug, SEXP no_sniff,
                         SEXP context, SEXP hold);
-SEXP zumime_stream_bytewise(SEXP x, SEXP limit);
+SEXP zumime_stream_bytewise(SEXP x, SEXP limit, SEXP supplied,
+                            SEXP apache_bug, SEXP no_sniff, SEXP context);
 
 #endif

@@ -18,11 +18,14 @@
 #' finding, not an error.
 #'
 #' The default answer depends on nothing outside the package. Three
-#' arguments ask for a suggested package: `inner = "decompress"` (zukomp),
-#' `text = "family"` (zucsv, zujson and zutoml, each used when installed),
-#' and `charset = "detect"` (zuutf). An argument whose package is absent
-#' raises `zumime_dependency_error`; `text = "family"` uses whichever
-#' sniffers are installed, listed by `zumime_info()$family`.
+#' arguments ask for an optional family package. `inner = "decompress"`
+#' uses zukomp. `charset = "detect"` uses zuutf. `text = "family"` uses
+#' zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
+#' yet on CRAN; install them from GitHub. An argument whose package is
+#' absent raises `zumime_dependency_error`. `text = "family"` uses whichever
+#' sniffers are installed, listed by `zumime_info()$family`. An error inside
+#' an optional package leaves that answer as it was, so a corrupt stream
+#' keeps the name's `inner`.
 #'
 #' @param path A character vector of paths.
 #' @param limit The number of bytes to read from each file; `0` reads whole
@@ -39,7 +42,8 @@
 #'   decompresses gzip with zukomp and sniffs the result, falling back to
 #'   the name for other wrappers and for files over 16 MiB.
 #' @param text `"whatwg"` keeps the standard's answer for text; `"family"`
-#'   offers a still generic `text/plain` to the family's sniffers.
+#'   offers a still generic `text/plain` to the family's sniffers, which
+#'   read whole files.
 #' @param charset `"declared"` reports the charset the bytes declare;
 #'   `"detect"` asks zuutf where they declare none, or only the C1 guess.
 #' @param strict If `TRUE`, an unreadable path raises `zumime_io_error`.
@@ -120,9 +124,9 @@ sniff_paths <- function(
   no_sniff = FALSE,
   context = 0L
 ) {
-  .Call(
+  res <- .Call(
     zumime_sniff_paths,
-    enc2native(path.expand(path)),
+    path.expand(path),
     limit,
     complete,
     supplied$essence,
@@ -130,6 +134,18 @@ sniff_paths <- function(
     no_sniff,
     context
   )
+  if (isTRUE(attr(res, "interrupted"))) {
+    resignal_interrupt()
+  }
+  names(res) <- path_fields
+  res
+}
+
+# The C loop caught an interrupt inside a long read so it could close the
+# file first; raise it again as R would have.
+resignal_interrupt <- function() {
+  signalCondition(structure(class = c("interrupt", "condition"), list()))
+  invokeRestart("abort")
 }
 
 check_paths <- function(path) {
@@ -143,57 +159,25 @@ check_paths <- function(path) {
   path
 }
 
-check_choice <- function(x, choices, arg = deparse(substitute(x))) {
-  if (identical(x, choices)) {
-    return(choices[1])
-  }
-  if (!is.character(x) || length(x) != 1L || !(x %in% choices)) {
-    zumime_abort(
-      "type",
-      sprintf(
-        "`%s` must be one of %s.",
-        arg,
-        paste0("\"", choices, "\"", collapse = ", ")
-      ),
-      call = sys.call(-1L)
-    )
-  }
-  x
-}
-
 check_strict <- function(path, res, strict) {
-  bad <- which(!is.na(res[[8]]))
+  bad <- which(!is.na(res$error))
   if (strict && length(bad)) {
     i <- bad[1]
     zumime_abort(
       "io",
-      sprintf("Cannot read \"%s\": %s.", path[i], res[[8]][i]),
-      call = sys.call(-1L)
-    )
-  }
-}
-
-need_package <- function(pkg, what) {
-  if (!has_package(pkg)) {
-    zumime_abort(
-      "dependency",
-      sprintf(
-        "%s needs the %s package, which is not installed.",
-        what,
-        pkg
-      ),
+      sprintf("Cannot read \"%s\": %s.", path[i], res$error[i]),
       call = sys.call(-1L)
     )
   }
 }
 
 path_result <- function(path, res, supplied = NULL) {
-  type <- res[[1]]
-  supplied_rows <- is.na(type) & is.na(res[[8]])
+  type <- res$type
+  supplied_rows <- is.na(type) & is.na(res$error)
   if (any(supplied_rows)) {
     type[supplied_rows] <- supplied$essence
   }
-  charset <- res[[3]]
+  charset <- res$charset
   if (!is.null(supplied$charset)) {
     text_rows <- supplied_rows | mime_is(type, "text/plain") %in% TRUE
     charset[text_rows & !is.na(type)] <- supplied$charset
@@ -201,12 +185,12 @@ path_result <- function(path, res, supplied = NULL) {
   new_result(
     path = path,
     type = type,
-    confidence = res[[2]],
+    confidence = res$confidence,
     charset = charset,
-    encrypted = res[[4]],
-    complete = res[[5]],
-    newline = res[[6]],
-    interpreter = res[[7]]
+    encrypted = res$encrypted,
+    complete = res$complete,
+    newline = res$newline,
+    interpreter = res$interpreter
   )
 }
 
@@ -220,7 +204,8 @@ agree <- function(type, confidence, by_name) {
   if (!any(known)) {
     return(out)
   }
-  # Once per distinct pair: a tree has few.
+  # Once per distinct pair: a tree has few. A carriage return cannot occur
+  # in a type, so it separates the two unambiguously.
   key <- paste(type, by_name, sep = "\r")
   pairs <- unique(data.frame(key, type, by_name)[known, , drop = FALSE])
   one <- vapply(
@@ -235,23 +220,21 @@ agree <- function(type, confidence, by_name) {
   out
 }
 
-wrapper_types <- function() {
-  c(
-    "application/gzip",
-    "application/x-bzip2",
-    "application/x-xz",
-    "application/zstd",
-    "application/x-lz4",
-    "application/lzip",
-    "application/x-compress"
-  )
-}
+wrapper_types <- c(
+  "application/gzip",
+  "application/x-bzip2",
+  "application/x-xz",
+  "application/zstd",
+  "application/x-lz4",
+  "application/lzip",
+  "application/x-compress"
+)
 
 # The type inside a compression wrapper, from the rest of the name or, with
 # "decompress", from the bytes zukomp inflates.
 inner_type <- function(out, inner, limit) {
   res <- rep(NA_character_, nrow(out))
-  wrapped <- which(out$type %in% wrapper_types())
+  wrapped <- which(out$type %in% wrapper_types)
   if (!length(wrapped)) {
     return(res)
   }
@@ -280,8 +263,13 @@ decompress_type <- function(path, limit) {
   if (is.na(size) || size > cap) {
     return(NA_character_)
   }
-  bytes <- readBin(path, "raw", size)
+  bytes <- read_bytes(path, 0)
+  if (is.null(bytes)) {
+    return(NA_character_)
+  }
   decompress <- suggested_fun("zukomp", "komp_decompress")
+  # An optional package's failure degrades the answer, never raises
+  # (design D6): a corrupt stream keeps the name's answer.
   out <- tryCatch(
     decompress(bytes, "gzip", max_output = cap),
     error = function(e) NULL
@@ -298,26 +286,30 @@ family_refine <- function(out) {
   sniffers <- family_sniffers()
   rows <- which(out$type %in% "text/plain")
   for (i in rows) {
-    t <- NA_character_
-    for (s in sniffers) {
-      t <- tryCatch(s(out$path[i]), error = function(e) NA_character_)
-      if (!is.na(t)) break
+    found <- NA_character_
+    for (sniffer in sniffers) {
+      # An optional package's failure leaves the row as it was (design D6).
+      found <- tryCatch(
+        sniffer(out$path[i]),
+        error = function(e) NA_character_
+      )
+      if (!is.na(found)) break
     }
-    if (!is.na(t)) {
-      out$type[i] <- t
+    if (!is.na(found)) {
+      out$type[i] <- found
       out$confidence[i] <- min(
         out$confidence[i],
-        factor("probable", levels = confidence_levels, ordered = TRUE)
+        as_confidence("probable")
       )
     }
   }
   out
 }
 
-family_packages <- function() c("zucsv", "zujson", "zutoml")
+family_packages <- c("zucsv", "zujson", "zutoml")
 
 family_sniffers <- function() {
-  have <- vapply(family_packages(), has_package, logical(1))
+  have <- vapply(family_packages, has_package, logical(1))
   sniffers <- list(
     zucsv = function(path) {
       sniff <- suggested_fun("zucsv", "sniff_csv")
@@ -353,23 +345,13 @@ detect_charset <- function(out, limit) {
       (is.na(out$charset) | out$charset %in% c("windows-1252", "ISO-8859-1"))
   )
   for (i in rows) {
-    bytes <- readBin(
-      out$path[i],
-      "raw",
-      if (limit > 0) {
-        limit
-      } else {
-        file.size(out$path[i])
-      }
-    )
+    bytes <- read_bytes(out$path[i], limit)
+    if (is.null(bytes)) {
+      next
+    }
+    # An optional package's failure leaves the charset as it was (D6).
     cand <- tryCatch(detect(bytes), error = function(e) character())
     if (length(cand)) out$charset[i] <- cand[1]
   }
   out
 }
-
-# The one place a suggested package is looked up, so tests can stand in for
-# packages CI does not install (zuutf and zutoml are not on CRAN).
-has_package <- function(pkg) requireNamespace(pkg, quietly = TRUE)
-
-suggested_fun <- function(pkg, name) getExportedValue(pkg, name)

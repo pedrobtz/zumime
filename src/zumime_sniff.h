@@ -184,6 +184,26 @@ int zumime_read_zip(const unsigned char *head, size_t hlen, int head_is_whole,
                     uint64_t tail_off, int *encrypted);
 int zumime_zip_cd_offset(const unsigned char *buf, size_t len, uint64_t buf_off,
                          uint64_t *cd_off);
+
+/* The path loop's ZIP tail (design section 6.2). ZUMIME_ZIP_TAIL bytes
+ * before the end hold the end-of-central-directory record wherever its
+ * comment puts it. */
+#define ZUMIME_ZIP_TAIL (22u + 65535u)
+/* A central directory that starts before the tail is read whole, from its
+ * start, when it is at most this long. */
+#define ZUMIME_ZIP_CD_MAX (8u * 1024u * 1024u)
+
+/* Where to read the tail of a file of `size` bytes: [*off, *off + *len). */
+void zumime_zip_tail_window(uint64_t size, uint64_t *off, size_t *len);
+
+/* With the tail read, whether to read instead the window from the central
+ * directory's start to the end of the file: 1 and [*off, *off + *len) when
+ * the directory starts before the tail and past the head and fits
+ * ZUMIME_ZIP_CD_MAX, else 0. Pure arithmetic over the tail's bytes, so the
+ * fuzz harness can run it on an in-memory file. */
+int zumime_zip_cd_window(const unsigned char *tail, size_t tail_len,
+                         uint64_t tail_off, uint64_t size, size_t head_len,
+                         uint64_t *off, size_t *len);
 int zumime_read_ole2(const unsigned char *buf, size_t len, int *encrypted);
 /* The OLE2 reader over any byte source: get() returns n bytes at off, in
  * scratch (at least n bytes) or in place, or NULL when not available. */

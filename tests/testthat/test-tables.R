@@ -4,16 +4,17 @@ test_that("regenerating from the recorded sources reproduces the tables", {
   skip_if_not_oracle_package("yaml")
   skip_if_not_oracle_package("digest")
   out <- withr::local_tempdir()
-  status <- withr::with_dir(
+  log <- withr::with_dir(
     root,
-    system2(
+    suppressWarnings(system2(
       file.path(R.home("bin"), "Rscript"),
       c("tools/generate-tables.R", paste0("--out=", out)),
-      stdout = FALSE,
-      stderr = FALSE
-    )
+      stdout = TRUE,
+      stderr = TRUE
+    ))
   )
-  expect_identical(status, 0L)
+  # The generator's own output says why it failed.
+  expect_null(attr(log, "status"), info = paste(log, collapse = "\n"))
 
   header <- file.path(out, "src", "zumime_types.h")
   committed <- file.path(root, "src", "zumime_types.h")

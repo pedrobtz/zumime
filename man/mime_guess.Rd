@@ -23,4 +23,11 @@ mime_guess(c("report.FINAL.PDF", "data.tar.gz", "README", "x.rds"))
 }
 \seealso{
 \code{\link[=mime_extensions]{mime_extensions()}} for the reverse.
+
+Other registry:
+\code{\link[=mime_extensions]{mime_extensions()}},
+\code{\link[=mime_is]{mime_is()}},
+\code{\link[=mime_parent]{mime_parent()}},
+\code{\link[=mime_types]{mime_types()}}
 }
+\concept{registry}

@@ -345,6 +345,8 @@ stream_inputs <- function() {
     elf = c(charToRaw("\x7fELF"), raw(60)),
     rds = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20))),
     ws = charToRaw("      "),
+    # Tag-terminated row that does not match: "<html" then "x".
+    htmlx = charToRaw("<htmlx lang=en>words"),
     short = as.raw(0xff),
     jpeg = as.raw(c(0xff, 0xd8, 0xff, 0xe0, 0, 0)),
     apng = c(
@@ -415,4 +417,35 @@ pack_bits <- function(bits) {
   bits <- c(bits, rep(0L, (8 - length(bits) %% 8) %% 8))
   m <- matrix(bits, nrow = 8)
   as.raw(colSums(m * 2^(0:7)))
+}
+
+# Feed x one byte at a time to a fresh sniffer, in C: list(bytes taken,
+# type decided, decided before the end). A supplied type that stands is
+# reported as its essence, as mime_sniff() does.
+stream_bytewise <- function(
+  x,
+  limit = 4096,
+  type = NULL,
+  no_sniff = FALSE,
+  context = "none"
+) {
+  supplied <- supplied_type(type)
+  got <- .Call(
+    zumime_stream_bytewise,
+    x,
+    as.double(limit),
+    supplied$essence,
+    supplied$apache_bug,
+    no_sniff,
+    check_context(context)
+  )
+  if (is.na(got[[2]]) && !is.null(supplied$essence)) {
+    got[[2]] <- supplied$essence
+  }
+  got
+}
+
+# The start of an xz stream: its magic number and stream flags.
+xz_header <- function() {
+  c(as.raw(c(0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00, 0x00, 0x04)), raw(20))
 }

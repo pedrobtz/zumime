@@ -136,14 +136,29 @@ static int walk_central(zip_scan *z, const unsigned char *b, size_t len,
   return seen > 0;
 }
 
+/* The end-of-central-directory record in buf, which ends where the file
+ * does: the last signature whose comment length reaches the end, so a
+ * signature inside the comment is passed over, else the last signature
+ * (an archive with bytes after its comment). Its offset, or -1. */
+static long find_eocd(const unsigned char *buf, size_t len) {
+  if (len < 22) return -1;
+  size_t lo = len > EOCD_SEARCH ? len - EOCD_SEARCH : 0;
+  long first = -1;
+  for (size_t i = len - 22 + 1; i-- > lo;) {
+    if (memcmp(buf + i, "PK\x05\x06", 4) != 0) continue;
+    if (first < 0) first = (long) i;
+    if (i + 22 + zumime_le16(buf + i + 20) == len) return (long) i;
+  }
+  return first;
+}
+
 /* Find the end-of-central-directory record in buf, which ends at file
  * offset buf_off + len, and walk the directory if buf (or head) holds it. */
 static int from_eocd(zip_scan *z, const unsigned char *buf, size_t len,
                      uint64_t buf_off, const unsigned char *head, size_t hlen) {
-  if (len < 22) return 0;
-  size_t lo = len > EOCD_SEARCH ? len - EOCD_SEARCH : 0;
-  for (size_t i = len - 22 + 1; i-- > lo;) {
-    if (memcmp(buf + i, "PK\x05\x06", 4) != 0) continue;
+  long at = find_eocd(buf, len);
+  if (at >= 0) {
+    size_t i = (size_t) at;
     unsigned count = zumime_le16(buf + i + 10);
     uint32_t cd_size = zumime_le32(buf + i + 12);
     uint32_t cd_off = zumime_le32(buf + i + 16);
@@ -258,14 +273,28 @@ int zumime_read_zip(const unsigned char *head, size_t hlen, int head_is_whole,
 int zumime_zip_cd_offset(const unsigned char *buf, size_t len, uint64_t buf_off,
                          uint64_t *cd_off) {
   (void) buf_off;
-  if (len < 22) return 0;
-  size_t lo = len > EOCD_SEARCH ? len - EOCD_SEARCH : 0;
-  for (size_t i = len - 22 + 1; i-- > lo;) {
-    if (memcmp(buf + i, "PK\x05\x06", 4) != 0) continue;
-    uint32_t off = zumime_le32(buf + i + 16);
-    if (off == 0xFFFFFFFFu) return 0;
-    *cd_off = off;
-    return 1;
-  }
-  return 0;
+  long at = find_eocd(buf, len);
+  if (at < 0) return 0;
+  uint32_t off = zumime_le32(buf + at + 16);
+  if (off == 0xFFFFFFFFu) return 0;
+  *cd_off = off;
+  return 1;
+}
+
+void zumime_zip_tail_window(uint64_t size, uint64_t *off, size_t *len) {
+  *len = size < ZUMIME_ZIP_TAIL ? (size_t) size : ZUMIME_ZIP_TAIL;
+  *off = size - *len;
+}
+
+int zumime_zip_cd_window(const unsigned char *tail, size_t tail_len,
+                         uint64_t tail_off, uint64_t size, size_t head_len,
+                         uint64_t *off, size_t *len) {
+  uint64_t cd = 0;
+  if (!zumime_zip_cd_offset(tail, tail_len, tail_off, &cd)) return 0;
+  if (cd >= tail_off || cd < head_len || cd > size ||
+      size - cd > ZUMIME_ZIP_CD_MAX)
+    return 0;
+  *off = cd;
+  *len = (size_t) (size - cd);
+  return 1;
 }

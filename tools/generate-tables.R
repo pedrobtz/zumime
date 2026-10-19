@@ -166,6 +166,15 @@ for (a in names(alias_to)) {
 
 types <- sort(names(ext_of), method = "radix")
 
+# Every type and alias must be a lower-case token pair (RFC 9110), so it is
+# safe inside a C string literal and parses as a MIME type.
+token <- "[a-z0-9!#$%&'*+.^_`|~-]+"
+names_seen <- c(types, names(alias_to))
+bad <- !grepl(paste0("^", token, "/", token, "$"), names_seen)
+if (any(bad)) {
+  stop("not a lower-case type/subtype token pair: ", toString(names_seen[bad]))
+}
+
 # --- Extensions -------------------------------------------------------------
 
 # types.yaml claims first, then the sources in their order: the first type
@@ -192,6 +201,21 @@ extensions <- lapply(types, function(type) {
   e
 })
 names(extensions) <- types
+
+# A canonical extension must map back to its type in mime_guess().
+for (type in names(spec)) {
+  canon <- spec[[type]]$canonical
+  if (!is.null(canon) && !identical(unname(owner[canon]), resolve(type))) {
+    stop(
+      "canonical extension ",
+      canon,
+      " of ",
+      type,
+      " maps to ",
+      owner[canon]
+    )
+  }
+}
 owner <- owner[order(names(owner), method = "radix")]
 
 # --- Parents ----------------------------------------------------------------
@@ -226,6 +250,28 @@ parent <- vapply(
 bad <- !is.na(parent) & !(parent %in% types)
 if (any(bad)) {
   stop("unknown parent: ", paste(types[bad], parent[bad]))
+}
+
+# One root, application/octet-stream, and every type reaches it: a walk up
+# longer than the number of types has met a cycle.
+roots <- types[is.na(parent)]
+if (!identical(roots, "application/octet-stream")) {
+  stop(
+    "the root must be application/octet-stream alone, not: ",
+    toString(roots)
+  )
+}
+parent_idx <- match(parent, types)
+cur <- seq_along(types)
+for (step in seq_along(types)) {
+  up <- !is.na(parent_idx[cur])
+  if (!any(up)) {
+    break
+  }
+  cur[up] <- parent_idx[cur[up]]
+}
+if (any(!is.na(parent_idx[cur]))) {
+  stop("parent cycle through: ", toString(types[cur[!is.na(parent_idx[cur])]]))
 }
 
 aliases <- lapply(types, function(type) {
@@ -263,12 +309,32 @@ types_table_version <- table_version
 
 # --- C header ---------------------------------------------------------------
 
-enum_names <- paste0("ZUMIME_T_", toupper(gsub("[^A-Za-z0-9]", "_", types)))
-dup <- duplicated(enum_names)
-while (any(dup)) {
-  enum_names[dup] <- paste0(enum_names[dup], "_2")
-  dup <- duplicated(enum_names)
+# An enum name comes from the type, punctuation as underscores. Types that
+# collide (model/x3d+vrml, model/x3d-vrml) take their name from an `enum:`
+# field in types.yaml, so a new upstream type never renames an old one; an
+# unsettled collision stops the generator.
+enum_names <- toupper(gsub("[^A-Za-z0-9]", "_", types))
+override <- vapply(
+  types,
+  function(type) {
+    e <- spec[[type]]$enum
+    if (is.null(e)) NA_character_ else e
+  },
+  ""
+)
+enum_names[!is.na(override)] <- override[!is.na(override)]
+bad <- !grepl("^[A-Z0-9_]+$", enum_names)
+if (any(bad)) {
+  stop("enum name is not an upper-case identifier: ", toString(types[bad]))
 }
+dup <- enum_names %in% enum_names[duplicated(enum_names)]
+if (any(dup)) {
+  stop(
+    "enum names collide; set `enum:` in tools/types.yaml for: ",
+    toString(types[dup])
+  )
+}
+enum_names <- paste0("ZUMIME_T_", enum_names)
 parent_id <- match(parent, types) - 1L
 parent_id[is.na(parent_id)] <- -1L
 

@@ -4,6 +4,8 @@
 
 test_that("every signature row matches an input generated from it", {
   rows <- .Call(zumime_signature_rows)
+  # A floor, not a count: the standard's tables alone have more than 50
+  # rows, so fewer means the table failed to load.
   expect_gt(length(rows$type), 50L)
   for (i in seq_along(rows$type)) {
     got <- sniff_row(rows, i, row_input(rows, i))
@@ -22,6 +24,7 @@ test_that("every signature row matches an input generated from it", {
 test_that("case-insensitive rows match lower case and '>' terminates", {
   rows <- .Call(zumime_signature_rows)
   tt <- which(bitwAnd(rows$flags, 2L) != 0L)
+  # The standard's tag-terminated rows: the 17 HTML tags of section 7.1.
   expect_length(tt, 17L)
   for (i in tt) {
     pat <- rows$pattern[[i]]

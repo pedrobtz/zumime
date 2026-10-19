@@ -58,3 +58,7 @@ test_that("every extension of every type maps back to it or a descendant", {
     expect_true(all(mime_is(back, types$type[i])), info = types$type[i])
   }
 })
+
+test_that("a suffix of 64 or more characters is not looked up", {
+  expect_identical(mime_guess(paste0("a.", strrep("x", 70))), NA_character_)
+})

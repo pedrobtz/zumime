@@ -490,9 +490,36 @@ static int jcontainer(json *j, int depth, int object) {
   }
 }
 
+/* A container past the depth limit, at its opening bracket: only the
+ * brackets are matched, outside strings, without recursion. */
+static int jbalanced(json *j) {
+  size_t open = 0;
+  while (j->pos < j->len) {
+    unsigned char c = j->b[j->pos++];
+    if (c == '"') {
+      while (j->pos < j->len && j->b[j->pos] != '"') {
+        if (j->b[j->pos] == '\\') j->pos++;
+        j->pos++;
+      }
+      if (j->pos >= j->len) {
+        j->pos = j->len; /* an escape may have stepped past the end */
+        return J_PARTIAL;
+      }
+      j->pos++;
+    } else if (c == '[' || c == '{') {
+      open++;
+    } else if (c == ']' || c == '}') {
+      if (--open == 0) return J_OK;
+    }
+  }
+  return J_PARTIAL;
+}
+
 static int jvalue(json *j, int depth) {
-  if (depth > 64) return J_PARTIAL; /* deep enough: stop looking */
   jskip(j);
+  if (depth > 64 && j->pos < j->len &&
+      (j->b[j->pos] == '[' || j->b[j->pos] == '{'))
+    return jbalanced(j); /* deep enough: match brackets only */
   if (j->pos >= j->len) return J_PARTIAL;
   unsigned char c = j->b[j->pos];
   size_t s, n;

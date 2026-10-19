@@ -37,8 +37,10 @@ A data rule, \code{list(offset, bytes, mask)}, runs in C whenever the bytes
 have been typed as the parent, costs what a built-in signature costs,
 and is reported at \code{"definite"}. A function rule is called from R with
 the bytes read and must return \code{TRUE} or \code{FALSE}; it runs last, only when
-the parent matched, and is reported at \code{"probable"}. A data rule cannot sit
-under a type that a function rule decides, since data rules run first.
+the parent matched, and is reported at \code{"probable"}. A function rule that
+raises an error counts as \code{FALSE}, and the call warns once with a
+\code{zumime_rule_warning} naming the type. A data rule cannot sit under a type
+that a function rule decides, since data rules run first.
 }
 \examples{
 mime_register("application/x-zumime-demo", "application/octet-stream",

@@ -34,7 +34,8 @@ decompresses gzip with zukomp and sniffs the result, falling back to
 the name for other wrappers and for files over 16 MiB.}
 
 \item{text}{\code{"whatwg"} keeps the standard's answer for text; \code{"family"}
-offers a still generic \code{text/plain} to the family's sniffers.}
+offers a still generic \code{text/plain} to the family's sniffers, which
+read whole files.}
 
 \item{charset}{\code{"declared"} reports the charset the bytes declare;
 \code{"detect"} asks zuutf where they declare none, or only the C1 guess.}
@@ -66,11 +67,14 @@ named \code{.txt}; and \code{NA} when either is unknown. A disagreement is a
 finding, not an error.
 
 The default answer depends on nothing outside the package. Three
-arguments ask for a suggested package: \code{inner = "decompress"} (zukomp),
-\code{text = "family"} (zucsv, zujson and zutoml, each used when installed),
-and \code{charset = "detect"} (zuutf). An argument whose package is absent
-raises \code{zumime_dependency_error}; \code{text = "family"} uses whichever
-sniffers are installed, listed by \code{zumime_info()$family}.
+arguments ask for an optional family package. \code{inner = "decompress"}
+uses zukomp. \code{charset = "detect"} uses zuutf. \code{text = "family"} uses
+zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
+yet on CRAN; install them from GitHub. An argument whose package is
+absent raises \code{zumime_dependency_error}. \code{text = "family"} uses whichever
+sniffers are installed, listed by \code{zumime_info()$family}. An error inside
+an optional package leaves that answer as it was, so a corrupt stream
+keeps the name's \code{inner}.
 }
 \examples{
 dir <- tempfile()

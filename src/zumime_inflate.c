@@ -351,6 +351,7 @@ static int gzip_member(state *s, unsigned char id1) {
 }
 
 int zumime_gzip_complete(zumime_reader read, void *ctx) {
+  /* Allocation failure is not provoked by the tests; it gives NA. */
   state *s = (state *) calloc(1, sizeof(state));
   unsigned char *buf = (unsigned char *) malloc(65536);
   if (s == NULL || buf == NULL) {

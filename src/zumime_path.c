@@ -24,8 +24,6 @@
 #include "zumime_r.h"
 #include "zumime_sniff.h"
 
-#define TAIL_LEN (22u + 65535u)
-#define CD_MAX (8u * 1024u * 1024u)
 
 /* --- Files ------------------------------------------------------------------ */
 
@@ -96,6 +94,26 @@ static FILE *open_path(const char *path, int *special) {
 #endif
 }
 
+/* The size of a regular file at `path` by stat, or -1. Asked before the
+ * file is opened, so the head buffer can grow while nothing is open. */
+static int64_t path_size(const char *path) {
+#ifdef _WIN32
+  int n = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
+  if (n <= 0) return -1;
+  wchar_t *w = (wchar_t *) malloc((size_t) n * sizeof(wchar_t));
+  if (w == NULL) return -1;
+  MultiByteToWideChar(CP_UTF8, 0, path, -1, w, n);
+  struct _stat64 st;
+  int ok = _wstat64(w, &st) == 0;
+  free(w);
+  return ok ? (int64_t) st.st_size : -1;
+#else
+  struct stat st;
+  return stat(path, &st) == 0 && S_ISREG(st.st_mode) ? (int64_t) st.st_size
+                                                       : -1;
+#endif
+}
+
 static int64_t file_size(FILE *f) {
   if (fseek64(f, 0, SEEK_END) != 0) return -1;
   foff n = ftell64(f);
@@ -109,8 +127,36 @@ static size_t read_at(FILE *f, int64_t offset, unsigned char *buf, size_t n) {
   return fread(buf, 1, n, f);
 }
 
+/* A file read by the streaming inflater, which can run for minutes on a
+ * large file. Every few MiB it lets R check for an interrupt inside
+ * R_ToplevelExec(), so no longjmp passes the open file or the inflater's
+ * buffers; on an interrupt it reports the end of the file, the inflater
+ * returns, and the caller raises the interrupt after cleaning up. */
+typedef struct {
+  FILE *f;
+  size_t since_check;
+  int interrupted;
+} interruptible_file;
+
+#define INTERRUPT_EVERY (4u * 1024u * 1024u)
+
+static void check_interrupt(void *data) {
+  (void) data;
+  R_CheckUserInterrupt();
+}
+
 static size_t file_reader(void *ctx, unsigned char *buf, size_t n) {
-  return fread(buf, 1, n, (FILE *) ctx);
+  interruptible_file *r = (interruptible_file *) ctx;
+  if (r->interrupted) return 0;
+  r->since_check += n;
+  if (r->since_check >= INTERRUPT_EVERY) {
+    r->since_check = 0;
+    if (!R_ToplevelExec(check_interrupt, NULL)) {
+      r->interrupted = 1;
+      return 0;
+    }
+  }
+  return fread(buf, 1, n, r->f);
 }
 
 static int find(const unsigned char *b, size_t len, const char *lit) {
@@ -153,6 +199,7 @@ typedef struct {
   int complete; /* -1 NA, 0, 1 */
   int is_dir;
   int failed;
+  int interrupted; /* the user interrupted the completeness read */
   char error[128];
 } path_result;
 
@@ -198,14 +245,21 @@ static const unsigned char *file_get(void *ctx, uint64_t off, size_t n,
 
 /* complete = TRUE: does the file end as its format says it must? */
 static int completeness(FILE *f, int64_t size, const unsigned char *head,
-                        size_t head_len, zumime_result *r) {
+                        size_t head_len, zumime_result *r, int *interrupted) {
   int t = r->type;
   unsigned char tail[4096];
   if (zumime_type_is(t, ZUMIME_T_APPLICATION_ZIP)) {
-    size_t n = size < (int64_t) TAIL_LEN ? (size_t) size : TAIL_LEN;
+    uint64_t at;
+    size_t n;
+    zumime_zip_tail_window((uint64_t) size, &at, &n);
     unsigned char *buf = (unsigned char *) malloc(n ? n : 1);
     if (buf == NULL) return -1;
-    size_t got = read_at(f, size - (int64_t) n, buf, n);
+    size_t got = read_at(f, (int64_t) at, buf, n);
+    /* A tail that cannot be read says nothing about completeness. */
+    if (got == 0) {
+      free(buf);
+      return -1;
+    }
     int ok = 0;
     for (size_t i = got >= 22 ? got - 22 + 1 : 0; i-- > 0;)
       if (memcmp(buf + i, "PK\x05\x06", 4) == 0) {
@@ -218,31 +272,37 @@ static int completeness(FILE *f, int64_t size, const unsigned char *head,
   if (t == ZUMIME_T_APPLICATION_PDF) {
     size_t n = size < 4096 ? (size_t) size : 4096;
     size_t got = read_at(f, size - (int64_t) n, tail, n);
+    if (got == 0) return -1;
     size_t last = got < 1024 ? got : 1024;
     r->encrypted = pdf_encrypted(tail, got);
     return find(tail + got - last, last, "%%EOF");
   }
   if (t == ZUMIME_T_APPLICATION_VND_APACHE_PARQUET) {
     if (size < 8) return 0;
-    return read_at(f, size - 4, tail, 4) == 4 && memcmp(tail, "PAR1", 4) == 0;
+    if (read_at(f, size - 4, tail, 4) != 4) return -1;
+    return memcmp(tail, "PAR1", 4) == 0;
   }
   if (head_len >= 2 && head[0] == 0x1F && head[1] == 0x8B &&
       (t == ZUMIME_T_APPLICATION_GZIP || t == ZUMIME_T_APPLICATION_X_RDS ||
        t == ZUMIME_T_APPLICATION_X_RDATA)) {
     if (fseek64(f, 0, SEEK_SET) != 0) return -1;
-    return zumime_gzip_complete(file_reader, f);
+    interruptible_file rf = {f, 0, 0};
+    int ok = zumime_gzip_complete(file_reader, &rf);
+    *interrupted = rf.interrupted;
+    return rf.interrupted ? -1 : ok;
   }
   return -1;
 }
 
-/* Sniff one path into *out. head is a buffer of head_cap bytes (limit > 0);
- * with limit 0 the whole file is read into a buffer of its own. */
+/* Sniff one path into *out. head is a buffer of head_cap bytes, which
+ * reserve_head() sized for this file (limit > 0); with limit 0 the whole
+ * file is read into a buffer of its own. */
 typedef int (*base_gate)(void *ctx, int base);
 
 static void sniff_path(const char *path, size_t limit, int want_complete,
                        const zumime_input *proto, unsigned char *head,
-                       path_result *out, base_gate gate, void *gate_ctx,
-                       int *gated_out) {
+                       size_t head_cap, path_result *out, base_gate gate,
+                       void *gate_ctx, int *gated_out) {
   memset(out, 0, sizeof(*out));
   out->complete = -1;
   out->r.encrypted = -1;
@@ -252,7 +312,10 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
   if (special >= 0) {
     out->is_dir = 1;
     out->r.type = special;
-    out->r.confidence = ZUMIME_CONF_DEFINITE;
+    /* An inode of no known kind is the floor, which carries no evidence. */
+    out->r.confidence = special == ZUMIME_T_APPLICATION_OCTET_STREAM
+                            ? ZUMIME_CONF_NONE
+                            : ZUMIME_CONF_DEFINITE;
     return;
   }
   if (f == NULL) {
@@ -272,7 +335,9 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
   }
 
   unsigned char *own = NULL;
-  size_t cap = limit;
+  /* The buffer holds the head stat saw; a file that grew since is read to
+   * that size and sniffed as truncated. */
+  size_t cap = limit < head_cap ? limit : head_cap;
   if (limit == 0) {
     cap = (size_t) size;
     /* Allocation failure is not provoked by the tests; the alloc-failure
@@ -314,18 +379,24 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
   unsigned char *tail = NULL;
   if (in.truncated && proto->context == ZUMIME_CTX_NONE && !proto->base_only &&
       head_len >= 4 && memcmp(head, "PK\x03\x04", 4) == 0) {
-    size_t n = size < (int64_t) TAIL_LEN ? (size_t) size : TAIL_LEN;
+    uint64_t at;
+    size_t n;
+    zumime_zip_tail_window((uint64_t) size, &at, &n);
+    /* An allocation failure here or for the wider window below is not
+     * provoked by the tests: the sniff goes on from the head alone, as for
+     * a central directory over ZUMIME_ZIP_CD_MAX, which a test would need
+     * an 8 MiB directory to reach. */
     tail = (unsigned char *) malloc(n);
     if (tail != NULL) {
       in.tail = tail;
-      in.tail_len = read_at(f, size - (int64_t) n, tail, n);
-      in.tail_off = (uint64_t) (size - (int64_t) n);
+      in.tail_len = read_at(f, (int64_t) at, tail, n);
+      in.tail_off = at;
       /* A central directory that starts before the tail (an archive of
-       * many entries) is read from its start, up to CD_MAX bytes. */
-      uint64_t cd = 0;
-      if (zumime_zip_cd_offset(tail, in.tail_len, in.tail_off, &cd) &&
-          cd < in.tail_off && cd >= head_len && (uint64_t) size - cd <= CD_MAX) {
-        size_t m = (size_t) ((uint64_t) size - cd);
+       * many entries) is read from its start. */
+      uint64_t cd;
+      size_t m;
+      if (zumime_zip_cd_window(tail, in.tail_len, in.tail_off,
+                               (uint64_t) size, head_len, &cd, &m)) {
         unsigned char *wide = (unsigned char *) malloc(m);
         if (wide != NULL) {
           free(tail);
@@ -350,7 +421,8 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
     out->r.encrypted = enc;
   }
   if (want_complete && out->r.type != ZUMIME_SUPPLIED)
-    out->complete = completeness(f, size, head, head_len, &out->r);
+    out->complete =
+        completeness(f, size, head, head_len, &out->r, &out->interrupted);
 
   free(tail);
   free(own);
@@ -358,6 +430,27 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
 }
 
 /* --- The loop ---------------------------------------------------------------- */
+
+/* The head buffer, sized by need: the largest head read so far, never more
+ * than the limit, so a large limit costs nothing for small files. It grows
+ * by doubling with R_alloc() between files, while nothing is open. */
+typedef struct {
+  unsigned char *p;
+  size_t cap;
+} head_buf;
+
+static void reserve_head(head_buf *hb, const char *path, size_t limit) {
+  if (limit == 0) return;
+  int64_t size = path_size(path);
+  size_t need = size < 0 || (uint64_t) size > limit ? limit : (size_t) size;
+  if (need == 0) need = 1;
+  if (need <= hb->cap) return;
+  size_t cap = hb->cap ? hb->cap : 4096;
+  while (cap < need) cap = cap > limit / 2 ? limit : cap * 2;
+  if (cap > limit) cap = limit;
+  hb->p = (unsigned char *) R_alloc(cap, 1);
+  hb->cap = cap;
+}
 
 
 /* paths: character (UTF-8, expanded); limit: double; complete: logical;
@@ -387,7 +480,8 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
   SEXP newline = PROTECT(Rf_allocVector(STRSXP, n));
   SEXP interp = PROTECT(Rf_allocVector(STRSXP, n));
   SEXP error = PROTECT(Rf_allocVector(STRSXP, n));
-  unsigned char *head = lim > 0 ? (unsigned char *) R_alloc(lim, 1) : NULL;
+  head_buf hb = {NULL, 0};
+  int interrupted = 0;
 
   for (R_xlen_t i = 0; i < n; i++) {
     /* testthat cannot send an interrupt; the check runs between files with
@@ -407,7 +501,13 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
 #else
       const char *p = Rf_translateChar(s); /* the native encoding */
 #endif
-      sniff_path(p, lim, want_complete, &proto, head, &pr, NULL, NULL, NULL);
+      reserve_head(&hb, p, lim);
+      sniff_path(p, lim, want_complete, &proto, hb.p, hb.cap, &pr, NULL, NULL,
+                 NULL);
+      if (pr.interrupted) {
+        interrupted = 1;
+        break;
+      }
     }
     const zumime_result *r = &pr.r;
     if (pr.failed) {
@@ -441,6 +541,12 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
   SET_VECTOR_ELT(out, 5, newline);
   SET_VECTOR_ELT(out, 6, interp);
   SET_VECTOR_ELT(out, 7, error);
+  /* The file is closed; R raises the interrupt R_ToplevelExec() caught. */
+  if (interrupted) {
+    SEXP flag = PROTECT(Rf_ScalarLogical(1));
+    Rf_setAttrib(out, Rf_install("interrupted"), flag);
+    UNPROTECT(1);
+  }
   UNPROTECT(9);
   return out;
 }
@@ -458,8 +564,16 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
  * One probe is counted per allowed type tested, in a static counter. */
 
 static double probes = 0;
+static double full_passes = 0; /* inputs that went past the gate */
 
-SEXP zumime_probe_count(void) { return Rf_ScalarReal(probes); }
+/* c(probes, full passes), for the tests of the shortcut. */
+SEXP zumime_probe_count(void) {
+  SEXP out = PROTECT(Rf_allocVector(REALSXP, 2));
+  REAL(out)[0] = probes;
+  REAL(out)[1] = full_passes;
+  UNPROTECT(1);
+  return out;
+}
 
 static int in_sorted(SEXP ids, int x) {
   const int *p = INTEGER(ids);
@@ -514,13 +628,14 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
     zumime_result r;
     zumime_sniff(RAW(x), len, &b, &r);
     if (!related_to_any(related, r.type)) return Rf_ScalarLogical(0);
+    full_passes++;
     zumime_sniff(RAW(x), len, &in, &r);
     return Rf_ScalarLogical(allowed(within, r.type, r.confidence, min_conf));
   }
 
   R_xlen_t n = XLENGTH(x);
   SEXP out = PROTECT(Rf_allocVector(LGLSXP, n));
-  unsigned char *head = lim > 0 ? (unsigned char *) R_alloc(lim, 1) : NULL;
+  head_buf hb = {NULL, 0};
   for (R_xlen_t i = 0; i < n; i++) {
     if (i > 0 && i % 256 == 0) R_CheckUserInterrupt();
     SEXP s = STRING_ELT(x, i);
@@ -535,14 +650,17 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
 #endif
     path_result pr;
     int gated = 0;
-    sniff_path(p, lim, 0, &proto, head, &pr, related_to_any, (void *) related,
-               &gated);
+    reserve_head(&hb, p, lim);
+    sniff_path(p, lim, 0, &proto, hb.p, hb.cap, &pr, related_to_any,
+               (void *) related, &gated);
     if (pr.failed)
       LOGICAL(out)[i] = NA_LOGICAL;
     else if (gated)
       LOGICAL(out)[i] = 0;
-    else
+    else {
+      full_passes++;
       LOGICAL(out)[i] = allowed(within, pr.r.type, pr.r.confidence, min_conf);
+    }
   }
   UNPROTECT(1);
   return out;

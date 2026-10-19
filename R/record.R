@@ -16,6 +16,7 @@
 #'
 #'   `mime_format()` returns a character vector, `NA` for a `NULL` record.
 #' @references <https://mimesniff.spec.whatwg.org/#parsing-a-mime-type>
+#' @seealso [mime_sniff()], which takes a supplied type in this grammar.
 #' @export
 #' @examples
 #' rec <- mime_parse("Text/HTML; Charset=\"UTF-8\"; charset=latin1")
@@ -25,10 +26,8 @@
 #' mime_parse("not a type")
 mime_parse <- function(x, strict = FALSE) {
   x <- check_character(x)
-  if (!isTRUE(strict) && !isFALSE(strict)) {
-    zumime_abort("type", "`strict` must be TRUE or FALSE.")
-  }
-  out <- .Call(zumime_mime_parse, enc2utf8(x))
+  check_flag(strict)
+  out <- .Call(zumime_mime_parse, utf8_or_replace(x))
   if (strict) {
     bad <- which(vapply(out, is.null, logical(1)) & !is.na(x))
     if (length(bad)) {
@@ -65,10 +64,10 @@ mime_format <- function(record) {
     if (is.null(r)) {
       return(NULL)
     }
-    p <- r$parameters
+    p <- r[["parameters"]]
     list(
-      enc2utf8(r$type),
-      enc2utf8(r$subtype),
+      enc2utf8(r[["type"]]),
+      enc2utf8(r[["subtype"]]),
       structure(
         lapply(p, enc2utf8),
         names = enc2utf8(names(p) %||% character())
@@ -78,16 +77,27 @@ mime_format <- function(record) {
   .Call(zumime_mime_format, record)
 }
 
+# A record as mime_parse() makes it. Fields are read with [[ so a list with
+# `typex` is not taken for one with `type`. Tokens are not re-checked: the
+# documented input is a record from mime_parse().
 is_record <- function(r) {
   is.list(r) &&
-    !is.null(r$type) &&
-    is_string(r$type) &&
-    is_string(r$subtype) &&
-    is.list(r$parameters) &&
-    all(vapply(r$parameters, is_string, TRUE)) &&
-    (length(r$parameters) == 0L || !is.null(names(r$parameters)))
+    is_string(r[["type"]]) &&
+    is_string(r[["subtype"]]) &&
+    is.list(r[["parameters"]]) &&
+    all(vapply(r[["parameters"]], is_string, TRUE)) &&
+    (length(r[["parameters"]]) == 0L || !is.null(names(r[["parameters"]])))
 }
 
-is_string <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
-
-`%||%` <- function(x, y) if (is.null(x)) y else x
+# x in UTF-8 for the parser. enc2utf8() turns a byte the native encoding
+# cannot hold into the text "<c3>", which then parses as a value; the
+# standard decodes it to U+FFFD, which no token or value may hold.
+utf8_or_replace <- function(x) {
+  bad <- !is.na(x) & Encoding(x) == "unknown" & !validUTF8(x)
+  # U+FFFD as bytes: as a string it would be translated to the native
+  # encoding, which may not hold it.
+  fffd <- rawToChar(as.raw(c(0xef, 0xbf, 0xbd)))
+  x[bad] <- iconv(x[bad], "", "UTF-8", sub = fffd)
+  Encoding(x[bad]) <- "UTF-8"
+  enc2utf8(x)
+}

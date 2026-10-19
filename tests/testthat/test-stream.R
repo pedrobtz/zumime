@@ -72,7 +72,7 @@ test_that("each input decides at the whole's type, never past the limit", {
     x <- stream_inputs()[[name]]
     # Inputs longer than 4096 bytes are read whole.
     limit <- max(4096, length(x))
-    got <- .Call(zumime_stream_bytewise, x, limit)
+    got <- stream_bytewise(x, limit)
     expect_identical(got[[2]], mime_sniff(x, limit = limit)$type, info = name)
     expect_lte(got[[1]], limit)
   }
@@ -92,8 +92,64 @@ test_that("each input decides at the whole's type, never past the limit", {
   }
 })
 
+test_that("each input decides at the whole's type in every context", {
+  skip_if_gctorture()
+  for (context in c("browsing", "image", "audio_video", "font")) {
+    for (name in names(stream_inputs())) {
+      x <- stream_inputs()[[name]]
+      limit <- max(4096, length(x))
+      got <- stream_bytewise(x, limit, context = context)
+      want <- mime_sniff(x, context = context, limit = limit)$type
+      expect_identical(got[[2]], want, info = paste(context, name))
+    }
+  }
+})
+
+test_that("each input decides at the whole's type under a supplied type", {
+  skip_if_gctorture()
+  supplied <- list(
+    list(type = "image/gif", no_sniff = FALSE),
+    list(type = "video/mp4", no_sniff = FALSE),
+    list(type = "text/plain", no_sniff = FALSE),
+    list(type = "text/plain; charset=UTF-8", no_sniff = FALSE),
+    list(type = "text/html", no_sniff = FALSE),
+    list(type = "application/pdf", no_sniff = FALSE),
+    list(type = "text/csv", no_sniff = TRUE),
+    list(type = "text/x-zt-unknown", no_sniff = FALSE)
+  )
+  for (s in supplied) {
+    for (name in names(stream_inputs())) {
+      x <- stream_inputs()[[name]]
+      limit <- max(4096, length(x))
+      got <- stream_bytewise(x, limit, type = s$type, no_sniff = s$no_sniff)
+      want <- mime_sniff(
+        x,
+        type = s$type,
+        no_sniff = s$no_sniff,
+        limit = limit
+      )$type
+      expect_identical(got[[2]], want, info = paste(s$type, name))
+    }
+  }
+})
+
+test_that("contexts and supplied types decide where the bytes allow", {
+  n <- function(x, ...) stream_bytewise(x, ...)[[1]]
+  png <- stream_inputs()$png
+  expect_identical(n(png, context = "image"), 8)
+  ogg <- build_ogg("OpusHead")
+  expect_lt(n(ogg, context = "audio_video"), length(ogg))
+  gif <- stream_inputs()$gif
+  # A supplied image type is checked against the image table.
+  expect_identical(stream_bytewise(png, type = "image/gif")[[2]], "image/png")
+  # The Apache-bug rule reads a BOM's three bytes before deciding.
+  bom <- c(as.raw(c(0xef, 0xbb, 0xbf)), charToRaw("x"))
+  expect_gte(n(bom, type = "text/plain"), 3)
+  expect_identical(n(gif, type = "image/png", no_sniff = TRUE), 1)
+})
+
 test_that("early decisions happen where the bytes allow them", {
-  n <- function(x) .Call(zumime_stream_bytewise, x, 4096)[[1]]
+  n <- function(x) stream_bytewise(x)[[1]]
   expect_identical(n(stream_inputs()$pdf), 5)
   expect_identical(n(stream_inputs()$gif), 6)
   expect_identical(n(stream_inputs()$jpeg), 4)
@@ -111,7 +167,7 @@ test_that("every fixture decides at the whole's type", {
   for (f in list.files(dir, full.names = TRUE)) {
     x <- readBin(f, "raw", min(file.size(f), 8192))
     want <- mime_sniff(x, limit = 4096)$type
-    got <- .Call(zumime_stream_bytewise, x, 4096)
+    got <- stream_bytewise(x)
     expect_identical(got[[2]], want, info = basename(f))
     expect_lte(got[[1]], 4096, label = basename(f))
     # Through mime_push() in 512-byte chunks, which may skip work once
@@ -144,4 +200,25 @@ test_that("the byte count is kept as a double", {
   st <- .Call(zumime_stream_state, s)
   expect_type(st, "double")
   expect_identical(st[2], 10)
+})
+
+test_that("a sniffer's buffer grows by need up to its limit", {
+  size <- function(s) length(.Call(zumime_stream_buffer, s))
+  s <- mime_sniffer(limit = 1e9)
+  expect_lte(size(s), 4096)
+  t <- mime_sniffer(limit = 10000)
+  mime_push(t, charToRaw(strrep("words ", 1000)))
+  expect_gte(size(t), 6000)
+  mime_push(t, charToRaw(strrep("words ", 1000)))
+  expect_identical(size(t), 10000L)
+  expect_output(print(t), "10000 of 10000 bytes")
+})
+
+test_that("a sniffer stripped of its parameters is a type error", {
+  s <- mime_sniffer()
+  attr(s, "params") <- NULL
+  expect_error(mime_push(s, raw(1)), class = "zumime_type_error")
+  expect_error(mime_finish(s), class = "zumime_type_error")
+  fake <- structure(list(), class = "zumime_sniffer")
+  expect_error(mime_push(fake, raw(1)), class = "zumime_type_error")
 })

@@ -328,7 +328,7 @@ in hand plus, for paths, one bounded tail read:
 - **Compression wrappers**: gzip, zstd, xz and bzip2 are types in their
   own right and set `inner` (§6.7).
 - **R and analytic data**: RDS and RData by their compression wrapper
-  (gzip, bzip2, xz, zstd, or none) to the `X\n` or `RDX2\n`/`RDX3\n`
+  (gzip, bzip2, xz, zstd, or none) to the `X\n`/`B\n` or `RDX2\n`/`RDX3\n`
   header and the serialisation version; Parquet (`PAR1`, both ends),
   Arrow IPC and Feather (`ARROW1`, `FEA1`), fst, qs2, SQLite, DuckDB,
   HDF5 (at 0, 512, 1024, …), NetCDF classic, Stata `.dta`, SPSS `.sav`
@@ -367,9 +367,12 @@ and IANA's deprecated entries.
 
 ### 6.4 Structured text
 
-When the WHATWG result is `text/plain`, `text/xml`-like or `text/html`,
-the text reader looks further, at the `probable` level because the
-evidence is grammar, not magic:
+When the WHATWG result is `text/plain` or `text/xml`-like, the text
+reader looks further, at the `probable` level because the evidence is
+grammar, not magic. A `text/html` result stands: XHTML without an XML
+declaration is `text/html`, as Go's `net/http`, libmagic and Python's
+puremagic answer and as a browser parses it, and only after a
+declaration does its root make it `application/xhtml+xml`.
 
 - **XML**: the root element's local name and namespace decide SVG, RSS,
   Atom, KML, GPX, X3D, XLIFF, COLLADA, XHTML, DocBook and OpenDocument
@@ -427,7 +430,9 @@ The how-to-open columns come from the same bytes:
 
 - **`inner`.** For gzip, zstd, xz and bzip2, the type inside. The default
   `inner = "name"` takes it from the remaining extension (`.tar` of
-  `.tar.gz`, `.csv` of `.csv.gz`) at `confidence = "extension"`;
+  `.tar.gz`, `.csv` of `.csv.gz`). The row's one `confidence` column
+  (D10) describes `type`, not `inner`, so a name-derived `inner` carries
+  no confidence of its own;
   `inner = "decompress"` decompresses the first block through `zukomp`
   and sniffs it, erroring with `zumime_dependency_error` if `zukomp` is
   not installed. With `inner = "name"` the default answer never depends on

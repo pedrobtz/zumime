@@ -68,6 +68,12 @@ test_that("a function rule runs last, at probable", {
 })
 
 test_that("registering checks the type and the parent", {
+  # A regression that let one of these register would leak the type into
+  # later tests.
+  withr::defer({
+    try(mime_unregister("application/x-zt-a"), silent = TRUE)
+    try(mime_unregister("application/x-zt-b"), silent = TRUE)
+  })
   expect_error(
     mime_register("application/x-zt-a", "foo/unknown"),
     class = "zumime_registry_error"
@@ -268,4 +274,75 @@ test_that("a namespace reload starts with an empty C registry", {
     stdout = TRUE
   )
   expect_identical(trimws(out), rep("application/octet-stream", 2L))
+})
+
+test_that("a built-in compound suffix beats a registered single one", {
+  withr::defer(try(mime_unregister("application/x-zt-gz"), silent = TRUE))
+  mime_register(
+    "application/x-zt-gz",
+    "application/octet-stream",
+    extensions = c("gz", "zt.gz")
+  )
+  expect_identical(
+    mime_guess(c("a.tar.gz", "a.csv.gz", "a.zt.gz", "a.gz")),
+    c(
+      mime_guess("a.tgz"),
+      "application/x-zt-gz",
+      "application/x-zt-gz",
+      "application/x-zt-gz"
+    )
+  )
+})
+
+test_that("a failing function rule warns once and does not match", {
+  withr::defer(try(mime_unregister("text/x-zt-broken"), silent = TRUE))
+  mime_register("text/x-zt-broken", "text/plain", rule = function(x) {
+    stop("bug in the rule")
+  })
+  dir <- local_tree(list(a.txt = "one\n", b.txt = "two\n"))
+  expect_warning(
+    t <- mime_type(file.path(dir, c("a.txt", "b.txt"))),
+    class = "zumime_rule_warning"
+  )
+  expect_identical(t$type, c("text/plain", "text/plain"))
+  expect_warning(
+    r <- mime_sniff(charToRaw("hello")),
+    class = "zumime_warning"
+  )
+  expect_identical(r$type, "text/plain")
+})
+
+test_that("a rule under a directory never reads it", {
+  withr::defer(try(mime_unregister("inode/x-zt-dir"), silent = TRUE))
+  mime_register("inode/x-zt-dir", "inode/directory", rule = function(x) TRUE)
+  dir <- withr::local_tempdir()
+  t <- mime_type(dir)
+  expect_identical(t$type, "inode/directory")
+})
+
+test_that("a file gone before R re-reads it gives no bytes", {
+  path <- withr::local_tempfile()
+  expect_null(read_bytes(path, 4096))
+  writeBin(as.raw(1:10), path)
+  expect_identical(read_bytes(path, 4), as.raw(1:4))
+  expect_identical(read_bytes(path, 0), as.raw(1:10))
+  expect_null(read_bytes(dirname(path), 4096))
+})
+
+test_that("a registered compound extension and an offset-only rule", {
+  withr::defer(try(mime_unregister("application/x-zt-tar"), silent = TRUE))
+  mime_register(
+    "application/x-zt-tar",
+    "application/octet-stream",
+    extensions = "tar.zt"
+  )
+  expect_identical(mime_guess("a.tar.zt"), "application/x-zt-tar")
+  expect_error(
+    mime_register(
+      "application/x-zt-off",
+      "application/octet-stream",
+      rule = list(offset = 1)
+    ),
+    class = "zumime_type_error"
+  )
 })

@@ -46,6 +46,14 @@ test_that("the Apache bug strings run the text-or-binary rule", {
   r <- mime_sniff(bom, type = "text/plain")
   expect_identical(r$type, "text/plain")
   expect_identical(as.character(r$confidence), "definite")
+  expect_identical(r$charset, "UTF-16LE")
+  r <- mime_sniff(
+    c(as.raw(c(0xef, 0xbb, 0xbf)), charToRaw("x")),
+    type = "text/plain"
+  )
+  expect_identical(r$type, "text/plain")
+  expect_identical(as.character(r$confidence), "definite")
+  expect_identical(r$charset, "UTF-8")
 })
 
 test_that("an image or media supplied type is checked against its tables", {
@@ -207,4 +215,17 @@ test_that("mime_sniff() rejects malformed arguments", {
       class = "zumime_type_error"
     )
   }
+})
+
+test_that("a missing supplied type sniffs as no type", {
+  expect_identical(
+    mime_sniff(charToRaw("hello"), type = NA),
+    mime_sniff(charToRaw("hello"))
+  )
+  expect_identical(mime_is(NA, "text"), NA)
+})
+
+test_that("a lone carriage return at the end is not an ending", {
+  expect_identical(mime_sniff(charToRaw("a\r"))$newline, NA_character_)
+  expect_identical(mime_sniff(charToRaw("a\rb"))$newline, "cr")
 })

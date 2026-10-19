@@ -22,7 +22,7 @@ static const R_CallMethodDef call_methods[] = {
   {"zumime_stream_state", (DL_FUNC) &zumime_stream_state, 1},
   {"zumime_stream_buffer", (DL_FUNC) &zumime_stream_buffer, 1},
   {"zumime_stream_push", (DL_FUNC) &zumime_stream_push, 9},
-  {"zumime_stream_bytewise", (DL_FUNC) &zumime_stream_bytewise, 2},
+  {"zumime_stream_bytewise", (DL_FUNC) &zumime_stream_bytewise, 6},
   {NULL, NULL, 0}
 };
 

@@ -9,8 +9,9 @@ zumime_info()
 \value{
 A list with \code{version}, the package version as a string;
 \code{table_version}, the date of the table sources as a string
-(\code{"YYYY-MM-DD"}); and \code{family}, the family sniffers this session can
-offer text to with \code{mime_type(text = "family")}.
+(\code{"YYYY-MM-DD"}); and \code{family}, the optional family packages this
+session can offer text to with \code{mime_type(text = "family")}. zutoml is
+not yet on CRAN; install it from GitHub.
 }
 \description{
 Reports what this build of zumime contains: the package version and the
@@ -19,4 +20,7 @@ sources they were built from.
 }
 \examples{
 zumime_info()
+}
+\seealso{
+\code{\link[=mime_type]{mime_type()}} for the arguments that use the family.
 }

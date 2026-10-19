@@ -33,9 +33,10 @@ vector longer than \code{limit} is sniffed on its first \code{limit} bytes.}
 }
 \value{
 A \code{zumime_result} data frame with one row per path (one for a
-raw vector) and columns \code{path} (\code{NA} for a raw vector), \code{type} (a canonical type), \code{confidence} (an
-ordered factor: \verb{none < extension < probable < definite}), \code{charset},
-\code{inner}, \code{encrypted}, \code{complete}, \code{newline} (\code{"lf"}, \code{"crlf"}, \code{"cr"},
+raw vector) and columns \code{path} (\code{NA} for a raw vector), \code{type} (a
+canonical type), \code{confidence} (an ordered factor:
+\verb{none < extension < probable < definite}), \code{charset}, \code{inner},
+\code{encrypted}, \code{complete}, \code{newline} (\code{"lf"}, \code{"crlf"}, \code{"cr"},
 \code{"mixed"}, or \code{NA}) and \code{interpreter}.
 }
 \description{

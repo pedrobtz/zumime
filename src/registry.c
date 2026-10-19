@@ -21,7 +21,7 @@ int zumime_reg_add(const char *name, int parent, int has_rule, uint32_t offset,
     zumime_registered *r = &zumime_reg[k];
     if (r->active) continue;
     memset(r, 0, sizeof(*r));
-    strcpy(r->name, name);
+    memcpy(r->name, name, strlen(name) + 1); /* length checked above */
     r->parent = parent;
     r->has_rule = has_rule;
     r->offset = offset;

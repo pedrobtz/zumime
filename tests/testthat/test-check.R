@@ -29,8 +29,17 @@ test_that("an allowlist of three types costs three probes", {
   dir <- local_tree(list(anim = c(charToRaw("GIF89a"), raw(10))))
   allowed <- c("application/pdf", "image/png", "image/jpeg")
   before <- probe_count()
+  full <- full_pass_count()
   expect_false(mime_check(file.path(dir, "anim"), allowed))
   expect_identical(probe_count() - before, 3)
+  # Refused at the gate: the readers never ran.
+  expect_identical(full_pass_count() - full, 0)
+  full <- full_pass_count()
+  expect_false(mime_check(c(charToRaw("GIF89a"), raw(10)), allowed))
+  expect_identical(full_pass_count() - full, 0)
+  # A related input goes past it.
+  expect_true(mime_check(c(charToRaw("GIF89a"), raw(10)), "image/gif"))
+  expect_identical(full_pass_count() - full, 1)
   before <- probe_count()
   mime_check(rep(file.path(dir, "anim"), 4), allowed)
   expect_identical(probe_count() - before, 12)

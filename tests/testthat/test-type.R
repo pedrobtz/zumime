@@ -97,6 +97,45 @@ test_that("inner comes from the rest of the name by default", {
   expect_identical(t$agree[1:4], rep(TRUE, 4))
 })
 
+test_that("inner comes from the name for xz and bzip2 too", {
+  # Only the magic numbers matter; memCompress() is avoided, as in
+  # deflate_raw(), to keep valgrind runs clean.
+  dir <- local_tree(list(
+    "data.csv.xz" = xz_header(),
+    "files.tar.bz2" = c(charToRaw("BZh91AY&SY"), raw(20))
+  ))
+  t <- mime_type(file.path(dir, c("data.csv.xz", "files.tar.bz2")))
+  expect_identical(t$type, c("application/x-xz", "application/x-bzip2"))
+  expect_identical(t$inner, c("text/csv", "application/x-tar"))
+})
+
+test_that("inner = \"decompress\" falls back to the name", {
+  big <- c(gzip_bytes("a,b\n"), raw(16 * 1024^2))
+  dir <- local_tree(list(
+    "bad.csv.gz" = gzip_bytes("a,b\n1,2\n"),
+    "big.csv.gz" = big,
+    "data.csv.xz" = xz_header()
+  ))
+  calls <- character()
+  local_mocked_bindings(
+    has_package = function(pkg) TRUE,
+    suggested_fun = function(pkg, name) {
+      function(x, codec, max_output) {
+        calls <<- c(calls, codec)
+        stop("corrupt")
+      }
+    }
+  )
+  t <- mime_type(
+    file.path(dir, c("bad.csv.gz", "big.csv.gz", "data.csv.xz")),
+    inner = "decompress"
+  )
+  # A decompression error, a file over 16 MiB and a wrapper other than
+  # gzip all keep the name's answer; only the first reaches zukomp.
+  expect_identical(t$inner, rep("text/csv", 3))
+  expect_identical(calls, "gzip")
+})
+
 test_that("inner = \"decompress\" sniffs what zukomp inflates", {
   skip_if_not_installed("zukomp")
   dir <- local_tree(list("blob.gz" = gzip_bytes("{\"a\": [1, 2]}")))
@@ -357,6 +396,18 @@ test_that("a non-ASCII path is read", {
   expect_identical(mime_check(path, "image"), TRUE)
 })
 
+test_that("a path under ~ is expanded by mime_type() and mime_check()", {
+  home <- withr::local_tempdir()
+  withr::local_envvar(HOME = home, R_USER = home)
+  writeBin(png_bytes(), file.path(home, "a.png"))
+  skip_if(
+    path.expand("~/a.png") != file.path(home, "a.png"),
+    "~ does not follow HOME here"
+  )
+  expect_identical(mime_type("~/a.png")$type, "image/png")
+  expect_identical(mime_check("~/a.png", "image"), TRUE)
+})
+
 test_that("suggested packages are reached only when asked, through one door", {
   dir <- local_tree(list(
     a.txt = c(charToRaw("caf"), as.raw(0xe9), charToRaw("\n")),
@@ -364,7 +415,10 @@ test_that("suggested packages are reached only when asked, through one door", {
     c.gz = gzip_bytes("{\"a\": 1}")
   ))
   p <- file.path(dir, c("a.txt", "b", "c.gz"))
-  local_mocked_bindings(has_package = function(pkg) FALSE)
+  local_mocked_bindings(
+    has_package = function(pkg) FALSE,
+    is_installed = function(pkg) FALSE
+  )
   expect_error(
     mime_type(p, charset = "detect"),
     class = "zumime_dependency_error"
@@ -378,6 +432,7 @@ test_that("suggested packages are reached only when asked, through one door", {
 
   local_mocked_bindings(
     has_package = function(pkg) TRUE,
+    is_installed = function(pkg) TRUE,
     suggested_fun = function(pkg, name) {
       switch(
         name,
@@ -396,4 +451,54 @@ test_that("suggested packages are reached only when asked, through one door", {
   expect_identical(t$type[2], "application/json")
   expect_identical(t$inner[3], NA_character_)
   expect_identical(zumime_info()$family, c("zucsv", "zujson", "zutoml"))
+})
+
+test_that("an interrupt caught in C is raised again as an interrupt", {
+  # testthat cannot send an interrupt, so the R half is tested alone: the
+  # condition reaches an interrupt handler, as a real one would.
+  got <- tryCatch(resignal_interrupt(), interrupt = function(c) "interrupt")
+  expect_identical(got, "interrupt")
+})
+
+test_that("a large limit costs nothing for small files", {
+  dir <- local_tree(list(a.png = png_bytes(), b.txt = "hello\n"))
+  paths <- file.path(dir, c("a.png", "b.txt"))
+  # 2e9 bytes were allocated up front before; now the buffer follows the
+  # files, so this is quick and gives the default answer.
+  expect_identical(
+    mime_type(paths, limit = 2e9)$type,
+    mime_type(paths)$type
+  )
+  expect_identical(mime_check(paths, "image", "definite"), c(TRUE, FALSE))
+})
+
+test_that("zumime_info() lists the family without loading it", {
+  loaded <- character()
+  local_mocked_bindings(
+    is_installed = function(pkg) pkg != "zutoml",
+    has_package = function(pkg) {
+      loaded <<- c(loaded, pkg)
+      TRUE
+    }
+  )
+  expect_identical(zumime_info()$family, c("zucsv", "zujson"))
+  expect_identical(loaded, character())
+})
+
+test_that("text = \"family\" takes zutoml's answer when the others decline", {
+  dir <- local_tree(list(conf = "title = \"x\"\n"))
+  local_mocked_bindings(
+    has_package = function(pkg) TRUE,
+    suggested_fun = function(pkg, name) {
+      switch(
+        name,
+        sniff_csv = function(path, delimiter) list(ncol = 1L, nrow = 1L),
+        json_validate = function(x) FALSE,
+        toml_validate = function(x) TRUE
+      )
+    }
+  )
+  t <- mime_type(file.path(dir, "conf"), text = "family")
+  expect_identical(t$type, "application/toml")
+  expect_identical(as.character(t$confidence), "probable")
 })

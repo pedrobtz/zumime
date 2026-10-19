@@ -4,22 +4,27 @@
 #' the next chunk and returns `NULL` while the bytes seen cannot yet decide
 #' the type, or the result row once they can. `mime_finish()` forces an
 #' answer from what has been seen, as the end of a short stream would. The
-#' answer is the one [mime_sniff()] gives for the same first `limit` bytes.
+#' answer is the one [mime_sniff()] gives for the whole stream with the same
+#' `limit`. A stream exactly `limit` bytes long is read as one that goes on,
+#' since the sniffer cannot know it has ended, so a character cut at the
+#' end does not count against UTF-8.
 #'
 #' Once the sniffer has decided, further pushes ignore their chunks and
 #' return the same row. Once it has finished, a push raises a
 #' `zumime_state_error`; `mime_finish()` can still be called and returns
 #' the same row.
 #'
-#' The bytes decide when no longer signature could still override the
-#' match, the container reader for the type has what it needs, or `limit`
-#' bytes have arrived. Text decides only at `limit` or at the finish, since
-#' a later byte can still change it. The tail-reading columns (`complete`)
-#' are `NA` for a stream.
+#' The bytes decide as soon as one of three things holds. No longer
+#' signature could still override the match. The container reader for the
+#' type has what it needs. Or `limit` bytes have arrived. Text decides only
+#' at `limit` or at the finish, since a later byte can still change it. The
+#' tail-reading column, `complete`, is `NA` for a stream.
 #'
-#' The sniffer keeps its bytes in an R raw vector. A sniffer saved and
-#' loaded again keeps those bytes but forgets its decision, and is
-#' undecided until the next push.
+#' The sniffer keeps its bytes in an R raw vector, grown as they arrive up to
+#' `limit`. With `limit = 0` text never decides before the finish, so the
+#' sniffer holds the whole stream until `mime_finish()`. A sniffer saved and
+#' loaded again keeps those bytes but forgets its decision, and is undecided
+#' until the next push.
 #'
 #' @inheritParams mime_sniff
 #' @param s A sniffer from `mime_sniffer()`.
@@ -93,7 +98,11 @@ print.zumime_sniffer <- function(x, ...) {
 }
 
 check_sniffer <- function(s) {
-  if (!inherits(s, "zumime_sniffer") || typeof(s) != "externalptr") {
+  if (
+    !inherits(s, "zumime_sniffer") ||
+      typeof(s) != "externalptr" ||
+      !is.list(attr(s, "params"))
+  ) {
     zumime_abort(
       "type",
       "`s` must be a sniffer from `mime_sniffer()`.",
@@ -120,23 +129,9 @@ stream_result <- function(s, chunk, final) {
   if (is.null(res)) {
     return(NULL)
   }
-  out_type <- res[[1]]
-  if (is.na(out_type)) {
-    out_type <- p$supplied$essence
-  }
-  charset <- res[[3]]
-  if (isTRUE(res[[5]]) && !is.null(p$supplied$charset)) {
-    charset <- p$supplied$charset
-  }
-  out <- new_result(
-    path = NA_character_,
-    type = out_type,
-    confidence = res[[2]],
-    charset = charset,
-    encrypted = res[[6]],
-    newline = res[[4]],
-    interpreter = res[[7]]
-  )
+  out <- raw_result(res, p$supplied)
+  # Checked here so a sniffer without function rules skips copying its
+  # bytes out for apply_registered().
   if (length(fns)) {
     out <- apply_registered(out, stream_bytes(s), p$limit)
   }

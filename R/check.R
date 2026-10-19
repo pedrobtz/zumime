@@ -4,15 +4,15 @@
 #' `allowed`, or a descendant of one, at `min_confidence` or better. The name
 #' is never consulted, since the question exists because names lie.
 #'
-#' The answer always equals `mime_is(t$type, allowed) & t$confidence >=
-#' min_confidence` with `t <- mime_type(x)` (or `mime_sniff(x)` for a raw
-#' vector). It is computed in one pass with a shortcut that this equality
-#' hides: the container and text readers and tail reads are skipped for
-#' every input whose first answer could not end as an allowed type, and no
-#' result frame is built.
+#' The answer always equals
+#' `mime_is(t$type, allowed) & t$confidence >= min_confidence`, with
+#' `t <- mime_type(x)`, or `mime_sniff(x)` for a raw vector. It is computed
+#' in one pass, with a shortcut that this equality hides. The container
+#' readers, text readers and tail reads are skipped for every input whose
+#' first answer could not end as an allowed type. No result frame is built.
 #' Call [mime_type()] to learn why a file was refused.
 #'
-#' @param x A character vector of paths, or one raw vector.
+#' @param x A raw vector, or a character vector of paths.
 #' @param allowed A character vector of types, aliases or top-level types,
 #'   as [mime_is()] takes them.
 #' @param min_confidence The weakest evidence accepted: `"probable"` (the
@@ -38,7 +38,7 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
   if (!is.character(x) && !is.raw(x)) {
     zumime_abort(
       "type",
-      "`x` must be a character vector of paths or a raw vector."
+      "`x` must be a raw vector or a character vector of paths."
     )
   }
   allowed <- check_character(allowed)
@@ -55,27 +55,30 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
       )
     )
   }
-  m <- factor(min_confidence, levels = confidence_levels, ordered = TRUE)
-  limit <- 4096
+  m <- as_confidence(min_confidence)
+  # The same bytes mime_type() reads by default, which the equality with it
+  # requires.
+  limit <- as.double(formals(mime_type)$limit)
 
   # Function rules run in R after the C pass, so the shortcut cannot see
   # them; answer in full.
   if (any(session$types$kind == "function")) {
-    t <- if (is.raw(x)) mime_sniff(x) else mime_type(x)
-    return(mime_is(t$type, allowed) & t$confidence >= m)
+    res <- if (is.raw(x)) mime_sniff(x) else mime_type(x)
+    return(mime_is(res$type, allowed) & res$confidence >= m)
   }
 
   sets <- related_sets(allowed)
   out <- .Call(
     zumime_check,
-    x,
+    if (is.character(x)) path.expand(x) else x,
     limit,
     lapply(sets, `[[`, "related"),
     lapply(sets, `[[`, "within"),
     match(min_confidence, confidence_levels) - 1L
   )
-  # An unreadable path is type NA at confidence "none".
-  unreadable <- factor("none", levels = confidence_levels, ordered = TRUE)
+  # An unreadable path is type NA at confidence "none": NA when "none" is
+  # accepted, else FALSE, since NA & FALSE is FALSE.
+  unreadable <- as_confidence("none")
   out[is.na(out)] <- NA & (unreadable >= m)
   out
 }
@@ -90,6 +93,7 @@ related_sets <- function(allowed) {
     session$related_version <- session$version
   }
   lapply(allowed, function(a) {
+    # A carriage return cannot occur in a type, so this key is no type's.
     key <- if (is.na(a)) "\rNA" else a
     hit <- session$related[[key]]
     if (!is.null(hit)) {
@@ -112,6 +116,8 @@ related_sets <- function(allowed) {
   })
 }
 
-# The static counter the shortcut increments once per allowed type tested.
-# Not API: the test of design D15 reads it.
-probe_count <- function() .Call(zumime_probe_count)
+# The static counters of the shortcut: one probe per allowed type tested,
+# and one full pass per input that went past it. Not API: the tests of
+# design D15 read them.
+probe_count <- function() .Call(zumime_probe_count)[1]
+full_pass_count <- function() .Call(zumime_probe_count)[2]
