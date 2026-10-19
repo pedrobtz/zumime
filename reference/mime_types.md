@@ -35,5 +35,5 @@ types[types$type == "application/zip", ]
 #>                                              aliases extensions    category
 #> 1978 application/x-zip, application/x-zip-compressed        zip application
 #>      detected_by
-#> 1978   extension
+#> 1978   signature
 ```

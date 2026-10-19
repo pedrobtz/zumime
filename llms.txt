@@ -38,6 +38,8 @@ library(zumime)
 - [`mime_parse()`](https://pedrobtz.github.io/zumime/reference/mime_parse.md)
   [`mime_format()`](https://pedrobtz.github.io/zumime/reference/mime_parse.md)
   : Parse and serialise MIME types
+- [`mime_sniff()`](https://pedrobtz.github.io/zumime/reference/mime_sniff.md)
+  : Sniff a type from bytes
 - [`mime_types()`](https://pedrobtz.github.io/zumime/reference/mime_types.md)
   : The type registry
 - [`zumime_info()`](https://pedrobtz.github.io/zumime/reference/zumime_info.md)

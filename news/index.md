@@ -25,3 +25,9 @@
   [`mime_format()`](https://pedrobtz.github.io/zumime/reference/mime_parse.md)
   parse and serialise a MIME type as the WHATWG MIME Sniffing Standard
   defines it.
+- [`mime_sniff()`](https://pedrobtz.github.io/zumime/reference/mime_sniff.md)
+  runs the WHATWG MIME Sniffing Standard’s algorithm over a raw vector,
+  with a supplied type, the no-sniff flag and a sniffing context, and
+  reports the charset the bytes declare and their line endings. Beyond
+  the standard it knows the compression wrappers, tar, ISO 9660 images,
+  RAR 5, 7z, fonts and WebAssembly.

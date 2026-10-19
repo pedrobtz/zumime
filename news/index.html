@@ -44,6 +44,8 @@
 <code><a href="../reference/mime_parent.html">mime_parent()</a></code> gives a type’s lineage and <code><a href="../reference/mime_is.html">mime_is()</a></code> tests whether a type is, or descends from, a type, an alias or a top-level type.</li>
 <li>
 <code><a href="../reference/mime_parse.html">mime_parse()</a></code> and <code><a href="../reference/mime_parse.html">mime_format()</a></code> parse and serialise a MIME type as the WHATWG MIME Sniffing Standard defines it.</li>
+<li>
+<code><a href="../reference/mime_sniff.html">mime_sniff()</a></code> runs the WHATWG MIME Sniffing Standard’s algorithm over a raw vector, with a supplied type, the no-sniff flag and a sniffing context, and reports the charset the bytes declare and their line endings. Beyond the standard it knows the compression wrappers, tar, ISO 9660 images, RAR 5, 7z, fonts and WebAssembly.</li>
 </ul></div>
   </main></div>
 
