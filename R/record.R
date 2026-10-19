@@ -28,7 +28,7 @@ mime_parse <- function(x, strict = FALSE) {
   if (!isTRUE(strict) && !isFALSE(strict)) {
     zumime_abort("type", "`strict` must be TRUE or FALSE.")
   }
-  out <- .Call(zumime_mime_parse, enc2utf8(x))
+  out <- .Call(zumime_mime_parse, utf8_or_replace(x))
   if (strict) {
     bad <- which(vapply(out, is.null, logical(1)) & !is.na(x))
     if (length(bad)) {
@@ -91,3 +91,16 @@ is_record <- function(r) {
 is_string <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
+
+# x in UTF-8 for the parser. enc2utf8() turns a byte the native encoding
+# cannot hold into the text "<c3>", which then parses as a value; the
+# standard decodes it to U+FFFD, which no token or value may hold.
+utf8_or_replace <- function(x) {
+  bad <- !is.na(x) & Encoding(x) == "unknown" & !validUTF8(x)
+  # U+FFFD as bytes: as a string it would be translated to the native
+  # encoding, which may not hold it.
+  fffd <- rawToChar(as.raw(c(0xef, 0xbf, 0xbd)))
+  x[bad] <- iconv(x[bad], "", "UTF-8", sub = fffd)
+  Encoding(x[bad]) <- "UTF-8"
+  enc2utf8(x)
+}

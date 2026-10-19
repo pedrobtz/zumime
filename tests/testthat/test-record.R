@@ -38,6 +38,32 @@ test_that("mime_parse() rejects code points above U+00FF in values", {
   expect_identical(rec$parameters, list(x = "é"))
 })
 
+test_that("mime_parse() decodes 4-byte, invalid and latin1 input", {
+  # U+1F600 is above U+00FF: the value is dropped.
+  rec <- mime_parse("a/b;x=\U1F600;y=z")[[1]]
+  expect_identical(rec$parameters, list(y = "z"))
+  # A lone lead byte decodes to U+FFFD, so the value is dropped too, and a
+  # type holding one is no type. Native bytes are invalid only where the
+  # native encoding cannot hold them, which Latin-1 can.
+  invalid <- rawToChar(as.raw(c(0x61, 0x2f, 0x62, 0x3b, 0x78, 0x3d, 0xc3)))
+  bad_type <- rawToChar(as.raw(c(0x61, 0xc3, 0x2f, 0x62)))
+  marked <- c(invalid, bad_type)
+  Encoding(marked) <- "UTF-8"
+  inputs <- list(marked)
+  if (!isTRUE(l10n_info()[["Latin-1"]])) {
+    inputs <- c(inputs, list(c(invalid, bad_type)))
+  }
+  for (x in inputs) {
+    out <- mime_parse(x)
+    expect_length(out[[1]]$parameters, 0L)
+    expect_null(out[[2]])
+  }
+  # A latin1-marked U+00E9 is within U+00FF and kept.
+  latin1 <- "a/b;x=\xe9"
+  Encoding(latin1) <- "latin1"
+  expect_identical(mime_parse(latin1)[[1]]$parameters, list(x = "\u00e9"))
+})
+
 test_that("mime_format() rejects what is not a record", {
   expect_error(mime_format("text/html"), class = "zumime_type_error")
   expect_error(mime_format(list(list(type = "a"))), class = "zumime_type_error")
