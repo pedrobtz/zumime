@@ -208,3 +208,18 @@ test_that("XHTML without an XML declaration stays text/html", {
   r <- mime_sniff(charToRaw(paste0("<?xml version=\"1.0\"?>\n", body)))
   expect_identical(r$type, "application/xhtml+xml")
 })
+
+test_that("JSON nested past the depth limit is still JSON when it closes", {
+  deep <- function(d, inner = "1") {
+    charToRaw(paste0(strrep("[", d), inner, strrep("]", d)))
+  }
+  expect_identical(sniff_type(deep(30)), "application/json")
+  expect_identical(sniff_type(deep(70)), "application/json")
+  # Brackets inside a string past the limit do not count.
+  expect_identical(sniff_type(deep(70, "\"]]\\\"[\"")), "application/json")
+  # Unclosed and whole: not JSON.
+  expect_identical(sniff_type(charToRaw(strrep("[", 70))), "text/plain")
+  # Unclosed but cut by the limit: JSON so far.
+  long <- deep(3000)
+  expect_identical(mime_sniff(long, limit = 4096)$type, "application/json")
+})

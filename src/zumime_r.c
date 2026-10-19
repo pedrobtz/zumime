@@ -94,7 +94,7 @@ SEXP zumime_sniff_raw(SEXP x, SEXP limit, SEXP supplied, SEXP apache_bug,
   SET_VECTOR_ELT(out, 1, zumime_scalar_string(zumime_confidence_charsxp(r.confidence)));
   SET_VECTOR_ELT(out, 2, zumime_scalar_string(zumime_charset_charsxp(&r)));
   SET_VECTOR_ELT(out, 3, zumime_scalar_string(zumime_newline_charsxp(r.newline)));
-  int is_text = r.charset != ZUMIME_CS_NONE || r.newline != ZUMIME_NL_NONE;
+  int is_text;
   if (r.type == ZUMIME_SUPPLIED)
     is_text = in.supplied_id >= 0
                   ? zumime_type_is(in.supplied_id, ZUMIME_T_TEXT_PLAIN)

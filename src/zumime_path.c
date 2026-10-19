@@ -255,6 +255,11 @@ static int completeness(FILE *f, int64_t size, const unsigned char *head,
     unsigned char *buf = (unsigned char *) malloc(n ? n : 1);
     if (buf == NULL) return -1;
     size_t got = read_at(f, (int64_t) at, buf, n);
+    /* A tail that cannot be read says nothing about completeness. */
+    if (got == 0) {
+      free(buf);
+      return -1;
+    }
     int ok = 0;
     for (size_t i = got >= 22 ? got - 22 + 1 : 0; i-- > 0;)
       if (memcmp(buf + i, "PK\x05\x06", 4) == 0) {
@@ -267,13 +272,15 @@ static int completeness(FILE *f, int64_t size, const unsigned char *head,
   if (t == ZUMIME_T_APPLICATION_PDF) {
     size_t n = size < 4096 ? (size_t) size : 4096;
     size_t got = read_at(f, size - (int64_t) n, tail, n);
+    if (got == 0) return -1;
     size_t last = got < 1024 ? got : 1024;
     r->encrypted = pdf_encrypted(tail, got);
     return find(tail + got - last, last, "%%EOF");
   }
   if (t == ZUMIME_T_APPLICATION_VND_APACHE_PARQUET) {
     if (size < 8) return 0;
-    return read_at(f, size - 4, tail, 4) == 4 && memcmp(tail, "PAR1", 4) == 0;
+    if (read_at(f, size - 4, tail, 4) != 4) return -1;
+    return memcmp(tail, "PAR1", 4) == 0;
   }
   if (head_len >= 2 && head[0] == 0x1F && head[1] == 0x8B &&
       (t == ZUMIME_T_APPLICATION_GZIP || t == ZUMIME_T_APPLICATION_X_RDS ||
@@ -375,6 +382,10 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
     uint64_t at;
     size_t n;
     zumime_zip_tail_window((uint64_t) size, &at, &n);
+    /* An allocation failure here or for the wider window below is not
+     * provoked by the tests: the sniff goes on from the head alone, as for
+     * a central directory over ZUMIME_ZIP_CD_MAX, which a test would need
+     * an 8 MiB directory to reach. */
     tail = (unsigned char *) malloc(n);
     if (tail != NULL) {
       in.tail = tail;

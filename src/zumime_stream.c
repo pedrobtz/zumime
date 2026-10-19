@@ -142,12 +142,17 @@ static int earlier_pending(const unsigned char *buf, size_t len, size_t limit,
   return 0;
 }
 
-/* Where the base type was matched: the first row of that type that matches,
- * or the algorithms' slot for MP4, WebM and MP3. */
-static void match_position(const unsigned char *buf, size_t len, int type,
-                           int *group, int *index) {
+/* Where the base type was matched: the first row of that type that matches
+ * among the groups the context consults (the font rows also appear in
+ * EXTRA), or the algorithms' slot for MP4, WebM and MP3. */
+static void match_position(const unsigned char *buf, size_t len,
+                           const zumime_input *in, int type, int *group,
+                           int *index) {
+  int algorithms;
+  unsigned groups = consulted(in, &algorithms);
   for (int i = 0; i < zumime_n_sigs; i++) {
     const zumime_sig *row = &zumime_sigs[i];
+    if (!(groups & (1u << row->group))) continue;
     if (row->type == type && row->parent < 0 && zumime_match_row(row, buf, len)) {
       *group = row->group;
       *index = i;
@@ -229,7 +234,7 @@ int zumime_can_decide(const unsigned char *buf, size_t len, size_t limit,
     group = ZUMIME_N_GROUPS;
     index = 0;
   } else {
-    match_position(buf, len, base, &group, &index);
+    match_position(buf, len, in, base, &group, &index);
   }
   if (earlier_pending(buf, len, limit, in, group, index)) return 0;
   if (in->context == ZUMIME_CTX_NONE && !reader_settled(buf, len, base, r->type))
