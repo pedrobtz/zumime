@@ -6,6 +6,7 @@
 # exact. Design section 6.2 claims none of these formats.
 
 test_that("every claimed file-type fixture is typed as file-type types it", {
+  skip_if_gctorture()
   dir <- fixture_dir("file-type")
   answers <- file_type_answers()
   unclaimed <- unclaimed_fixtures()
