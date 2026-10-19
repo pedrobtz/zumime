@@ -145,7 +145,7 @@ for (a in names(alias_to)) {
   }
 }
 
-types <- sort(names(ext_of))
+types <- sort(names(ext_of), method = "radix")
 
 # --- Extensions -------------------------------------------------------------
 
@@ -169,7 +169,7 @@ extensions <- lapply(types, function(type) {
   e
 })
 names(extensions) <- types
-owner <- owner[order(names(owner))]
+owner <- owner[order(names(owner), method = "radix")]
 
 # --- Parents ----------------------------------------------------------------
 
@@ -195,7 +195,9 @@ parent <- vapply(types, function(type) {
 bad <- !is.na(parent) & !(parent %in% types)
 if (any(bad)) stop("unknown parent: ", paste(types[bad], parent[bad]))
 
-aliases <- lapply(types, function(type) sort(names(alias_to)[alias_to == type]))
+aliases <- lapply(types, function(type) {
+  sort(names(alias_to)[alias_to == type], method = "radix")
+})
 detected_by <- vapply(types, function(type) {
   d <- spec[[type]]$detected_by
   if (is.null(d)) "extension" else d
@@ -214,7 +216,7 @@ types_registry <- types_registry[c(
   "type", "parent", "aliases", "extensions", "category", "detected_by"
 )]
 types_ext_map <- owner
-types_alias_map <- alias_to[order(names(alias_to))]
+types_alias_map <- alias_to[order(names(alias_to), method = "radix")]
 types_table_version <- table_version
 
 # --- C header ---------------------------------------------------------------
