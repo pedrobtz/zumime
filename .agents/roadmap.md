@@ -17,7 +17,7 @@ lands in Stage 1 with the tables it covers.
 
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
-| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | | 2026-10-19 |
+| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | [#13](https://github.com/pedrobtz/zumime/pull/13) | 2026-10-19 |
 | 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | | |
 | 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | | |
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | | |
