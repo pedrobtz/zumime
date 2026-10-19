@@ -26,17 +26,18 @@ test_that("regenerating from the recorded sources reproduces the tables", {
 
 test_that("every type reaches the root without a cycle", {
   types <- mime_types()
-  for (i in seq_len(nrow(types))) {
-    seen <- types$type[i]
-    parent <- types$parent[i]
-    while (!is.na(parent)) {
-      expect_false(parent %in% seen, info = types$type[i])
-      if (parent %in% seen) break
-      seen <- c(seen, parent)
-      parent <- types$parent[match(parent, types$type)]
-    }
-    expect_identical(seen[length(seen)], "application/octet-stream")
+  idx <- match(types$parent, types$type)
+  cur <- seq_len(nrow(types))
+  # Walk every type up together; a cycle would never reach the root.
+  for (step in seq_len(nrow(types))) {
+    nxt <- idx[cur]
+    done <- is.na(nxt)
+    if (all(done)) break
+    cur[!done] <- nxt[!done]
   }
+  expect_true(all(is.na(idx[cur])))
+  expect_true(all(types$type[cur] == "application/octet-stream"))
+  expect_lt(step, 16L)
 })
 
 test_that("every parent is a registered type", {
