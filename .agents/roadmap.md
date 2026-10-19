@@ -85,9 +85,13 @@ any `zumime` code exists.
 - `NEWS.md` is headed `# zumime 0.0.0.9000`, not `(development version)`:
   R 4.5's news parser skips a heading without a version, and `R CMD check`
   then notes "No news entries found".
-- `native-checks.yaml` (sanitizers with ASan, valgrind, LTO, gctorture,
-  rchk, analyzers, cran-special) is added here rather than in Stage 2, so
-  Stage 2's full run has it from its first push.
+- `native-checks.yaml` (valgrind, LTO, gctorture, rchk, analyzers,
+  cran-special) is added here rather than in Stage 2, so Stage 2's full run
+  has it from its first push. `sanitizers.yml` joins in Stage 1: its
+  instrumentation check looks for `__ubsan` symbols, and `init.c` alone
+  gives UBSan nothing to instrument.
+- Quick-profile timings on #13: every check under five minutes (the
+  longest, UBSan before it was deferred, 4m22s); nothing tuned.
 - The coverage badge goes to `gh-pages`: the `main` ruleset requires pull
   requests and rejected the badge commit on every push.
 
