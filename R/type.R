@@ -29,9 +29,10 @@
 #'   files.
 #' @param complete If `TRUE`, also read each file's end and fill
 #'   `complete`: a ZIP needs its end-of-central-directory record, a PDF
-#'   `%%EOF` in its last kilobyte (and its trailer's `/Encrypt` sets
-#'   `encrypted`), a gzip stream must inflate to its trailer, and Parquet
-#'   must end in `PAR1`. Other formats give `NA`.
+#'   `%%EOF` in its last kilobyte, a gzip stream must inflate to its
+#'   trailer, and Parquet must end in `PAR1`. Other formats give `NA`. A
+#'   PDF is `encrypted` when its trailer dictionary, found in the last 4 KB,
+#'   names `/Encrypt`.
 #' @param inner How to find the type inside a compression wrapper (gzip,
 #'   bzip2, xz, zstd, LZ4, lzip, compress): `"name"` takes it from the rest
 #'   of the name, so `data.csv.gz` holds `text/csv`; `"decompress"`

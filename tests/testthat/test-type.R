@@ -93,6 +93,30 @@ test_that("encrypted is read from ZIP, OLE2 and, with complete, PDF", {
     c(TRUE, FALSE, TRUE, TRUE, FALSE))
 })
 
+test_that("only the trailer dictionary decides whether a PDF is encrypted", {
+  in_text <- charToRaw(paste0("%PDF-1.7\n",
+    "1 0 obj << /Type /Catalog >> endobj\n",
+    "2 0 obj (/Encrypt is a word) endobj\n",
+    "trailer << /Root 1 0 R >>\nstartxref\n0\n%%EOF\n"))
+  xref <- function(dict) {
+    charToRaw(paste0("%PDF-1.7\n",
+      "1 0 obj << /Type /Catalog >> endobj\n",
+      "2 0 obj (/Encrypt is a word) endobj\n",
+      "3 0 obj << /Type /XRef /Size 4 /Root 1 0 R", dict,
+      " /Length 0 >>\nstream\n\nendstream\nendobj\n",
+      "startxref\n0\n%%EOF\n"))
+  }
+  dir <- local_tree(list(
+    "text.pdf" = in_text,
+    "xref.pdf" = xref(""),
+    "xref-locked.pdf" = xref(" /Encrypt 4 0 R")
+  ))
+  paths <- file.path(dir, c("text.pdf", "xref.pdf", "xref-locked.pdf"))
+  r <- mime_type(paths, complete = TRUE)
+  expect_identical(r$encrypted, c(FALSE, FALSE, TRUE))
+  expect_identical(r$complete, rep(TRUE, 3L))
+})
+
 test_that("complete = TRUE reads the end of ZIP, PDF, gzip and Parquet", {
   zip <- build_zip(ooxml_entries("word"))
   gz <- gzip_bytes(strrep("abc,def\n", 2000))
