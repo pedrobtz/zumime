@@ -123,7 +123,7 @@ sniff_paths <- function(
 ) {
   .Call(
     zumime_sniff_paths,
-    enc2native(path.expand(path)),
+    path.expand(path),
     limit,
     complete,
     supplied$essence,

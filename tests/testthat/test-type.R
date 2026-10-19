@@ -396,6 +396,18 @@ test_that("a non-ASCII path is read", {
   expect_identical(mime_check(path, "image"), TRUE)
 })
 
+test_that("a path under ~ is expanded by mime_type() and mime_check()", {
+  home <- withr::local_tempdir()
+  withr::local_envvar(HOME = home, R_USER = home)
+  writeBin(png_bytes(), file.path(home, "a.png"))
+  skip_if(
+    path.expand("~/a.png") != file.path(home, "a.png"),
+    "~ does not follow HOME here"
+  )
+  expect_identical(mime_type("~/a.png")$type, "image/png")
+  expect_identical(mime_check("~/a.png", "image"), TRUE)
+})
+
 test_that("suggested packages are reached only when asked, through one door", {
   dir <- local_tree(list(
     a.txt = c(charToRaw("caf"), as.raw(0xe9), charToRaw("\n")),
