@@ -63,8 +63,8 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
   # Function rules run in R after the C pass, so the shortcut cannot see
   # them; answer in full.
   if (any(session$types$kind == "function")) {
-    t <- if (is.raw(x)) mime_sniff(x) else mime_type(x)
-    return(mime_is(t$type, allowed) & t$confidence >= m)
+    res <- if (is.raw(x)) mime_sniff(x) else mime_type(x)
+    return(mime_is(res$type, allowed) & res$confidence >= m)
   }
 
   sets <- related_sets(allowed)
@@ -76,7 +76,8 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
     lapply(sets, `[[`, "within"),
     match(min_confidence, confidence_levels) - 1L
   )
-  # An unreadable path is type NA at confidence "none".
+  # An unreadable path is type NA at confidence "none": NA when "none" is
+  # accepted, else FALSE, since NA & FALSE is FALSE.
   unreadable <- as_confidence("none")
   out[is.na(out)] <- NA & (unreadable >= m)
   out
@@ -92,6 +93,7 @@ related_sets <- function(allowed) {
     session$related_version <- session$version
   }
   lapply(allowed, function(a) {
+    # A carriage return cannot occur in a type, so this key is no type's.
     key <- if (is.na(a)) "\rNA" else a
     hit <- session$related[[key]]
     if (!is.null(hit)) {
@@ -114,6 +116,8 @@ related_sets <- function(allowed) {
   })
 }
 
-# The static counter the shortcut increments once per allowed type tested.
-# Not API: the test of design D15 reads it.
-probe_count <- function() .Call(zumime_probe_count)
+# The static counters of the shortcut: one probe per allowed type tested,
+# and one full pass per input that went past it. Not API: the tests of
+# design D15 read them.
+probe_count <- function() .Call(zumime_probe_count)[1]
+full_pass_count <- function() .Call(zumime_probe_count)[2]

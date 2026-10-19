@@ -42,7 +42,8 @@
 #'   decompresses gzip with zukomp and sniffs the result, falling back to
 #'   the name for other wrappers and for files over 16 MiB.
 #' @param text `"whatwg"` keeps the standard's answer for text; `"family"`
-#'   offers a still generic `text/plain` to the family's sniffers.
+#'   offers a still generic `text/plain` to the family's sniffers, which
+#'   read whole files.
 #' @param charset `"declared"` reports the charset the bytes declare;
 #'   `"detect"` asks zuutf where they declare none, or only the C1 guess.
 #' @param strict If `TRUE`, an unreadable path raises `zumime_io_error`.
@@ -203,7 +204,8 @@ agree <- function(type, confidence, by_name) {
   if (!any(known)) {
     return(out)
   }
-  # Once per distinct pair: a tree has few.
+  # Once per distinct pair: a tree has few. A carriage return cannot occur
+  # in a type, so it separates the two unambiguously.
   key <- paste(type, by_name, sep = "\r")
   pairs <- unique(data.frame(key, type, by_name)[known, , drop = FALSE])
   one <- vapply(
@@ -218,23 +220,21 @@ agree <- function(type, confidence, by_name) {
   out
 }
 
-wrapper_types <- function() {
-  c(
-    "application/gzip",
-    "application/x-bzip2",
-    "application/x-xz",
-    "application/zstd",
-    "application/x-lz4",
-    "application/lzip",
-    "application/x-compress"
-  )
-}
+wrapper_types <- c(
+  "application/gzip",
+  "application/x-bzip2",
+  "application/x-xz",
+  "application/zstd",
+  "application/x-lz4",
+  "application/lzip",
+  "application/x-compress"
+)
 
 # The type inside a compression wrapper, from the rest of the name or, with
 # "decompress", from the bytes zukomp inflates.
 inner_type <- function(out, inner, limit) {
   res <- rep(NA_character_, nrow(out))
-  wrapped <- which(out$type %in% wrapper_types())
+  wrapped <- which(out$type %in% wrapper_types)
   if (!length(wrapped)) {
     return(res)
   }
@@ -286,14 +286,17 @@ family_refine <- function(out) {
   sniffers <- family_sniffers()
   rows <- which(out$type %in% "text/plain")
   for (i in rows) {
-    t <- NA_character_
-    for (s in sniffers) {
+    found <- NA_character_
+    for (sniffer in sniffers) {
       # An optional package's failure leaves the row as it was (design D6).
-      t <- tryCatch(s(out$path[i]), error = function(e) NA_character_)
-      if (!is.na(t)) break
+      found <- tryCatch(
+        sniffer(out$path[i]),
+        error = function(e) NA_character_
+      )
+      if (!is.na(found)) break
     }
-    if (!is.na(t)) {
-      out$type[i] <- t
+    if (!is.na(found)) {
+      out$type[i] <- found
       out$confidence[i] <- min(
         out$confidence[i],
         as_confidence("probable")
@@ -303,10 +306,10 @@ family_refine <- function(out) {
   out
 }
 
-family_packages <- function() c("zucsv", "zujson", "zutoml")
+family_packages <- c("zucsv", "zujson", "zutoml")
 
 family_sniffers <- function() {
-  have <- vapply(family_packages(), has_package, logical(1))
+  have <- vapply(family_packages, has_package, logical(1))
   sniffers <- list(
     zucsv = function(path) {
       sniff <- suggested_fun("zucsv", "sniff_csv")

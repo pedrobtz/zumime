@@ -6,8 +6,7 @@ session$types <- data.frame(
   type = character(),
   parent = character(),
   id = integer(),
-  kind = character(),
-  stringsAsFactors = FALSE
+  kind = character()
 )
 session$extensions <- list()
 session$rules <- list()
@@ -49,52 +48,9 @@ session$version <- 0L
 #' mime_guess("file.zdemo")
 #' mime_unregister("application/x-zumime-demo")
 mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
-  if (!is_string(type) || is.null(mime_parse(type)[[1]])) {
-    zumime_abort("type", "`type` must be a single MIME type string.")
-  }
-  rec <- mime_parse(type)[[1]]
-  essence <- paste0(rec$type, "/", rec$subtype)
-  if (!is_string(parent)) {
-    zumime_abort("type", "`parent` must be a single type string.")
-  }
-  parent <- canonical_type(parent)
-  if (nchar(essence, type = "bytes") > 127L) {
-    zumime_abort(
-      "registry",
-      sprintf(
-        "A registered type is at most 127 bytes long, not %d.",
-        nchar(essence, type = "bytes")
-      )
-    )
-  }
-  if (essence %in% all_types() || essence %in% names(types_alias_map)) {
-    zumime_abort("registry", sprintf("\"%s\" is already a type.", essence))
-  }
-  if (!(parent %in% all_types())) {
-    zumime_abort(
-      "registry",
-      sprintf("The parent \"%s\" is not a type.", parent)
-    )
-  }
-  # A data rule runs in C before R's function rules, so it could never see
-  # a type that only a function rule decides.
-  if (
-    !is.function(rule) &&
-      !is.null(rule) &&
-      parent %in% session$types$type[session$types$kind == "function"]
-  ) {
-    zumime_abort(
-      "registry",
-      sprintf(
-        paste(
-          "\"%s\" is decided by a function rule; a data rule cannot sit",
-          "under it. Use a function rule for \"%s\"."
-        ),
-        parent,
-        essence
-      )
-    )
-  }
+  args <- check_register_args(type, parent, rule)
+  essence <- args$essence
+  parent <- args$parent
   extensions <- check_extensions(extensions)
   data_rule <- NULL
   fn <- NULL
@@ -123,18 +79,79 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
   }
   session$types <- rbind(
     session$types,
-    data.frame(
-      type = essence,
-      parent = parent,
-      id = id,
-      kind = kind,
-      stringsAsFactors = FALSE
-    )
+    data.frame(type = essence, parent = parent, id = id, kind = kind)
   )
   session$extensions[[essence]] <- extensions
   session$rules[[essence]] <- fn
   session$version <- session$version + 1L
   invisible(essence)
+}
+
+# mime_register()'s checks on the type, the parent and where the rule may
+# sit. Returns the type's essence and the canonical parent.
+check_register_args <- function(type, parent, rule, call = sys.call(-1L)) {
+  rec <- if (is_string(type)) mime_parse(type)[[1]]
+  if (is.null(rec)) {
+    zumime_abort(
+      "type",
+      "`type` must be a single MIME type string.",
+      call = call
+    )
+  }
+  essence <- paste0(rec$type, "/", rec$subtype)
+  if (!is_string(parent)) {
+    zumime_abort(
+      "type",
+      "`parent` must be a single type string.",
+      call = call
+    )
+  }
+  parent <- canonical_type(parent)
+  if (nchar(essence, type = "bytes") > 127L) {
+    zumime_abort(
+      "registry",
+      sprintf(
+        "A registered type is at most 127 bytes long, not %d.",
+        nchar(essence, type = "bytes")
+      ),
+      call = call
+    )
+  }
+  if (essence %in% all_types() || essence %in% names(types_alias_map)) {
+    zumime_abort(
+      "registry",
+      sprintf("\"%s\" is already a type.", essence),
+      call = call
+    )
+  }
+  if (!(parent %in% all_types())) {
+    zumime_abort(
+      "registry",
+      sprintf("The parent \"%s\" is not a type.", parent),
+      call = call
+    )
+  }
+  # A data rule runs in C before R's function rules, so it could never see
+  # a type that only a function rule decides.
+  if (
+    !is.function(rule) &&
+      !is.null(rule) &&
+      parent %in% session$types$type[session$types$kind == "function"]
+  ) {
+    zumime_abort(
+      "registry",
+      sprintf(
+        paste(
+          "\"%s\" is decided by a function rule; a data rule cannot sit",
+          "under it. Use a function rule for \"%s\"."
+        ),
+        parent,
+        essence
+      ),
+      call = call
+    )
+  }
+  list(essence = essence, parent = parent)
 }
 
 #' @rdname mime_register
@@ -194,14 +211,15 @@ check_rule <- function(rule) {
         "`rule` must be NULL, a function, or a list of `offset`, `bytes`",
         "(1 to 64 bytes) and an optional `mask` of the same length."
       ),
+      # -2: past bad() and check_rule() to mime_register().
       call = sys.call(-2L)
     )
   }
-  if (!is.list(rule) || is.null(rule$bytes)) {
+  if (!is.list(rule) || is.null(rule[["bytes"]])) {
     bad()
   }
-  offset <- rule$offset %||% 0
-  bytes <- rule$bytes
+  offset <- rule[["offset"]] %||% 0
+  bytes <- rule[["bytes"]]
   if (is.character(bytes) && length(bytes) == 1L) {
     bytes <- charToRaw(bytes)
   }
@@ -218,7 +236,7 @@ check_rule <- function(rule) {
   ) {
     bad()
   }
-  mask <- rule$mask
+  mask <- rule[["mask"]]
   if (!is.null(mask) && (!is.raw(mask) || length(mask) != length(bytes))) {
     bad()
   }
@@ -246,40 +264,20 @@ apply_registered <- function(out, x, limit) {
   fns <- session$types[session$types$kind == "function", , drop = FALSE]
   failed <- character()
   for (i in seq_len(nrow(out))) {
-    bytes <- NULL
-    for (depth in 1:8) {
-      hit <- which(fns$parent == out$type[i])
-      if (!length(hit) || is.na(out$type[i])) {
-        break
-      }
-      # A directory or other inode is never opened.
-      if (is.null(bytes) && !startsWith(out$type[i], "inode/")) {
-        bytes <- head_bytes(x, i, limit)
-      }
-      if (is.null(bytes)) {
-        break
-      }
-      changed <- FALSE
-      for (h in hit) {
-        # A rule that fails does not match; the caller hears once.
-        ok <- tryCatch(
-          isTRUE(session$rules[[fns$type[h]]](bytes)),
-          error = function(e) {
-            failed <<- union(failed, fns$type[h])
-            FALSE
-          }
-        )
-        if (ok) {
-          out$type[i] <- fns$type[h]
-          out$confidence[i] <- min(
-            out$confidence[i],
-            as_confidence("probable")
-          )
-          changed <- TRUE
-          break
-        }
-      }
-      if (!changed) break
+    type <- out$type[i]
+    # A directory or other inode is never opened.
+    if (is.na(type) || !any(fns$parent == type) || startsWith(type, "inode/")) {
+      next
+    }
+    bytes <- head_bytes(x, i, limit)
+    if (is.null(bytes)) {
+      next
+    }
+    hit <- apply_rules_to(type, bytes, fns)
+    failed <- union(failed, hit$failed)
+    if (hit$type != type) {
+      out$type[i] <- hit$type
+      out$confidence[i] <- min(out$confidence[i], as_confidence("probable"))
     }
   }
   if (length(failed)) {
@@ -294,6 +292,37 @@ apply_registered <- function(out, x, limit) {
   }
   out
 }
+
+# Descend from `type` through the function rules under it, taking the
+# first that matches at each level. A rule that fails does not match, and
+# is named in `failed`.
+apply_rules_to <- function(type, bytes, fns) {
+  failed <- character()
+  for (level in seq_len(max_rule_depth)) {
+    matched <- FALSE
+    for (h in which(fns$parent == type)) {
+      ok <- tryCatch(
+        isTRUE(session$rules[[fns$type[h]]](bytes)),
+        error = function(e) {
+          failed <<- c(failed, fns$type[h])
+          FALSE
+        }
+      )
+      if (ok) {
+        type <- fns$type[h]
+        matched <- TRUE
+        break
+      }
+    }
+    if (!matched) break
+  }
+  list(type = type, failed = failed)
+}
+
+# How many function rules may sit one under another. Registration needs an
+# existing parent, so chains cannot loop; the bound keeps a long chain from
+# reading the bytes over and over.
+max_rule_depth <- 8L
 
 head_bytes <- function(x, i, limit) {
   if (is.raw(x)) {

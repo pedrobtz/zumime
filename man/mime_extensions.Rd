@@ -23,4 +23,11 @@ mime_extensions(c("image/jpeg", "application/x-sqlite3"))
 }
 \seealso{
 \code{\link[=mime_guess]{mime_guess()}} for the reverse.
+
+Other registry:
+\code{\link[=mime_guess]{mime_guess()}},
+\code{\link[=mime_is]{mime_is()}},
+\code{\link[=mime_parent]{mime_parent()}},
+\code{\link[=mime_types]{mime_types()}}
 }
+\concept{registry}

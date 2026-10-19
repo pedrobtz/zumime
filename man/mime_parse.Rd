@@ -42,3 +42,6 @@ mime_parse("not a type")
 \references{
 \url{https://mimesniff.spec.whatwg.org/#parsing-a-mime-type}
 }
+\seealso{
+\code{\link[=mime_sniff]{mime_sniff()}}, which takes a supplied type in this grammar.
+}

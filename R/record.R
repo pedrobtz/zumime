@@ -16,6 +16,7 @@
 #'
 #'   `mime_format()` returns a character vector, `NA` for a `NULL` record.
 #' @references <https://mimesniff.spec.whatwg.org/#parsing-a-mime-type>
+#' @seealso [mime_sniff()], which takes a supplied type in this grammar.
 #' @export
 #' @examples
 #' rec <- mime_parse("Text/HTML; Charset=\"UTF-8\"; charset=latin1")
@@ -63,10 +64,10 @@ mime_format <- function(record) {
     if (is.null(r)) {
       return(NULL)
     }
-    p <- r$parameters
+    p <- r[["parameters"]]
     list(
-      enc2utf8(r$type),
-      enc2utf8(r$subtype),
+      enc2utf8(r[["type"]]),
+      enc2utf8(r[["subtype"]]),
       structure(
         lapply(p, enc2utf8),
         names = enc2utf8(names(p) %||% character())
@@ -76,14 +77,16 @@ mime_format <- function(record) {
   .Call(zumime_mime_format, record)
 }
 
+# A record as mime_parse() makes it. Fields are read with [[ so a list with
+# `typex` is not taken for one with `type`. Tokens are not re-checked: the
+# documented input is a record from mime_parse().
 is_record <- function(r) {
   is.list(r) &&
-    !is.null(r$type) &&
-    is_string(r$type) &&
-    is_string(r$subtype) &&
-    is.list(r$parameters) &&
-    all(vapply(r$parameters, is_string, TRUE)) &&
-    (length(r$parameters) == 0L || !is.null(names(r$parameters)))
+    is_string(r[["type"]]) &&
+    is_string(r[["subtype"]]) &&
+    is.list(r[["parameters"]]) &&
+    all(vapply(r[["parameters"]], is_string, TRUE)) &&
+    (length(r[["parameters"]]) == 0L || !is.null(names(r[["parameters"]])))
 }
 
 # x in UTF-8 for the parser. enc2utf8() turns a byte the native encoding

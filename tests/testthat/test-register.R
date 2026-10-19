@@ -328,3 +328,21 @@ test_that("a file gone before R re-reads it gives no bytes", {
   expect_identical(read_bytes(path, 0), as.raw(1:10))
   expect_null(read_bytes(dirname(path), 4096))
 })
+
+test_that("a registered compound extension and an offset-only rule", {
+  withr::defer(try(mime_unregister("application/x-zt-tar"), silent = TRUE))
+  mime_register(
+    "application/x-zt-tar",
+    "application/octet-stream",
+    extensions = "tar.zt"
+  )
+  expect_identical(mime_guess("a.tar.zt"), "application/x-zt-tar")
+  expect_error(
+    mime_register(
+      "application/x-zt-off",
+      "application/octet-stream",
+      rule = list(offset = 1)
+    ),
+    class = "zumime_type_error"
+  )
+})

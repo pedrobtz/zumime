@@ -25,4 +25,11 @@ types[types$type == "application/zip", ]
 }
 \seealso{
 \code{\link[=mime_parent]{mime_parent()}} for one type's lineage.
+
+Other registry:
+\code{\link[=mime_extensions]{mime_extensions()}},
+\code{\link[=mime_guess]{mime_guess()}},
+\code{\link[=mime_is]{mime_is()}},
+\code{\link[=mime_parent]{mime_parent()}}
 }
+\concept{registry}

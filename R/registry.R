@@ -2,16 +2,6 @@
 # by tools/generate-tables.R into R/sysdata.rda: types_registry,
 # types_ext_map, types_alias_map and types_table_version.
 
-# Canonical essence of each type string: parameters dropped, whitespace
-# trimmed, lower-cased, aliases resolved. Unknown types come back as their
-# essence; NA stays NA.
-canonical_type <- function(x) {
-  x <- tolower(trimws(sub(";.*$", "", x)))
-  hit <- match(x, names(types_alias_map))
-  x[!is.na(hit)] <- types_alias_map[hit[!is.na(hit)]]
-  unname(x)
-}
-
 #' The type registry
 #'
 #' Every type zumime knows, with its parent, aliases, extensions and the
@@ -24,6 +14,7 @@ canonical_type <- function(x) {
 #'   (`"signature"`, `"container"`, `"text"`, `"extension"` or
 #'   `"registered"`).
 #' @seealso [mime_parent()] for one type's lineage.
+#' @family registry
 #' @export
 #' @examples
 #' types <- mime_types()
@@ -38,8 +29,7 @@ mime_types <- function() {
     type = reg$type,
     parent = reg$parent,
     category = sub("/.*$", "", reg$type),
-    detected_by = "registered",
-    stringsAsFactors = FALSE
+    detected_by = "registered"
   )
   extra$aliases <- rep(list(character()), nrow(reg))
   extra$extensions <- unname(session$extensions[reg$type])
@@ -54,19 +44,19 @@ mime_types <- function() {
 #'   extension first, without the dot. An unknown type gives
 #'   `character(0)`.
 #' @seealso [mime_guess()] for the reverse.
+#' @family registry
 #' @export
 #' @examples
 #' mime_extensions(c("image/jpeg", "application/x-sqlite3"))
 mime_extensions <- function(type) {
   type <- canonical_type(check_character(type))
   hit <- match(type, types_registry$type)
-  out <- lapply(seq_along(type), function(k) {
+  lapply(seq_along(type), function(k) {
     if (!is.na(hit[k])) {
       return(types_registry$extensions[[hit[k]]])
     }
     session$extensions[[type[k]]] %||% character()
   })
-  out
 }
 
 #' Guess a type from a file name
@@ -79,6 +69,7 @@ mime_extensions <- function(type) {
 #' @return A character vector of canonical types, `NA` where no suffix is
 #'   known.
 #' @seealso [mime_extensions()] for the reverse.
+#' @family registry
 #' @export
 #' @examples
 #' mime_guess(c("report.FINAL.PDF", "data.tar.gz", "README", "x.rds"))
@@ -104,43 +95,6 @@ mime_guess <- function(path) {
   unname(out)
 }
 
-# Lineage of one canonical type, nearest first, from the registry and any
-# registered types. Every known type's lineage is computed once per
-# registry version and kept in `session`.
-lineage <- function(type) {
-  table <- lineage_table()
-  out <- table[[type]]
-  if (is.null(out)) character() else out
-}
-
-lineage_table <- function() {
-  if (identical(session$lineage_version, session$version)) {
-    return(session$lineage)
-  }
-  types <- all_types()
-  parents <- type_parent(types)
-  idx <- match(parents, types)
-  out <- vector("list", length(types))
-  names(out) <- types
-  # Walk all types up one level at a time.
-  cur <- idx
-  acc <- lapply(seq_along(types), function(i) character())
-  for (depth in seq_len(64)) {
-    live <- which(!is.na(cur))
-    if (!length(live)) {
-      break
-    }
-    for (i in live) {
-      acc[[i]] <- c(acc[[i]], types[cur[i]])
-    }
-    cur[live] <- idx[cur[live]]
-  }
-  out[] <- acc
-  session$lineage <- out
-  session$lineage_version <- session$version
-  out
-}
-
 #' The lineage of a type
 #'
 #' Every type has one parent, ending at `application/octet-stream`: text
@@ -153,14 +107,15 @@ lineage_table <- function() {
 #' @return A list with one character vector per type: its ancestors,
 #'   nearest first, empty for the root and `NA` for an unknown type.
 #' @seealso [mime_is()] to test membership.
+#' @family registry
 #' @export
 #' @examples
 #' mime_parent("image/svg+xml")
 #' mime_parent(c("application/x-sqlite3", "application/octet-stream"))
 mime_parent <- function(type) {
   type <- canonical_type(check_character(type))
-  lapply(type, function(t) {
-    if (is.na(t) || !(t %in% all_types())) NA_character_ else lineage(t)
+  lapply(type, function(one) {
+    if (is.na(one) || !(one %in% all_types())) NA_character_ else lineage(one)
   })
 }
 
@@ -175,6 +130,7 @@ mime_parent <- function(type) {
 #' @param what A character vector of types, aliases or top-level types.
 #' @return A logical vector the length of `x`, `NA` where `x` is `NA`.
 #' @seealso [mime_parent()] for the lineage.
+#' @family registry
 #' @export
 #' @examples
 #' mime_is("application/x-sqlite3", "application/vnd.sqlite3")
@@ -187,16 +143,64 @@ mime_is <- function(x, what) {
   u <- unique(x)
   hit <- vapply(
     u,
-    function(t) {
-      if (is.na(t)) {
+    function(one) {
+      if (is.na(one)) {
         return(NA)
       }
-      known <- t %in% all_types()
-      family <- c(t, if (known) lineage(t) else "application/octet-stream")
-      any(family %in% what) || sub("/.*$", "", t) %in% what
+      known <- one %in% all_types()
+      family <- c(one, if (known) lineage(one) else "application/octet-stream")
+      any(family %in% what) || sub("/.*$", "", one) %in% what
     },
     logical(1),
     USE.NAMES = FALSE
   )
   hit[match(x, u)]
 }
+
+# Canonical essence of each type string: parameters dropped, whitespace
+# trimmed, lower-cased, aliases resolved. Unknown types come back as their
+# essence; NA stays NA.
+canonical_type <- function(x) {
+  x <- tolower(trimws(sub(";.*$", "", x)))
+  hit <- match(x, names(types_alias_map))
+  x[!is.na(hit)] <- types_alias_map[hit[!is.na(hit)]]
+  unname(x)
+}
+
+# Lineage of one canonical type, nearest first, from the registry and any
+# registered types. Every known type's lineage is computed once per
+# registry version and kept in `session`.
+lineage <- function(type) {
+  lineage_table()[[type]] %||% character()
+}
+
+lineage_table <- function() {
+  if (identical(session$lineage_version, session$version)) {
+    return(session$lineage)
+  }
+  types <- all_types()
+  parents <- type_parent(types)
+  idx <- match(parents, types)
+  # Walk all types up one level at a time. The generator rejects cycles and
+  # registration needs an existing parent, so the walk ends; the bound only
+  # guards against a table that breaks that promise.
+  cur <- idx
+  acc <- rep(list(character()), length(types))
+  names(acc) <- types
+  for (step in seq_len(max_lineage)) {
+    live <- which(!is.na(cur))
+    if (!length(live)) {
+      break
+    }
+    for (i in live) {
+      acc[[i]] <- c(acc[[i]], types[cur[i]])
+    }
+    cur[live] <- idx[cur[live]]
+  }
+  session$lineage <- acc
+  session$lineage_version <- session$version
+  acc
+}
+
+# The deepest lineage the walk follows: today's deepest is far shorter.
+max_lineage <- 64L

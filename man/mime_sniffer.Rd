@@ -46,7 +46,10 @@ returns the result.
 the next chunk and returns \code{NULL} while the bytes seen cannot yet decide
 the type, or the result row once they can. \code{mime_finish()} forces an
 answer from what has been seen, as the end of a short stream would. The
-answer is the one \code{\link[=mime_sniff]{mime_sniff()}} gives for the same first \code{limit} bytes.
+answer is the one \code{\link[=mime_sniff]{mime_sniff()}} gives for the whole stream with the same
+\code{limit}. A stream exactly \code{limit} bytes long is read as one that goes on,
+since the sniffer cannot know it has ended, so a character cut at the
+end does not count against UTF-8.
 }
 \details{
 Once the sniffer has decided, further pushes ignore their chunks and
@@ -60,9 +63,11 @@ type has what it needs. Or \code{limit} bytes have arrived. Text decides only
 at \code{limit} or at the finish, since a later byte can still change it. The
 tail-reading column, \code{complete}, is \code{NA} for a stream.
 
-The sniffer keeps its bytes in an R raw vector. A sniffer saved and
-loaded again keeps those bytes but forgets its decision, and is
-undecided until the next push.
+The sniffer keeps its bytes in an R raw vector, grown as they arrive up to
+\code{limit}. With \code{limit = 0} text never decides before the finish, so the
+sniffer holds the whole stream until \code{mime_finish()}. A sniffer saved and
+loaded again keeps those bytes but forgets its decision, and is undecided
+until the next push.
 }
 \examples{
 s <- mime_sniffer()

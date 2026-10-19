@@ -26,4 +26,11 @@ mime_parent(c("application/x-sqlite3", "application/octet-stream"))
 }
 \seealso{
 \code{\link[=mime_is]{mime_is()}} to test membership.
+
+Other registry:
+\code{\link[=mime_extensions]{mime_extensions()}},
+\code{\link[=mime_guess]{mime_guess()}},
+\code{\link[=mime_is]{mime_is()}},
+\code{\link[=mime_types]{mime_types()}}
 }
+\concept{registry}

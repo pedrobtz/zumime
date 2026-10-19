@@ -415,7 +415,10 @@ test_that("suggested packages are reached only when asked, through one door", {
     c.gz = gzip_bytes("{\"a\": 1}")
   ))
   p <- file.path(dir, c("a.txt", "b", "c.gz"))
-  local_mocked_bindings(has_package = function(pkg) FALSE)
+  local_mocked_bindings(
+    has_package = function(pkg) FALSE,
+    is_installed = function(pkg) FALSE
+  )
   expect_error(
     mime_type(p, charset = "detect"),
     class = "zumime_dependency_error"
@@ -429,6 +432,7 @@ test_that("suggested packages are reached only when asked, through one door", {
 
   local_mocked_bindings(
     has_package = function(pkg) TRUE,
+    is_installed = function(pkg) TRUE,
     suggested_fun = function(pkg, name) {
       switch(
         name,
@@ -466,4 +470,35 @@ test_that("a large limit costs nothing for small files", {
     mime_type(paths)$type
   )
   expect_identical(mime_check(paths, "image", "definite"), c(TRUE, FALSE))
+})
+
+test_that("zumime_info() lists the family without loading it", {
+  loaded <- character()
+  local_mocked_bindings(
+    is_installed = function(pkg) pkg != "zutoml",
+    has_package = function(pkg) {
+      loaded <<- c(loaded, pkg)
+      TRUE
+    }
+  )
+  expect_identical(zumime_info()$family, c("zucsv", "zujson"))
+  expect_identical(loaded, character())
+})
+
+test_that("text = \"family\" takes zutoml's answer when the others decline", {
+  dir <- local_tree(list(conf = "title = \"x\"\n"))
+  local_mocked_bindings(
+    has_package = function(pkg) TRUE,
+    suggested_fun = function(pkg, name) {
+      switch(
+        name,
+        sniff_csv = function(path, delimiter) list(ncol = 1L, nrow = 1L),
+        json_validate = function(x) FALSE,
+        toml_validate = function(x) TRUE
+      )
+    }
+  )
+  t <- mime_type(file.path(dir, "conf"), text = "family")
+  expect_identical(t$type, "application/toml")
+  expect_identical(as.character(t$confidence), "probable")
 })

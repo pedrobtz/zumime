@@ -21,9 +21,12 @@ inputs <- c(
       ooxml_entries("xl")
     )),
     zip_enc = build_zip(list(a = "x"), flags = 1L),
-  # Past a 4 KiB head, so the harness's path windows apply.
-  zip_long = build_zip(c(ooxml_entries("word"), list(media = strrep("x", 5000)))),
-  zip_comment = build_zip(ooxml_entries("xl"), comment = raw(6000)),
+    # Past a 4 KiB head, so the harness's path windows apply.
+    zip_long = build_zip(c(
+      ooxml_entries("word"),
+      list(media = strrep("x", 5000))
+    )),
+    zip_comment = build_zip(ooxml_entries("xl"), comment = raw(6000)),
     odt = build_zip(list(mimetype = "application/vnd.oasis.opendocument.text")),
     ooxml_deflate = build_zip(
       ooxml_entries(

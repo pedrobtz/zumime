@@ -21,3 +21,6 @@ sources they were built from.
 \examples{
 zumime_info()
 }
+\seealso{
+\code{\link[=mime_type]{mime_type()}} for the arguments that use the family.
+}

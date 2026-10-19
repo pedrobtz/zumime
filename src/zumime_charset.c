@@ -361,6 +361,9 @@ void zumime_charset(const unsigned char *buf, size_t len, int truncated,
     out->confidence = ZUMIME_CONF_PROBABLE;
 }
 
+/* A \r as the last byte is not counted: in a buffer cut by the limit it
+ * may be the first half of \r\n. A whole vector ending in a lone \r loses
+ * that one ending too, which is the price of one rule for both. */
 int zumime_newline_style(const unsigned char *buf, size_t len) {
   int lf = 0, crlf = 0, cr = 0;
   for (size_t i = 0; i < len; i++) {

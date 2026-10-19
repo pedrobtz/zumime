@@ -216,3 +216,16 @@ test_that("mime_sniff() rejects malformed arguments", {
     )
   }
 })
+
+test_that("a missing supplied type sniffs as no type", {
+  expect_identical(
+    mime_sniff(charToRaw("hello"), type = NA),
+    mime_sniff(charToRaw("hello"))
+  )
+  expect_identical(mime_is(NA, "text"), NA)
+})
+
+test_that("a lone carriage return at the end is not an ending", {
+  expect_identical(mime_sniff(charToRaw("a\r"))$newline, NA_character_)
+  expect_identical(mime_sniff(charToRaw("a\rb"))$newline, "cr")
+})

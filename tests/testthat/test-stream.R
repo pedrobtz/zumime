@@ -213,3 +213,12 @@ test_that("a sniffer's buffer grows by need up to its limit", {
   expect_identical(size(t), 10000L)
   expect_output(print(t), "10000 of 10000 bytes")
 })
+
+test_that("a sniffer stripped of its parameters is a type error", {
+  s <- mime_sniffer()
+  attr(s, "params") <- NULL
+  expect_error(mime_push(s, raw(1)), class = "zumime_type_error")
+  expect_error(mime_finish(s), class = "zumime_type_error")
+  fake <- structure(list(), class = "zumime_sniffer")
+  expect_error(mime_push(fake, raw(1)), class = "zumime_type_error")
+})

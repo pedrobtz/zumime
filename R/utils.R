@@ -83,6 +83,9 @@ has_package <- function(pkg) requireNamespace(pkg, quietly = TRUE)
 
 suggested_fun <- function(pkg, name) getExportedValue(pkg, name)
 
+# Installed, without loading it: for reports such as zumime_info().
+is_installed <- function(pkg) nzchar(system.file(package = pkg))
+
 is_string <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
 
 `%||%` <- function(x, y) if (is.null(x)) y else x

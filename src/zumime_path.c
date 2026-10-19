@@ -564,8 +564,16 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
  * One probe is counted per allowed type tested, in a static counter. */
 
 static double probes = 0;
+static double full_passes = 0; /* inputs that went past the gate */
 
-SEXP zumime_probe_count(void) { return Rf_ScalarReal(probes); }
+/* c(probes, full passes), for the tests of the shortcut. */
+SEXP zumime_probe_count(void) {
+  SEXP out = PROTECT(Rf_allocVector(REALSXP, 2));
+  REAL(out)[0] = probes;
+  REAL(out)[1] = full_passes;
+  UNPROTECT(1);
+  return out;
+}
 
 static int in_sorted(SEXP ids, int x) {
   const int *p = INTEGER(ids);
@@ -620,6 +628,7 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
     zumime_result r;
     zumime_sniff(RAW(x), len, &b, &r);
     if (!related_to_any(related, r.type)) return Rf_ScalarLogical(0);
+    full_passes++;
     zumime_sniff(RAW(x), len, &in, &r);
     return Rf_ScalarLogical(allowed(within, r.type, r.confidence, min_conf));
   }
@@ -648,8 +657,10 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
       LOGICAL(out)[i] = NA_LOGICAL;
     else if (gated)
       LOGICAL(out)[i] = 0;
-    else
+    else {
+      full_passes++;
       LOGICAL(out)[i] = allowed(within, pr.r.type, pr.r.confidence, min_conf);
+    }
   }
   UNPROTECT(1);
   return out;

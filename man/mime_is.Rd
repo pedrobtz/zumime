@@ -27,4 +27,11 @@ mime_is("image/svg+xml", "application/xml")
 }
 \seealso{
 \code{\link[=mime_parent]{mime_parent()}} for the lineage.
+
+Other registry:
+\code{\link[=mime_extensions]{mime_extensions()}},
+\code{\link[=mime_guess]{mime_guess()}},
+\code{\link[=mime_parent]{mime_parent()}},
+\code{\link[=mime_types]{mime_types()}}
 }
+\concept{registry}

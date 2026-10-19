@@ -34,7 +34,8 @@ decompresses gzip with zukomp and sniffs the result, falling back to
 the name for other wrappers and for files over 16 MiB.}
 
 \item{text}{\code{"whatwg"} keeps the standard's answer for text; \code{"family"}
-offers a still generic \code{text/plain} to the family's sniffers.}
+offers a still generic \code{text/plain} to the family's sniffers, which
+read whole files.}
 
 \item{charset}{\code{"declared"} reports the charset the bytes declare;
 \code{"detect"} asks zuutf where they declare none, or only the C1 guess.}

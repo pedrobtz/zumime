@@ -87,3 +87,9 @@ test_that("every web-platform-tests parse fixture passes", {
     }
   }
 })
+
+test_that("mime_format() reads record fields without partial matching", {
+  near <- list(typex = "text", subtype = "plain", parameters = list())
+  expect_error(mime_format(near), class = "zumime_type_error")
+  expect_error(mime_parse("a/b", strict = NA), class = "zumime_type_error")
+})
