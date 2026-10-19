@@ -47,6 +47,18 @@ test_that("uncompressed RDS and RData are found by their headers", {
   )
 })
 
+test_that("uncompressed native-format RDS is found by its header", {
+  for (version in 2:3) {
+    x <- serialize(1:3, NULL, xdr = FALSE, version = version)
+    expect_identical(mime_sniff(x)$type, "application/x-rds", info = version)
+  }
+  # ASCII serialisation is text.
+  expect_identical(
+    mime_sniff(serialize(1:3, NULL, ascii = TRUE))$type,
+    "text/plain"
+  )
+})
+
 test_that("other wrappers keep their own type", {
   dir <- withr::local_tempdir()
   for (w in c("bzip2", "xz")) {

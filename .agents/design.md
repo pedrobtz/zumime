@@ -328,7 +328,7 @@ in hand plus, for paths, one bounded tail read:
 - **Compression wrappers**: gzip, zstd, xz and bzip2 are types in their
   own right and set `inner` (§6.7).
 - **R and analytic data**: RDS and RData by their compression wrapper
-  (gzip, bzip2, xz, zstd, or none) to the `X\n` or `RDX2\n`/`RDX3\n`
+  (gzip, bzip2, xz, zstd, or none) to the `X\n`/`B\n` or `RDX2\n`/`RDX3\n`
   header and the serialisation version; Parquet (`PAR1`, both ends),
   Arrow IPC and Feather (`ARROW1`, `FEA1`), fst, qs2, SQLite, DuckDB,
   HDF5 (at 0, 512, 1024, …), NetCDF classic, Stata `.dta`, SPSS `.sav`

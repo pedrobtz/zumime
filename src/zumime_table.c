@@ -231,6 +231,10 @@ const zumime_sig zumime_sigs[] = {
   {0, "\x58\x0A\x00\x00\x00\x03", NULL, 6, ZUMIME_T_APPLICATION_X_RDS, -1, 0, ZUMIME_GROUP_EXTRA},
   /* RDS, XDR, format 2 */
   {0, "\x58\x0A\x00\x00\x00\x02", NULL, 6, ZUMIME_T_APPLICATION_X_RDS, -1, 0, ZUMIME_GROUP_EXTRA},
+  /* RDS, native little-endian (xdr = FALSE), format 3 */
+  {0, "\x42\x0A\x03\x00\x00\x00", NULL, 6, ZUMIME_T_APPLICATION_X_RDS, -1, 0, ZUMIME_GROUP_EXTRA},
+  /* RDS, native little-endian (xdr = FALSE), format 2 */
+  {0, "\x42\x0A\x02\x00\x00\x00", NULL, 6, ZUMIME_T_APPLICATION_X_RDS, -1, 0, ZUMIME_GROUP_EXTRA},
   /* RData */
   {0, "\x52\x44\x58\x33\x0A", NULL, 5, ZUMIME_T_APPLICATION_X_RDATA, -1, 0, ZUMIME_GROUP_EXTRA},
   /* RData */
