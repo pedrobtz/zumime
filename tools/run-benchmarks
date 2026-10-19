@@ -1,0 +1,187 @@
+#!/usr/bin/env Rscript
+# Times the design §10 operations for zumime and for the incumbents that are
+# installed: `file --mime-type` (libmagic) and mime::guess_type(). Prints a
+# Markdown table to paste into .agents/benchmarks.md.
+#
+#   tools/run-benchmarks            # every row
+#   ZUMIME_BENCH_FILES=10000 tools/run-benchmarks   # a smaller tree
+#
+# Nothing here ships: tools/ is in .Rbuildignore. mime is a GPL package and is
+# only *called* here as an incumbent to measure, never copied from.
+
+n_files <- as.integer(Sys.getenv("ZUMIME_BENCH_FILES", "100000"))
+n_paths <- 1e6L
+filetype_commit <- "11e0d6473a37972e4d39d8d6c1c9d1b85b9ace25" # v22.2.0
+
+have_zumime <- requireNamespace("zumime", quietly = TRUE) &&
+  "mime_type" %in% getNamespaceExports("zumime")
+have_mime <- requireNamespace("mime", quietly = TRUE)
+file_bin <- Sys.which("file")
+have_file <- nzchar(file_bin)
+mimetype_bin <- Sys.which("mimetype")
+have_mimetype <- nzchar(mimetype_bin) &&
+  any(grepl("gabriel-vasile", tryCatch(
+    system2(mimetype_bin, "-h", stdout = TRUE, stderr = TRUE),
+    error = function(e) ""
+  )))
+
+# Median wall time of `reps` runs of `expr`, in seconds.
+time_it <- function(expr, reps = 5L) {
+  expr <- substitute(expr)
+  env <- parent.frame()
+  eval(expr, env) # warm-up
+  median(vapply(seq_len(reps), function(i) {
+    system.time(eval(expr, env))[["elapsed"]]
+  }, numeric(1)))
+}
+
+fmt_time <- function(s) {
+  if (is.na(s)) return("n/a")
+  if (s < 1e-3) sprintf("%.2f µs", s * 1e6) else
+    if (s < 1) sprintf("%.1f ms", s * 1e3) else sprintf("%.2f s", s)
+}
+
+# A tree of small files whose first bytes cycle through common formats, so
+# the sniffers do representative work rather than one fast path.
+headers <- list(
+  png = as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)),
+  pdf = charToRaw("%PDF-1.7\n"),
+  zip = as.raw(c(0x50, 0x4b, 0x03, 0x04)),
+  gz = as.raw(c(0x1f, 0x8b, 0x08, 0x00)),
+  html = charToRaw("<!DOCTYPE html><html><head><title>x</title>"),
+  txt = charToRaw("plain text, nothing to see\n"),
+  json = charToRaw("{\"a\": 1, \"b\": [1, 2, 3]}\n"),
+  jpg = as.raw(c(0xff, 0xd8, 0xff, 0xe0))
+)
+make_tree <- function(n) {
+  dir <- file.path(tempdir(), "zumime-bench-tree")
+  unlink(dir, recursive = TRUE)
+  dir.create(dir)
+  set.seed(1)
+  pad <- as.raw(sample(0:255, 4096 - 64, replace = TRUE))
+  kinds <- names(headers)
+  paths <- file.path(dir, sprintf("f%06d.%s", seq_len(n), kinds))
+  for (i in seq_len(n)) {
+    k <- kinds[(i - 1L) %% length(kinds) + 1L]
+    body <- if (k %in% c("html", "txt", "json")) {
+      charToRaw(strrep("lorem ipsum dolor sit amet\n", 150))
+    } else {
+      pad
+    }
+    writeBin(c(headers[[k]], body), paths[i])
+  }
+  paths
+}
+
+fetch_corpus <- function() {
+  dir <- file.path(tempdir(), "zumime-bench-corpus")
+  if (dir.exists(dir)) return(dir)
+  tgz <- tempfile(fileext = ".tar.gz")
+  url <- sprintf(
+    "https://codeload.github.com/sindresorhus/file-type/tar.gz/%s",
+    filetype_commit
+  )
+  if (inherits(try(utils::download.file(url, tgz, quiet = TRUE)), "try-error"))
+    return(NA_character_)
+  dir.create(dir)
+  utils::untar(tgz, exdir = dir)
+  fx <- list.files(dir, pattern = "^fixture$", include.dirs = TRUE,
+    recursive = TRUE, full.names = TRUE)
+  fx[1]
+}
+
+file_batch <- function(paths) {
+  lst <- tempfile()
+  writeLines(paths, lst)
+  invisible(system2(file_bin, c("-b", "--mime-type", "-f", shQuote(lst)),
+    stdout = TRUE))
+}
+
+rows <- list()
+add <- function(op, tool, seconds, note = "") {
+  rows[[length(rows) + 1L]] <<- data.frame(
+    operation = op, tool = tool, time = fmt_time(seconds), note = note
+  )
+}
+
+message("building a tree of ", n_files, " files")
+tree <- make_tree(n_files)
+raw4k <- readBin(tree[1], "raw", 4096L)
+
+# Row 1: one 4 KiB buffer.
+op1 <- "sniff a 4 KiB buffer"
+if (have_file) {
+  sub <- tree[seq_len(min(10000L, n_files))]
+  t <- time_it(file_batch(sub), reps = 3L)
+  add(op1, "file --mime-type", t / length(sub),
+    sprintf("per file, batch of %d via -f", length(sub)))
+}
+if (have_zumime) {
+  t <- time_it(for (i in 1:10000) zumime::mime_sniff(raw4k), reps = 3L)
+  add(op1, "zumime::mime_sniff()", t / 10000, "per call")
+}
+
+# Row 2: the tree, warm cache.
+op2 <- sprintf("type %s files, warm cache", format(n_files, big.mark = ","))
+if (have_file) add(op2, "file --mime-type", time_it(file_batch(tree), 3L))
+if (have_zumime)
+  add(op2, "zumime::mime_type()", time_it(zumime::mime_type(tree), 3L))
+
+# Row 3: the file-type corpus.
+op3 <- "type the file-type fixture corpus"
+corpus <- fetch_corpus()
+if (!is.na(corpus)) {
+  cfiles <- list.files(corpus, full.names = TRUE)
+  note <- sprintf("%d files, file-type %s", length(cfiles),
+    substr(filetype_commit, 1, 7))
+  if (have_file) add(op3, "file --mime-type", time_it(file_batch(cfiles)), note)
+  if (have_mimetype) add(op3, "mimetype (Go CLI)", time_it(
+    system2(mimetype_bin, shQuote(cfiles), stdout = TRUE)), note)
+  if (have_zumime)
+    add(op3, "zumime::mime_type()", time_it(zumime::mime_type(cfiles)), note)
+}
+
+# Row 4: extension lookup.
+op4 <- "guess 10^6 paths by extension"
+exts <- c("pdf", "png", "csv", "tar.gz", "docx", "JPG", "html", "unknownext")
+paths <- sprintf("dir/file%07d.%s", seq_len(n_paths), exts)
+if (have_mime) add(op4, "mime::guess_type()", time_it(mime::guess_type(paths), 3L))
+if (have_zumime)
+  add(op4, "zumime::mime_guess()", time_it(zumime::mime_guess(paths), 3L))
+
+# Row 5: parsing Content-Type headers.
+op5 <- "parse 10^6 Content-Type headers"
+hdrs <- rep(c("text/html; charset=UTF-8", "application/json",
+  "multipart/form-data; boundary=\"a b\"", "image/png"), length.out = n_paths)
+if (have_zumime)
+  add(op5, "zumime::mime_parse()", time_it(zumime::mime_parse(hdrs), 3L))
+
+# Row 6: the allowlist check.
+op6 <- "check 10^4 files against 3 allowed types"
+if (have_zumime) {
+  sub <- tree[seq_len(min(10000L, n_files))]
+  allowed <- c("application/pdf", "image/png", "image/jpeg")
+  add(op6, "zumime::mime_check()",
+    time_it(zumime::mime_check(sub, allowed), 3L))
+  add(op6, "zumime::mime_type()", time_it(zumime::mime_type(sub), 3L),
+    "the same files, for the 3x ratio")
+}
+
+# Row 7: an undecided push.
+op7 <- "push one undecided chunk"
+if (have_zumime) {
+  t <- time_it({
+    s <- zumime::mime_sniffer(limit = 1e6L)
+    chunk <- as.raw(rep(0x20, 16))
+    for (i in 1:10000) zumime::mime_push(s, chunk)
+  }, reps = 3L)
+  add(op7, "zumime::mime_push()", t / 10000, "16-byte chunks, per push")
+}
+
+out <- do.call(rbind, rows)
+cat(sprintf("Run %s on %s, R %s, %s.\n\n", format(Sys.Date()),
+  utils::sessionInfo()$running, getRversion(),
+  if (have_file) system2(file_bin, "--version", stdout = TRUE)[1] else "no file"))
+cat("| Operation | Tool | Time | Note |\n| --- | --- | --- | --- |\n")
+cat(sprintf("| %s | %s | %s | %s |\n", out$operation, out$tool, out$time,
+  out$note), sep = "")

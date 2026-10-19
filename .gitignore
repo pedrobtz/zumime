@@ -52,3 +52,6 @@ CRAN-SUBMISSION
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Oracle fixtures fetched by tools/fetch-fixtures at pinned commits
+tests/testthat/fixtures/
