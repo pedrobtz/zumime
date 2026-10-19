@@ -22,7 +22,7 @@ lands in Stage 1 with the tables it covers.
 | 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | [#15](https://github.com/pedrobtz/zumime/pull/15) | 2026-10-19 |
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | [#16](https://github.com/pedrobtz/zumime/pull/16) | 2026-10-19 |
 | 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | [#17](https://github.com/pedrobtz/zumime/pull/17) | 2026-10-19 |
-| 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | | 2026-10-19 |
+| 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | [#18](https://github.com/pedrobtz/zumime/pull/18) | 2026-10-19 |
 | 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | | 2026-10-19 |
 | 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | | |
 | 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | | |
@@ -461,6 +461,16 @@ target has a measured number.
   finalizer: a saved sniffer comes back undecided with its bytes.
 - **A long fuzz run needs the `fuzz-hour` label**, since a workflow can be
   dispatched only from the default branch.
+- **The hour-long fuzz run** passed on #18 at commit `846f24e` on
+  2026-10-19: libFuzzer with ASan and UBSan, 282,215 inputs in 3,601 s, no
+  finding ([run 39201743167](https://github.com/pedrobtz/zumime/actions/runs/39201743167)).
+- **Valgrind on #18** reported uninitialised bytes in zlib under
+  `saveRDS()` of a sniffer: the buffer's unpushed tail was uninitialised R
+  memory, serialised with the object. It is now zeroed on allocation and
+  growth. It also reported 668 KB "possibly lost" inside R's own
+  `memCompress()` (libdeflate), which a test helper called; the helper now
+  writes raw DEFLATE through `gzfile()`. The same report failed the full
+  run on `main` after #17.
 - **Benchmarks**: four of the seven targets are missed and recorded in
   `.agents/benchmarks.md` (D14); the first run's three avoidable costs were
   fixed in this stage.

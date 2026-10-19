@@ -190,7 +190,10 @@ SEXP zumime_stream_new(SEXP limit) {
   double lim = REAL(limit)[0];
   R_xlen_t cap = lim > 0 ? (R_xlen_t) lim : 4096;
   SEXP prot = PROTECT(Rf_allocVector(VECSXP, 4));
+  /* Zeroed: the whole vector is serialised with the sniffer, and bytes
+   * never pushed must not be uninitialised memory. */
   SET_VECTOR_ELT(prot, 0, Rf_allocVector(RAWSXP, cap));
+  memset(RAW(VECTOR_ELT(prot, 0)), 0, (size_t) cap);
   SET_VECTOR_ELT(prot, 1, Rf_ScalarInteger(0));
   /* 1 once nothing can decide before the limit: the answer is text, or a
    * reader that settles only at the limit, with the resource header full. */
@@ -237,6 +240,7 @@ SEXP zumime_stream_push(SEXP s, SEXP chunk, SEXP final, SEXP limit,
     while (cap < n + add) cap *= 2;
     SEXP bigger = PROTECT(Rf_allocVector(RAWSXP, cap));
     memcpy(RAW(bigger), RAW(buf), (size_t) n);
+    memset(RAW(bigger) + n, 0, (size_t) (cap - n));
     SET_VECTOR_ELT(prot, 0, bigger);
     UNPROTECT(1);
     buf = bigger;
