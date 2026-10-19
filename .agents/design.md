@@ -367,9 +367,12 @@ and IANA's deprecated entries.
 
 ### 6.4 Structured text
 
-When the WHATWG result is `text/plain`, `text/xml`-like or `text/html`,
-the text reader looks further, at the `probable` level because the
-evidence is grammar, not magic:
+When the WHATWG result is `text/plain` or `text/xml`-like, the text
+reader looks further, at the `probable` level because the evidence is
+grammar, not magic. A `text/html` result stands: XHTML without an XML
+declaration is `text/html`, as Go's `net/http`, libmagic and Python's
+puremagic answer and as a browser parses it, and only after a
+declaration does its root make it `application/xhtml+xml`.
 
 - **XML**: the root element's local name and namespace decide SVG, RSS,
   Atom, KML, GPX, X3D, XLIFF, COLLADA, XHTML, DocBook and OpenDocument
