@@ -3,6 +3,7 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 #include <R_ext/Visibility.h>
+#include <string.h>
 
 #include "zumime_r.h"
 
@@ -28,6 +29,10 @@ static const R_CallMethodDef call_methods[] = {
 /* The only symbol the shared object exports: everything else is reached
  * through the registration table (alignment R3, test-abi.R). */
 void attribute_visible R_init_zumime(DllInfo *dll) {
+  /* The R side of the session registry starts empty with each load of the
+   * namespace, so the C side must too: a platform may keep the library
+   * mapped across library.dynam.unload(). */
+  memset(zumime_reg, 0, sizeof(zumime_reg));
   R_registerRoutines(dll, NULL, call_methods, NULL, NULL);
   R_useDynamicSymbols(dll, FALSE);
   R_forceSymbols(dll, TRUE);

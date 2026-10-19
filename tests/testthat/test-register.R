@@ -135,3 +135,27 @@ test_that("registration arguments are checked", {
   }
   expect_false("application/x-zt-c" %in% mime_types()$type)
 })
+
+test_that("a namespace reload starts with an empty C registry", {
+  skip_on_cran()
+  pkg <- find.package("zumime")
+  skip_if_not(dir.exists(file.path(pkg, "Meta")), "zumime is not installed")
+  script <- withr::local_tempfile(fileext = ".R")
+  writeLines(c(
+    sprintf("library(zumime, lib.loc = %s)", deparse(dirname(pkg))),
+    "b <- c(charToRaw('ZTRL'), raw(8))",
+    "reg <- function() mime_register('application/x-zt-reload',",
+    "  'application/octet-stream', rule = list(offset = 0, bytes = 'ZTRL'))",
+    "reg()",
+    "unloadNamespace('zumime')",
+    sprintf("library(zumime, lib.loc = %s)", deparse(dirname(pkg))),
+    "cat(mime_sniff(b)$type, '\\n')",
+    "reg()",
+    "mime_unregister('application/x-zt-reload')",
+    "cat(mime_sniff(b)$type, '\\n')"
+  ), script)
+  out <- system2(file.path(R.home("bin"), "Rscript"), shQuote(script),
+    stdout = TRUE)
+  expect_identical(trimws(out),
+    rep("application/octet-stream", 2L))
+})
