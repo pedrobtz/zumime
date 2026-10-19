@@ -461,6 +461,13 @@ target has a measured number.
   finalizer: a saved sniffer comes back undecided with its bytes.
 - **A long fuzz run needs the `fuzz-hour` label**, since a workflow can be
   dispatched only from the default branch.
+- **The hour-long fuzz run** passed on #18 at commit `846f24e` on
+  2026-10-19: libFuzzer with ASan and UBSan, 282,215 inputs in 3,601 s, no
+  finding ([run 39201743167](https://github.com/pedrobtz/zumime/actions/runs/39201743167)).
+- **Valgrind on #18** reported uninitialised bytes in zlib under
+  `saveRDS()` of a sniffer: the buffer's unpushed tail was uninitialised R
+  memory, serialised with the object. It is now zeroed on allocation and
+  growth.
 - **Benchmarks**: four of the seven targets are missed and recorded in
   `.agents/benchmarks.md` (D14); the first run's three avoidable costs were
   fixed in this stage.
