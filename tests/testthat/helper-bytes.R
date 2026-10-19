@@ -29,3 +29,25 @@ tar_header <- function(name = "a.txt") {
 # An MPEG-1 Layer III frame header (128 kbit/s, 44.1 kHz, no padding),
 # whose frame is 417 bytes long.
 mp3_frame <- function() as.raw(c(0xff, 0xfb, 0x90, 0x00))
+
+sniff_charset <- function(...) mime_sniff(...)$charset
+
+# Sniff a generated signature input in its row's group context: font rows
+# (group 4) are only consulted in the font context.
+sniff_row <- function(rows, i, bytes) {
+  group <- rows$group[i]
+  context <- if (group == 4L) "font" else "none"
+  mime_sniff(bytes, context = context, limit = 0)
+}
+
+row_input <- function(rows, i) {
+  off <- rows$offset[i]
+  pat <- rows$pattern[[i]]
+  if (bitwAnd(rows$flags[i], 4L) != 0L) {
+    bytes <- c(tar_header(), raw(1024))
+  } else {
+    bytes <- raw(max(1445L, off + length(pat)))
+    bytes[off + seq_along(pat)] <- pat
+  }
+  bytes
+}
