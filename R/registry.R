@@ -85,19 +85,22 @@ mime_extensions <- function(type) {
 mime_guess <- function(path) {
   path <- enc2utf8(check_character(path))
   suffix <- .Call(zumime_suffixes, path)
-  keys <- names(types_ext_map)
-  hit <- match(suffix[[2]], keys)
-  miss <- is.na(hit)
-  hit[miss] <- match(suffix[[1]][miss], keys)
-  out <- types_ext_map[hit]
-  if (length(session$extensions)) {
-    ext <- unlist(session$extensions, use.names = FALSE)
-    owner <- rep(names(session$extensions), lengths(session$extensions))
-    reg <- match(suffix[[2]], ext)
-    one <- match(suffix[[1]], ext)
-    reg[is.na(reg)] <- one[is.na(reg)]
-    out[!is.na(reg)] <- owner[reg[!is.na(reg)]]
+  ext <- as.character(unlist(session$extensions, use.names = FALSE))
+  owner <- as.character(rep(
+    names(session$extensions),
+    lengths(session$extensions)
+  ))
+  # The compound suffix before the single one, across both tables; at the
+  # same length a registered extension wins.
+  lookup <- function(s) {
+    out <- owner[match(s, ext)]
+    builtin <- is.na(out)
+    out[builtin] <- types_ext_map[match(s[builtin], names(types_ext_map))]
+    out
   }
+  out <- lookup(suffix[[2]])
+  single <- is.na(out)
+  out[single] <- lookup(suffix[[1]][single])
   unname(out)
 }
 

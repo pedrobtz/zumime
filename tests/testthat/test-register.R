@@ -275,3 +275,21 @@ test_that("a namespace reload starts with an empty C registry", {
   )
   expect_identical(trimws(out), rep("application/octet-stream", 2L))
 })
+
+test_that("a built-in compound suffix beats a registered single one", {
+  withr::defer(try(mime_unregister("application/x-zt-gz"), silent = TRUE))
+  mime_register(
+    "application/x-zt-gz",
+    "application/octet-stream",
+    extensions = c("gz", "zt.gz")
+  )
+  expect_identical(
+    mime_guess(c("a.tar.gz", "a.csv.gz", "a.zt.gz", "a.gz")),
+    c(
+      mime_guess("a.tgz"),
+      "application/x-zt-gz",
+      "application/x-zt-gz",
+      "application/x-zt-gz"
+    )
+  )
+})
