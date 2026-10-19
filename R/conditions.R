@@ -12,6 +12,20 @@ zumime_abort <- function(kind, message, call = sys.call(-1L)) {
   ))
 }
 
+# A warning for a problem the answer survives, such as a registered rule
+# that failed.
+zumime_warn <- function(kind, message, call = sys.call(-1L)) {
+  warning(structure(
+    class = c(
+      paste0("zumime_", kind, "_warning"),
+      "zumime_warning",
+      "warning",
+      "condition"
+    ),
+    list(message = message, call = call)
+  ))
+}
+
 check_character <- function(x, arg = deparse(substitute(x))) {
   if (!is.character(x) && !(is.atomic(x) && all(is.na(x)))) {
     zumime_abort(

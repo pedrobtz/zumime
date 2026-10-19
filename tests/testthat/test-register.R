@@ -293,3 +293,38 @@ test_that("a built-in compound suffix beats a registered single one", {
     )
   )
 })
+
+test_that("a failing function rule warns once and does not match", {
+  withr::defer(try(mime_unregister("text/x-zt-broken"), silent = TRUE))
+  mime_register("text/x-zt-broken", "text/plain", rule = function(x) {
+    stop("bug in the rule")
+  })
+  dir <- local_tree(list(a.txt = "one\n", b.txt = "two\n"))
+  expect_warning(
+    t <- mime_type(file.path(dir, c("a.txt", "b.txt"))),
+    class = "zumime_rule_warning"
+  )
+  expect_identical(t$type, c("text/plain", "text/plain"))
+  expect_warning(
+    r <- mime_sniff(charToRaw("hello")),
+    class = "zumime_warning"
+  )
+  expect_identical(r$type, "text/plain")
+})
+
+test_that("a rule under a directory never reads it", {
+  withr::defer(try(mime_unregister("inode/x-zt-dir"), silent = TRUE))
+  mime_register("inode/x-zt-dir", "inode/directory", rule = function(x) TRUE)
+  dir <- withr::local_tempdir()
+  t <- mime_type(dir)
+  expect_identical(t$type, "inode/directory")
+})
+
+test_that("a file gone before R re-reads it gives no bytes", {
+  path <- withr::local_tempfile()
+  expect_null(read_bytes(path, 4096))
+  writeBin(as.raw(1:10), path)
+  expect_identical(read_bytes(path, 4), as.raw(1:4))
+  expect_identical(read_bytes(path, 0), as.raw(1:10))
+  expect_null(read_bytes(dirname(path), 4096))
+})

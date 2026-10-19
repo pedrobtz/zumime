@@ -23,7 +23,9 @@
 #' zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
 #' yet on CRAN; install them from GitHub. An argument whose package is
 #' absent raises `zumime_dependency_error`. `text = "family"` uses whichever
-#' sniffers are installed, listed by `zumime_info()$family`.
+#' sniffers are installed, listed by `zumime_info()$family`. An error inside
+#' an optional package leaves that answer as it was, so a corrupt stream
+#' keeps the name's `inner`.
 #'
 #' @param path A character vector of paths.
 #' @param limit The number of bytes to read from each file; `0` reads whole
@@ -281,8 +283,13 @@ decompress_type <- function(path, limit) {
   if (is.na(size) || size > cap) {
     return(NA_character_)
   }
-  bytes <- readBin(path, "raw", size)
+  bytes <- read_bytes(path, 0)
+  if (is.null(bytes)) {
+    return(NA_character_)
+  }
   decompress <- suggested_fun("zukomp", "komp_decompress")
+  # An optional package's failure degrades the answer, never raises
+  # (design D6): a corrupt stream keeps the name's answer.
   out <- tryCatch(
     decompress(bytes, "gzip", max_output = cap),
     error = function(e) NULL
@@ -301,6 +308,7 @@ family_refine <- function(out) {
   for (i in rows) {
     t <- NA_character_
     for (s in sniffers) {
+      # An optional package's failure leaves the row as it was (design D6).
       t <- tryCatch(s(out$path[i]), error = function(e) NA_character_)
       if (!is.na(t)) break
     }
@@ -354,15 +362,11 @@ detect_charset <- function(out, limit) {
       (is.na(out$charset) | out$charset %in% c("windows-1252", "ISO-8859-1"))
   )
   for (i in rows) {
-    bytes <- readBin(
-      out$path[i],
-      "raw",
-      if (limit > 0) {
-        limit
-      } else {
-        file.size(out$path[i])
-      }
-    )
+    bytes <- read_bytes(out$path[i], limit)
+    if (is.null(bytes)) {
+      next
+    }
+    # An optional package's failure leaves the charset as it was (D6).
     cand <- tryCatch(detect(bytes), error = function(e) character())
     if (length(cand)) out$charset[i] <- cand[1]
   }

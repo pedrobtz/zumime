@@ -24,8 +24,10 @@ session$version <- 0L
 #' have been typed as the parent, costs what a built-in signature costs,
 #' and is reported at `"definite"`. A function rule is called from R with
 #' the bytes read and must return `TRUE` or `FALSE`; it runs last, only when
-#' the parent matched, and is reported at `"probable"`. A data rule cannot sit
-#' under a type that a function rule decides, since data rules run first.
+#' the parent matched, and is reported at `"probable"`. A function rule that
+#' raises an error counts as `FALSE`, and the call warns once with a
+#' `zumime_rule_warning` naming the type. A data rule cannot sit under a type
+#' that a function rule decides, since data rules run first.
 #'
 #' @param type The new type, such as `"application/x-myformat"`.
 #' @param parent An existing type the new one descends from.
@@ -242,6 +244,7 @@ apply_registered <- function(out, x, limit) {
     return(out)
   }
   fns <- session$types[session$types$kind == "function", , drop = FALSE]
+  failed <- character()
   for (i in seq_len(nrow(out))) {
     bytes <- NULL
     for (depth in 1:8) {
@@ -249,7 +252,8 @@ apply_registered <- function(out, x, limit) {
       if (!length(hit) || is.na(out$type[i])) {
         break
       }
-      if (is.null(bytes)) {
+      # A directory or other inode is never opened.
+      if (is.null(bytes) && !startsWith(out$type[i], "inode/")) {
         bytes <- head_bytes(x, i, limit)
       }
       if (is.null(bytes)) {
@@ -257,9 +261,13 @@ apply_registered <- function(out, x, limit) {
       }
       changed <- FALSE
       for (h in hit) {
+        # A rule that fails does not match; the caller hears once.
         ok <- tryCatch(
           isTRUE(session$rules[[fns$type[h]]](bytes)),
-          error = function(e) FALSE
+          error = function(e) {
+            failed <<- union(failed, fns$type[h])
+            FALSE
+          }
         )
         if (ok) {
           out$type[i] <- fns$type[h]
@@ -274,6 +282,16 @@ apply_registered <- function(out, x, limit) {
       if (!changed) break
     }
   }
+  if (length(failed)) {
+    zumime_warn(
+      "rule",
+      sprintf(
+        "The rule registered for %s failed and was taken as FALSE.",
+        paste0("\"", failed, "\"", collapse = ", ")
+      ),
+      call = NULL
+    )
+  }
   out
 }
 
@@ -281,10 +299,23 @@ head_bytes <- function(x, i, limit) {
   if (is.raw(x)) {
     return(if (limit > 0 && length(x) > limit) x[seq_len(limit)] else x)
   }
-  path <- x[i]
-  size <- suppressWarnings(file.size(path))
-  if (is.na(size)) {
-    return(NULL)
-  }
-  readBin(path, "raw", if (limit > 0) min(limit, size) else size)
+  read_bytes(x[i], limit)
+}
+
+# The first `limit` bytes of a file (all of it for 0), or NULL when it
+# cannot be read: the file may have gone or changed since the C pass, and
+# design section 8 says these calls never raise on input.
+read_bytes <- function(path, limit) {
+  tryCatch(
+    {
+      size <- file.size(path)
+      if (is.na(size) || dir.exists(path)) {
+        NULL
+      } else {
+        readBin(path, "raw", if (limit > 0) min(limit, size) else size)
+      }
+    },
+    error = function(e) NULL,
+    warning = function(w) NULL
+  )
 }
