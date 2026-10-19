@@ -68,6 +68,12 @@ test_that("a function rule runs last, at probable", {
 })
 
 test_that("registering checks the type and the parent", {
+  # A regression that let one of these register would leak the type into
+  # later tests.
+  withr::defer({
+    try(mime_unregister("application/x-zt-a"), silent = TRUE)
+    try(mime_unregister("application/x-zt-b"), silent = TRUE)
+  })
   expect_error(
     mime_register("application/x-zt-a", "foo/unknown"),
     class = "zumime_registry_error"
