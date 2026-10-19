@@ -108,7 +108,7 @@ supplied_type <- function(type) {
   }
   list(
     essence = canonical_type(paste0(rec$type, "/", rec$subtype)),
-    charset = rec$parameters$charset,
+    charset = rec$parameters[["charset"]],
     apache_bug = apache_bug
   )
 }

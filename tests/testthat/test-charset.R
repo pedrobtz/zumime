@@ -8,6 +8,13 @@ test_that("the supplied charset parameter comes first", {
     NA_character_)
 })
 
+test_that("only a parameter named exactly charset is the supplied charset", {
+  type <- "text/plain; charsetx=foo"
+  expect_identical(sniff_charset(charToRaw("hello world"), type = type), "UTF-8")
+  r <- mime_sniff(charToRaw("hello world"), type = type, no_sniff = TRUE)
+  expect_false(identical(r$charset, "foo"))
+})
+
 test_that("a byte-order mark decides", {
   expect_identical(sniff_charset(as.raw(c(0xef, 0xbb, 0xbf, 0x68, 0x69))), "UTF-8")
   expect_identical(sniff_charset(as.raw(c(0xff, 0xfe, 0x68, 0x00))), "UTF-16LE")
@@ -20,6 +27,17 @@ test_that("an XML declaration names the encoding", {
   expect_identical(r$type, "application/xml")
   expect_identical(r$charset, "ISO-8859-2")
   expect_identical(sniff_charset(charToRaw("<?xml version=\"1.0\"?><a/>")), "UTF-8")
+})
+
+test_that("a declared label with a non-printable byte gives an NA charset", {
+  xml <- c(
+    charToRaw("<?xml version=\"1.0\" encoding=\"caf"),
+    as.raw(0xe9),
+    charToRaw("\"?><a/>")
+  )
+  r <- mime_sniff(xml)
+  expect_identical(r$type, "application/xml")
+  expect_identical(r$charset, NA_character_)
 })
 
 test_that("the HTML meta prescan finds charset and http-equiv", {
