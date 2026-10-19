@@ -1,0 +1,20 @@
+#!/bin/sh
+# Fetches the oracle fixtures of design section 7 at pinned commits into
+# tests/testthat/fixtures/, which .gitignore and .Rbuildignore exclude. The
+# tests that use them skip when the directory is absent.
+#
+#   tools/fetch-fixtures
+#
+# Run from the package root.
+set -eu
+
+WPT_COMMIT=0f195499f06d0833e768b01a1a8ce942b8622fc8
+WPT_BASE=https://raw.githubusercontent.com/web-platform-tests/wpt/$WPT_COMMIT/mimesniff/mime-types/resources
+
+dest=tests/testthat/fixtures
+mkdir -p "$dest/wpt"
+for f in mime-types.json generated-mime-types.json; do
+  curl -sSfL -o "$dest/wpt/$f" "$WPT_BASE/$f"
+done
+echo "$WPT_COMMIT" > "$dest/wpt/COMMIT"
+echo "fetched web-platform-tests mimesniff fixtures at $WPT_COMMIT"
