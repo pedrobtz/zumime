@@ -99,6 +99,25 @@ test_that("the encryption flag and the AES extra field set encrypted", {
   expect_identical(mime_sniff(png_bytes())$encrypted, NA)
 })
 
+test_that("an AES-encrypted [Content_Types].xml leaves the folder's type", {
+  # Method 99 is WinZip AES: the part cannot be read, so the template
+  # content type inside it is not seen and word/ decides.
+  ct <- paste0(
+    "application/vnd.openxmlformats-officedocument.",
+    "wordprocessingml.template.main+xml"
+  )
+  aes <- c(u16(0x9901), u16(7), u16(2), charToRaw("AE"), as.raw(3), u16(8))
+  z <- build_zip(
+    ooxml_entries("word", main_ct = ct),
+    method = 99L,
+    flags = 1L,
+    extra = aes
+  )
+  r <- mime_sniff(z)
+  expect_identical(r$type, docx_type())
+  expect_true(r$encrypted)
+})
+
 test_that("without the central directory the local headers are walked", {
   e <- ooxml_entries("word")
   e[["word/big.bin"]] <- as.raw(rep(1:255, 40))
