@@ -56,7 +56,7 @@ mime_push <- function(s, chunk) {
   if (!is.raw(chunk)) {
     zumime_abort("type", "`chunk` must be a raw vector.")
   }
-  if (.Call(zumime_stream_state, s)[1] == 3L) {
+  if (.Call(zumime_stream_state, s)[1] == 3) {
     zumime_abort("state", "The sniffer is finished; start a new one.")
   }
   stream_result(s, chunk, final = FALSE)
@@ -74,7 +74,7 @@ print.zumime_sniffer <- function(x, ...) {
   st <- .Call(zumime_stream_state, x)
   p <- attr(x, "params")
   state <- c("undecided", "decided", "finished")[st[1]]
-  cat(sprintf("<zumime_sniffer: %d of %s bytes, %s>\n", st[2],
+  cat(sprintf("<zumime_sniffer: %s of %s bytes, %s>\n", format(st[2]),
     if (p$limit > 0) format(p$limit) else "unlimited", state))
   invisible(x)
 }

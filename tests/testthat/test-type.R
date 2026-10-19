@@ -182,3 +182,16 @@ test_that("mime_type() rejects malformed arguments", {
   expect_error(mime_type("a", strict = 1), class = "zumime_type_error")
   expect_error(mime_type("a", limit = -1), class = "zumime_type_error")
 })
+
+test_that("special files are typed without being opened", {
+  skip_on_os("windows")
+  mkfifo <- Sys.which("mkfifo")
+  skip_if(!nzchar(mkfifo), "mkfifo is not available")
+  dir <- withr::local_tempdir()
+  fifo <- file.path(dir, "pipe")
+  system2(mkfifo, shQuote(fifo))
+  # Opening a FIFO would block until a writer came.
+  t <- mime_type(c(fifo, "/dev/null"))
+  expect_identical(t$type, c("inode/fifo", "inode/chardevice"))
+  expect_identical(as.character(t$confidence), c("definite", "definite"))
+})

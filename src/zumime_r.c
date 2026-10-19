@@ -194,7 +194,8 @@ SEXP zumime_stream_new(SEXP limit) {
    * never pushed must not be uninitialised memory. */
   SET_VECTOR_ELT(prot, 0, Rf_allocVector(RAWSXP, cap));
   memset(RAW(VECTOR_ELT(prot, 0)), 0, (size_t) cap);
-  SET_VECTOR_ELT(prot, 1, Rf_ScalarInteger(0));
+  /* A double: an unlimited sniffer can hold more than INT_MAX bytes. */
+  SET_VECTOR_ELT(prot, 1, Rf_ScalarReal(0));
   /* 1 once nothing can decide before the limit: the answer is text, or a
    * reader that settles only at the limit, with the resource header full. */
   SET_VECTOR_ELT(prot, 3, Rf_ScalarInteger(0));
@@ -209,9 +210,9 @@ SEXP zumime_stream_buffer(SEXP s) {
 
 SEXP zumime_stream_state(SEXP s) {
   SEXP prot = R_ExternalPtrProtected(s);
-  SEXP out = PROTECT(Rf_allocVector(INTSXP, 2));
-  INTEGER(out)[0] = stream_state(s);
-  INTEGER(out)[1] = INTEGER(VECTOR_ELT(prot, 1))[0];
+  SEXP out = PROTECT(Rf_allocVector(REALSXP, 2));
+  REAL(out)[0] = stream_state(s);
+  REAL(out)[1] = REAL(VECTOR_ELT(prot, 1))[0];
   UNPROTECT(1);
   return out;
 }
@@ -231,7 +232,7 @@ SEXP zumime_stream_push(SEXP s, SEXP chunk, SEXP final, SEXP limit,
   }
   double lim = REAL(limit)[0];
   SEXP buf = VECTOR_ELT(prot, 0);
-  R_xlen_t n = INTEGER(VECTOR_ELT(prot, 1))[0];
+  R_xlen_t n = (R_xlen_t) REAL(VECTOR_ELT(prot, 1))[0];
   R_xlen_t add = Rf_isNull(chunk) ? 0 : XLENGTH(chunk);
   if (lim > 0 && n + add > (R_xlen_t) lim) add = (R_xlen_t) lim - n;
   if (add > 0 && n + add > XLENGTH(buf)) {
@@ -247,7 +248,7 @@ SEXP zumime_stream_push(SEXP s, SEXP chunk, SEXP final, SEXP limit,
   }
   if (add > 0) memcpy(RAW(buf) + n, RAW(chunk), (size_t) add);
   n += add;
-  INTEGER(VECTOR_ELT(prot, 1))[0] = (int) n;
+  REAL(VECTOR_ELT(prot, 1))[0] = (double) n;
 
   int is_final = LOGICAL(final)[0];
   int frozen = INTEGER(VECTOR_ELT(prot, 3))[0];

@@ -115,3 +115,13 @@ test_that("mime_push() and mime_sniffer() reject malformed arguments", {
   expect_error(mime_sniffer(limit = -1), class = "zumime_type_error")
   expect_error(mime_finish(list()), class = "zumime_type_error")
 })
+
+test_that("the byte count is kept as a double", {
+  # The count of an unlimited sniffer must not wrap at INT_MAX; pushing 2 GB
+  # is too slow for a test, so the storage type is checked instead.
+  s <- mime_sniffer(limit = 0)
+  mime_push(s, raw(10))
+  st <- .Call(zumime_stream_state, s)
+  expect_type(st, "double")
+  expect_identical(st[2], 10)
+})

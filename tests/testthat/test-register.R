@@ -75,3 +75,20 @@ test_that("registering twice fails and unregistering forgets", {
     "application/octet-stream")
   expect_false("application/x-zt-twice" %in% mime_types()$type)
 })
+
+test_that("a data rule cannot sit under a function-rule type", {
+  withr::defer(try(mime_unregister("text/x-zt-fnparent"), silent = TRUE))
+  withr::defer(try(mime_unregister("text/x-zt-datachild"), silent = TRUE))
+  mime_register("text/x-zt-fnparent", "text/plain",
+    rule = function(x) TRUE)
+  expect_error(
+    mime_register("text/x-zt-datachild", "text/x-zt-fnparent",
+      rule = list(bytes = "hello")),
+    class = "zumime_registry_error"
+  )
+  # A function rule under it is fine.
+  mime_register("text/x-zt-datachild", "text/x-zt-fnparent",
+    rule = function(x) grepl("hello", rawToChar(x)))
+  expect_identical(mime_sniff(charToRaw("hello world"))$type,
+    "text/x-zt-datachild")
+})

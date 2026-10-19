@@ -555,3 +555,9 @@ types:
     parent: text/plain
     aliases: [application/eps, application/x-eps, image/eps, image/x-eps]
     detected_by: signature
+
+  # Special files, reported without being opened (libmagic's names).
+  inode/fifo: {}
+  inode/chardevice: {}
+  inode/blockdevice: {}
+  inode/socket: {}

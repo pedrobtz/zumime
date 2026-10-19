@@ -60,9 +60,10 @@ ooxml_entries <- function(folder, main_ct = NULL, vba = FALSE) {
   e
 }
 
-# An OLE2 compound file: 512-byte sectors, the FAT in sector 0, the
-# directory in sector 1 (and 2 when more than four entries).
-build_ole2 <- function(streams, clsid = raw(16)) {
+# An OLE2 compound file: 512-byte sectors, the FAT in sector 0, `pad` free
+# sectors, then the directory (more than one sector beyond four entries). A
+# large `pad` puts the directory past the head, as Office does.
+build_ole2 <- function(streams, clsid = raw(16), pad = 0L) {
   entry <- function(name, type, clsid = raw(16)) {
     n <- unlist(lapply(utf8ToInt(name), function(cp) u16(cp)))
     n <- c(n, as.raw(c(0, 0)))
@@ -86,7 +87,7 @@ build_ole2 <- function(streams, clsid = raw(16)) {
   header[31:32] <- u16(9)
   header[33:34] <- u16(6)
   header[45:48] <- u32(1)
-  header[49:52] <- u32(1)
+  header[49:52] <- u32(1 + pad)
   header[57:60] <- u32(4096)
   header[61:64] <- as.raw(c(0xfe, 0xff, 0xff, 0xff))
   header[77:512] <- as.raw(0xff)
@@ -94,10 +95,11 @@ build_ole2 <- function(streams, clsid = raw(16)) {
   fat <- rep(as.raw(0xff), 512)
   fat[1:4] <- as.raw(c(0xfd, 0xff, 0xff, 0xff))
   for (k in seq_len(ndir)) {
-    nxt <- if (k < ndir) u32(k + 1) else as.raw(c(0xfe, 0xff, 0xff, 0xff))
-    fat[(4 * k + 1):(4 * k + 4)] <- nxt
+    sec <- pad + k
+    nxt <- if (k < ndir) u32(sec + 1) else as.raw(c(0xfe, 0xff, 0xff, 0xff))
+    fat[(4 * sec + 1):(4 * sec + 4)] <- nxt
   }
-  c(header, fat, dir)
+  c(header, fat, raw(512 * pad), dir)
 }
 
 msi_clsid <- function() {
