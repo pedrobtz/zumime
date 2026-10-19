@@ -189,3 +189,21 @@ expect_check_equivalence <- function(paths, allowed_sets, levels) {
     }
   }
 }
+
+# Inputs for the byte-at-a-time property: one per kind of answer.
+stream_inputs <- function() {
+  c(list(
+    pdf = pdf_bytes(), png = c(png_bytes()[1:8], u32be(13),
+      charToRaw("IHDR"), raw(17), u32be(0), charToRaw("IDAT"), raw(4)),
+    gif = c(charToRaw("GIF89a"), raw(20)), tar = c(tar_header(), raw(1024)),
+    docx = build_zip(ooxml_entries("word")), ole = build_ole2("Workbook"),
+    m4a = build_ftyp("M4A ", c("mp42")), mkv = build_ebml("webm", pad = 30),
+    ogg = build_ogg("OpusHead"), mp3 = c(mp3_frame(), raw(413), mp3_frame(),
+      raw(8)), html = charToRaw("  <html><body>x"),
+    json = charToRaw("{\"type\": \"Feature\", \"geometry\": {}}"),
+    text = charToRaw("plain words\n"), bin = as.raw(c(1:20, 0)),
+    exe = c(charToRaw("MZ"), raw(100)), elf = c(charToRaw("\x7fELF"), raw(60)),
+    rds = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20))),
+    ws = charToRaw("      "), short = as.raw(0xff)
+  ))
+}

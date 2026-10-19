@@ -5,6 +5,7 @@
 #
 #   tools/run-benchmarks            # every row
 #   ZUMIME_BENCH_FILES=10000 tools/run-benchmarks   # a smaller tree
+#   ZUMIME_BENCH_INCUMBENTS=false tools/run-benchmarks  # zumime only
 #
 # Nothing here ships: tools/ is in .Rbuildignore. mime is a GPL package and is
 # only *called* here as an incumbent to measure, never copied from.
@@ -15,11 +16,12 @@ filetype_commit <- "11e0d6473a37972e4d39d8d6c1c9d1b85b9ace25" # v22.2.0
 
 have_zumime <- requireNamespace("zumime", quietly = TRUE) &&
   "mime_type" %in% getNamespaceExports("zumime")
-have_mime <- requireNamespace("mime", quietly = TRUE)
+incumbents <- !identical(Sys.getenv("ZUMIME_BENCH_INCUMBENTS"), "false")
+have_mime <- incumbents && requireNamespace("mime", quietly = TRUE)
 file_bin <- Sys.which("file")
-have_file <- nzchar(file_bin)
+have_file <- incumbents && nzchar(file_bin)
 mimetype_bin <- Sys.which("mimetype")
-have_mimetype <- nzchar(mimetype_bin) &&
+have_mimetype <- incumbents && nzchar(mimetype_bin) &&
   any(grepl("gabriel-vasile", tryCatch(
     system2(mimetype_bin, "-h", stdout = TRUE, stderr = TRUE),
     error = function(e) ""

@@ -6,9 +6,10 @@
 #'
 #' The answer always equals `mime_is(t$type, allowed) & t$confidence >=
 #' min_confidence` with `t <- mime_type(x)` (or `mime_sniff(x)` for a raw
-#' vector). It is computed with a shortcut that this equality hides: the
-#' container and text readers, tail reads and the result frame are skipped
-#' for every input whose first answer could not end as an allowed type.
+#' vector). It is computed in one pass with a shortcut that this equality
+#' hides: the container and text readers and tail reads are skipped for
+#' every input whose first answer could not end as an allowed type, and no
+#' result frame is built.
 #' Call [mime_type()] to learn why a file was refused.
 #'
 #' @param x A character vector of paths, or one raw vector.
@@ -46,25 +47,26 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
   m <- factor(min_confidence, levels = confidence_levels, ordered = TRUE)
   limit <- 4096
 
-  full <- function(x) {
-    t <- if (is.raw(x)) mime_sniff(x) else mime_type(x)
-    mime_is(t$type, allowed) & t$confidence >= m
-  }
   # Function rules run in R after the C pass, so the shortcut cannot see
   # them; answer in full.
-  if (any(session$types$kind == "function")) return(full(x))
+  if (any(session$types$kind == "function")) {
+    t <- if (is.raw(x)) mime_sniff(x) else mime_type(x)
+    return(mime_is(t$type, allowed) & t$confidence >= m)
+  }
 
-  rel <- .Call(zumime_check, x, limit, related_sets(allowed))
+  sets <- related_sets(allowed)
+  out <- .Call(zumime_check, x, limit, lapply(sets, `[[`, "related"),
+    lapply(sets, `[[`, "within"), match(min_confidence, confidence_levels) - 1L)
+  # An unreadable path is type NA at confidence "none".
   unreadable <- factor("none", levels = confidence_levels, ordered = TRUE)
-  out <- ifelse(is.na(rel), NA & (unreadable >= m), FALSE)
-  hit <- which(rel %in% 1L)
-  if (length(hit)) out[hit] <- full(if (is.raw(x)) x else x[hit])
+  out[is.na(out)] <- NA & (unreadable >= m)
   out
 }
 
-# For each allowed type, the sorted C ids of the types an input's first
-# answer may have and still end as that type: the types within it, their
-# ancestors, and gzip for R's own formats.
+# For each allowed type, two sorted vectors of C ids: `related`, the types
+# an input's first answer may have and still end as that type (the types
+# within it, their ancestors, and gzip for R's own formats); and `within`,
+# the types that are it or descend from it.
 related_sets <- function(allowed) {
   if (!identical(session$related_version, session$version)) {
     session$related <- new.env(parent = emptyenv())
@@ -82,7 +84,10 @@ related_sets <- function(allowed) {
     if (any(within %in% c("application/x-rds", "application/x-rdata"))) {
       up <- c(up, "application/gzip")
     }
-    set <- sort(unique(ids[match(c(within, up), types)]))
+    set <- list(
+      related = sort(unique(ids[match(c(within, up), types)])),
+      within = sort(unique(ids[match(within, types)]))
+    )
     assign(key, set, envir = session$related)
     set
   })

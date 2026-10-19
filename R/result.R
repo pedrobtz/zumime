@@ -15,7 +15,8 @@ new_result <- function(path, type, confidence, charset = NA_character_,
   charset <- fill(charset)
   newline <- fill(newline)
   interpreter <- fill(interpreter)
-  out <- data.frame(
+  # Built directly: data.frame() costs more than the sniff itself.
+  out <- list(
     path = as.character(path),
     type = as.character(type),
     confidence = factor(confidence, levels = confidence_levels,
@@ -25,9 +26,9 @@ new_result <- function(path, type, confidence, charset = NA_character_,
     encrypted = as.logical(encrypted),
     complete = as.logical(complete),
     newline = as.character(newline),
-    interpreter = as.character(interpreter),
-    stringsAsFactors = FALSE
+    interpreter = as.character(interpreter)
   )
+  attr(out, "row.names") <- .set_row_names(n)
   class(out) <- c("zumime_result", "data.frame")
   out
 }

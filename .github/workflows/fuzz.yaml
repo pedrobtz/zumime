@@ -1,0 +1,41 @@
+# Coverage-guided fuzzing of the sniffer core (design section 9), built
+# without R from tools/fuzz/harness.c. Short runs on pull requests, a
+# longer one nightly; the corpus is cached between runs, so they add up to
+# one campaign. The `fuzz-hour` label on a pull request, or a manual
+# dispatch, runs for an hour: the run Stage 5 records.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Total fuzzing time in seconds
+        default: "3600"
+
+name: fuzz
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    uses: pedrobtz/r-actions/.github/workflows/fuzz.yml@v1
+    with:
+      harness: tools/fuzz/harness.c
+      # The R glue does not compile without R; the core does.
+      exclude-sources: |
+        src/init.c
+        src/guess.c
+        src/mime_record.c
+        src/zumime_path.c
+        src/zumime_r.c
+      cflags: -g -O1 -fno-omit-frame-pointer -Isrc -DZUMIME_STANDALONE
+      seed-corpus: tools/fuzz/seeds
+      dictionary: tools/fuzz/zumime.dict
+      max-total-time: ${{ github.event_name == 'workflow_dispatch' && fromJSON(inputs.seconds) || contains(github.event.pull_request.labels.*.name, 'fuzz-hour') && 3600 || github.event_name == 'schedule' && 1800 || 120 }}
+      timeout-minutes: ${{ (github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'fuzz-hour')) && 80 || 45 }}

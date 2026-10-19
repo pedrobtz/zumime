@@ -1,0 +1,13 @@
+#!/bin/sh
+# Build the fuzz harness with the local driver under ASan and UBSan and run
+# it for N seconds (default 60) over tools/fuzz/seeds and, when fetched,
+# the file-type fixtures. Run from the package root.
+set -eu
+seconds=${1:-60}
+out=$(mktemp -d)
+trap 'rm -rf "$out"' EXIT
+core=$(grep -L -E 'zumime_r\.h|<R\.h>|<Rinternals\.h>' src/*.c)
+cc -std=c11 -g -O1 -fno-omit-frame-pointer -fsanitize=address,undefined \
+  -fno-sanitize-recover=undefined -DZUMIME_STANDALONE -Isrc \
+  $core tools/fuzz/harness.c tools/fuzz/driver.c -o "$out/fuzz"
+"$out/fuzz" "$seconds" tools/fuzz/seeds tests/testthat/fixtures/file-type

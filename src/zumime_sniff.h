@@ -215,6 +215,13 @@ static inline uint32_t zumime_le32(const unsigned char *p) {
          ((uint32_t) p[3] << 24);
 }
 
+/* --- The incremental sniffer (zumime_stream.c) ---------------------------- */
+
+/* 1 when the type of buf can no longer change as bytes are appended; at
+ * most `limit` bytes will ever be read (0: no limit). */
+int zumime_can_decide(const unsigned char *buf, size_t len, size_t limit,
+                      const zumime_input *in, const zumime_result *r);
+
 /* --- Charset and newlines (zumime_charset.c) ----------------------------- */
 
 /* Fill out->charset (and cs_label) and may lower out->confidence to

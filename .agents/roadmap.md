@@ -22,7 +22,7 @@ lands in Stage 1 with the tables it covers.
 | 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | [#15](https://github.com/pedrobtz/zumime/pull/15) | 2026-10-19 |
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | | 2026-10-19 |
 | 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | | 2026-10-19 |
-| 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | | |
+| 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | | 2026-10-19 |
 | 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | | |
 | 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | | |
 | 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | | |
@@ -434,6 +434,31 @@ target has a measured number.
   the commit and date.
 - `.agents/benchmarks.md` holds a number for every §10 row.
 - Full profile green on the pull request.
+
+**Decisions and deviations (2026-10-19).**
+
+- **The fuzz property is the incremental one.** Design §9 asks that "the
+  result for a prefix is the whole's type or one of its ancestors". That
+  does not hold in general: a prefix of all text bytes is `text/plain`
+  while the whole may be binary, and a file that starts `MZ` is tar if
+  `ustar` and a valid checksum sit at 257. What a consumer relies on, and
+  what the target checks, is that the type the stream decides on, at the
+  first prefix the can-decide rule accepts, is the type of the whole.
+- **The can-decide rule is conservative** (`src/zumime_stream.c`): a
+  signature decides once no earlier row of the consulted groups could
+  still match and the type's reader is settled (JPEG at 4 bytes, PNG at
+  its first IDAT or acTL, ISO base media at the end of the `ftyp` box, Ogg
+  at its codec); text, ZIP, OLE2, Matroska and gzip decide at the limit or
+  the finish. Every fixture and every built input decides at the type of
+  the whole, byte by byte and in 512-byte chunks.
+- **The sniffer's state lives in the external pointer's address** and its
+  bytes in the protected raw vector, with no C allocation and so no
+  finalizer: a saved sniffer comes back undecided with its bytes.
+- **A long fuzz run needs the `fuzz-hour` label**, since a workflow can be
+  dispatched only from the default branch.
+- **Benchmarks**: four of the seven targets are missed and recorded in
+  `.agents/benchmarks.md` (D14); the first run's three avoidable costs were
+  fixed in this stage.
 
 **Design.** §6.10, §9 (fuzz), §10, D9, D14.
 
