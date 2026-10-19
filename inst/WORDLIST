@@ -11,6 +11,7 @@ HEIF
 IANA
 IANA's
 LZ
+Lifecycle
 MF
 NDJSON
 NetCDF
@@ -26,15 +27,19 @@ WebVTT
 allowlist
 allowlists
 bzip
+filetype
 fst
 httpd
 httpd's
 iCalendar
+libmagic
 lzip
+mimetype
 prescan
 qs
 slideshow
 unescaped
+uploader's
 vCard
 xz
 zstd

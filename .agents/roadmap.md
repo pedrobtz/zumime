@@ -23,7 +23,7 @@ lands in Stage 1 with the tables it covers.
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | [#16](https://github.com/pedrobtz/zumime/pull/16) | 2026-10-19 |
 | 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | [#17](https://github.com/pedrobtz/zumime/pull/17) | 2026-10-19 |
 | 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | [#18](https://github.com/pedrobtz/zumime/pull/18) | 2026-10-19 |
-| 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | | |
+| 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | [#19](https://github.com/pedrobtz/zumime/pull/19) | 2026-10-19 |
 | 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | | |
 | 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | | |
 
@@ -504,6 +504,11 @@ when to reach for it, and a consumer can follow one worked example.
 - Every exported function has a roxygen example that runs.
 - `README.md` is regenerated from `README.Rmd` with no diff.
 - Quick profile green.
+
+**Notes (2026-10-19).** The article lives in `vignettes/`, which
+`.Rbuildignore` keeps out of the tarball, so pkgdown builds it and R CMD
+check does not; `knitr` and `rmarkdown` are `Config/Needs/website`. The
+README's coverage badge points at `gh-pages`, where Stage 0 moved it.
 
 **Design.** §2 (README and article), §5.
 

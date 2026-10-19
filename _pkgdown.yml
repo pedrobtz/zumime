@@ -2,3 +2,39 @@ url: https://pedrobtz.github.io/zumime/
 template:
   bootstrap: 5
 
+articles:
+- title: Articles
+  contents:
+  - checking-an-upload
+
+reference:
+- title: From bytes
+  desc: The WHATWG sniffing algorithm, with zumime's containers and formats.
+  contents:
+  - mime_sniff
+- title: From the name
+  contents:
+  - mime_guess
+  - mime_extensions
+- title: Both, with the how-to-open columns
+  contents:
+  - mime_type
+  - mime_check
+- title: The hierarchy
+  contents:
+  - mime_parent
+  - mime_is
+  - mime_types
+- title: The MIME type record
+  contents:
+  - mime_parse
+- title: Detectors for the session
+  contents:
+  - mime_register
+- title: Streams
+  contents:
+  - mime_sniffer
+- title: The package
+  contents:
+  - zumime_info
+  - zumime-package
