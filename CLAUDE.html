@@ -84,7 +84,9 @@
 <div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R            <span class="co"># regenerate R/sysdata.rda, src/zumime_types.h</span></span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R <span class="at">--check</span>    <span class="co"># exit 1 if they differ from their sources</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R <span class="at">--fetch</span>    <span class="co"># download the sources again, record sha256</span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="ex">tools/fetch-fixtures</span>                       <span class="co"># oracle fixtures into tests/testthat/fixtures/</span></span></code></pre></div>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="ex">tools/fetch-fixtures</span>                       <span class="co"># oracle fixtures into tests/testthat/fixtures/</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="ex">tools/fuzz/run-local</span> 60                    <span class="co"># the fuzz harness under ASan+UBSan, 60 s</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="ex">Rscript</span> tools/fuzz/make-seeds.R            <span class="co"># rewrite tools/fuzz/seeds/</span></span></code></pre></div>
 <p>The registry is generated: edit <code>tools/types.yaml</code> (parents, aliases, extensions, <code>detected_by</code>) and regenerate, never the outputs. The tests that need fixtures skip without them; <code>oracles.yaml</code> fetches and runs them in CI.</p>
 </div>
 <div class="section level2">
@@ -98,6 +100,10 @@
 <strong>Readers (layer 3).</strong> <code>zumime_refine.c</code> runs after the standard’s answer in the <code>"none"</code> context and hands the bytes to one reader: <code>zumime_zip.c</code>, <code>zumime_ole2.c</code>, <code>zumime_bmff.c</code>, <code>zumime_ebml.c</code>, <code>zumime_ogg.c</code>, <code>zumime_png.c</code>, <code>zumime_rdata.c</code> (gzip through <code>zumime_inflate.c</code>), <code>zumime_text.c</code> (structured text). A reader’s answer is kept only when it descends from the current type; add a parent in <code>tools/types.yaml</code> rather than an exception.</li>
 <li>
 <strong>Paths (layer 4).</strong> <code>src/zumime_path.c</code> is the loop: it opens each path (<code>_wfopen</code> on Windows, native <code>fopen</code> elsewhere), reads the head, the ZIP tail and offset rows, checks completeness, and fills parallel vectors with no R allocation while a file is open. <code>R/type.R</code> builds the frame and the name columns; <code>R/check.R</code> holds <code><a href="reference/mime_check.html">mime_check()</a></code>’s shortcut (<code>zumime_check()</code> in C) and <code>probe_count()</code>; <code>R/register.R</code> the session registry, mirrored in C by <code>zumime_reg[]</code> in <code>registry.c</code>.</li>
+<li>
+<strong>Streams.</strong> <code>src/zumime_stream.c</code> is the can-decide rule; <code>zumime_stream_push()</code> in <code>zumime_r.c</code> keeps the bytes in the external pointer’s protected raw vector and the state in its address. <code>R/stream.R</code> is the API.</li>
+<li>
+<strong>Fuzzing.</strong> <code>tools/fuzz/harness.c</code> is the libFuzzer target over the core (no R), run by <code>.github/workflows/fuzz.yaml</code>; <code>tools/fuzz/driver.c</code> runs it without libFuzzer locally.</li>
 <li>
 <strong>Native layer.</strong> <code>src/init.c</code> registers every <code>.Call</code> entry point, declared in <code>src/zumime_r.h</code>, which also has <code>zumime_scalar_string()</code>: never pass a fresh <code>CHARSXP</code> to <code>Rf_ScalarString()</code> unprotected. <code>src/mime_record.c</code> is the WHATWG MIME type record over decoded code points; <code>src/guess.c</code> extracts suffixes for <code><a href="reference/mime_guess.html">mime_guess()</a></code>.</li>
 <li>

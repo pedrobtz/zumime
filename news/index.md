@@ -72,3 +72,9 @@
   `inner = "decompress"` (zukomp), `text = "family"` (zucsv, zujson,
   zutoml) and `charset = "detect"` (zuutf). `zumime_info()$family` lists
   the family sniffers available.
+- [`mime_sniffer()`](https://pedrobtz.github.io/zumime/reference/mime_sniffer.md),
+  [`mime_push()`](https://pedrobtz.github.io/zumime/reference/mime_sniffer.md)
+  and
+  [`mime_finish()`](https://pedrobtz.github.io/zumime/reference/mime_sniffer.md)
+  sniff a stream chunk by chunk and answer as soon as the bytes seen
+  decide the type.

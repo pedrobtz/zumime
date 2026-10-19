@@ -40,9 +40,10 @@ for an unreadable path unless `min_confidence` is `"none"`, where it is
 The answer always equals
 `mime_is(t$type, allowed) & t$confidence >= min_confidence` with
 `t <- mime_type(x)` (or `mime_sniff(x)` for a raw vector). It is
-computed with a shortcut that this equality hides: the container and
-text readers, tail reads and the result frame are skipped for every
-input whose first answer could not end as an allowed type. Call
+computed in one pass with a shortcut that this equality hides: the
+container and text readers and tail reads are skipped for every input
+whose first answer could not end as an allowed type, and no result frame
+is built. Call
 [`mime_type()`](https://pedrobtz.github.io/zumime/reference/mime_type.md)
 to learn why a file was refused.
 

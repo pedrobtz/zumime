@@ -104,6 +104,8 @@ Rscript tools/generate-tables.R            # regenerate R/sysdata.rda, src/zumim
 Rscript tools/generate-tables.R --check    # exit 1 if they differ from their sources
 Rscript tools/generate-tables.R --fetch    # download the sources again, record sha256
 tools/fetch-fixtures                       # oracle fixtures into tests/testthat/fixtures/
+tools/fuzz/run-local 60                    # the fuzz harness under ASan+UBSan, 60 s
+Rscript tools/fuzz/make-seeds.R            # rewrite tools/fuzz/seeds/
 ```
 
 The registry is generated: edit `tools/types.yaml` (parents, aliases,
@@ -146,6 +148,13 @@ See `.agents/design.md` §4; this section records what has landed.
   [`mime_check()`](https://pedrobtz.github.io/zumime/reference/mime_check.md)’s
   shortcut (`zumime_check()` in C) and `probe_count()`; `R/register.R`
   the session registry, mirrored in C by `zumime_reg[]` in `registry.c`.
+- **Streams.** `src/zumime_stream.c` is the can-decide rule;
+  `zumime_stream_push()` in `zumime_r.c` keeps the bytes in the external
+  pointer’s protected raw vector and the state in its address.
+  `R/stream.R` is the API.
+- **Fuzzing.** `tools/fuzz/harness.c` is the libFuzzer target over the
+  core (no R), run by `.github/workflows/fuzz.yaml`;
+  `tools/fuzz/driver.c` runs it without libFuzzer locally.
 - **Native layer.** `src/init.c` registers every `.Call` entry point,
   declared in `src/zumime_r.h`, which also has `zumime_scalar_string()`:
   never pass a fresh `CHARSXP` to `Rf_ScalarString()` unprotected.

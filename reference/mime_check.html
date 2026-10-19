@@ -77,9 +77,10 @@ where it is <code>NA</code>.</p>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The answer always equals <code>mime_is(t$type, allowed) &amp; t$confidence &gt;= min_confidence</code> with <code>t &lt;- mime_type(x)</code> (or <code>mime_sniff(x)</code> for a raw
-vector). It is computed with a shortcut that this equality hides: the
-container and text readers, tail reads and the result frame are skipped
-for every input whose first answer could not end as an allowed type.
+vector). It is computed in one pass with a shortcut that this equality
+hides: the container and text readers and tail reads are skipped for
+every input whose first answer could not end as an allowed type, and no
+result frame is built.
 Call <code><a href="mime_type.html">mime_type()</a></code> to learn why a file was refused.</p>
     </div>
     <div class="section level2">

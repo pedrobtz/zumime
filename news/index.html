@@ -62,6 +62,8 @@
 <li>
 <code><a href="../reference/mime_register.html">mime_register()</a></code> and <code><a href="../reference/mime_register.html">mime_unregister()</a></code> add a type for the session, detected by a byte rule in C or by an R function.</li>
 <li>Optional help from the family, never consulted unless asked: <code>inner = "decompress"</code> (zukomp), <code>text = "family"</code> (zucsv, zujson, zutoml) and <code>charset = "detect"</code> (zuutf). <code>zumime_info()$family</code> lists the family sniffers available.</li>
+<li>
+<code><a href="../reference/mime_sniffer.html">mime_sniffer()</a></code>, <code><a href="../reference/mime_sniffer.html">mime_push()</a></code> and <code><a href="../reference/mime_sniffer.html">mime_finish()</a></code> sniff a stream chunk by chunk and answer as soon as the bytes seen decide the type.</li>
 </ul></div>
   </main></div>
 
