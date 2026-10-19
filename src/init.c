@@ -10,6 +10,8 @@ static const R_CallMethodDef call_methods[] = {
   {"zumime_mime_parse", (DL_FUNC) &zumime_mime_parse, 1},
   {"zumime_mime_format", (DL_FUNC) &zumime_mime_format, 1},
   {"zumime_suffixes", (DL_FUNC) &zumime_suffixes, 1},
+  {"zumime_sniff_raw", (DL_FUNC) &zumime_sniff_raw, 6},
+  {"zumime_signature_rows", (DL_FUNC) &zumime_signature_rows, 0},
   {NULL, NULL, 0}
 };
 

@@ -234,15 +234,15 @@ static SEXP parse_one(const char *s) {
   SET_STRING_ELT(rec_names, 1, Rf_mkChar("subtype"));
   SET_STRING_ELT(rec_names, 2, Rf_mkChar("parameters"));
   Rf_setAttrib(rec, R_NamesSymbol, rec_names);
-  SET_VECTOR_ELT(rec, 0, Rf_ScalarString(mk_utf8(cp + ts, te - ts)));
-  SET_VECTOR_ELT(rec, 1, Rf_ScalarString(mk_utf8(cp + ss, se - ss)));
+  SET_VECTOR_ELT(rec, 0, zumime_scalar_string(mk_utf8(cp + ts, te - ts)));
+  SET_VECTOR_ELT(rec, 1, zumime_scalar_string(mk_utf8(cp + ss, se - ss)));
 
   SEXP params = PROTECT(Rf_allocVector(VECSXP, np));
   SEXP pnames = PROTECT(Rf_allocVector(STRSXP, np));
   for (R_xlen_t k = 0; k < np; k++) {
     SET_STRING_ELT(pnames, k,
                    mk_utf8(names[k].cp + names[k].start, names[k].end - names[k].start));
-    SET_VECTOR_ELT(params, k, Rf_ScalarString(mk_utf8(
+    SET_VECTOR_ELT(params, k, zumime_scalar_string(mk_utf8(
                                   values[k].cp + values[k].start,
                                   values[k].end - values[k].start)));
   }
