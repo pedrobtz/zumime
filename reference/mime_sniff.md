@@ -104,8 +104,6 @@ mime_sniff(png, type = "text/plain")
 # The supplied type wins under nosniff
 mime_sniff(png, type = "text/csv", no_sniff = TRUE)
 #> <zumime_result: 1 row>
-#>   path     type confidence      charset inner encrypted complete newline
-#> 1 <NA> text/csv       none windows-1252  <NA>        NA       NA   mixed
-#>   interpreter
-#> 1        <NA>
+#>   path     type confidence charset inner encrypted complete newline interpreter
+#> 1 <NA> text/csv       none    <NA>  <NA>        NA       NA    <NA>        <NA>
 ```

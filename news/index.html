@@ -46,6 +46,13 @@
 <code><a href="../reference/mime_parse.html">mime_parse()</a></code> and <code><a href="../reference/mime_parse.html">mime_format()</a></code> parse and serialise a MIME type as the WHATWG MIME Sniffing Standard defines it.</li>
 <li>
 <code><a href="../reference/mime_sniff.html">mime_sniff()</a></code> runs the WHATWG MIME Sniffing Standard’s algorithm over a raw vector, with a supplied type, the no-sniff flag and a sniffing context, and reports the charset the bytes declare and their line endings. Beyond the standard it knows the compression wrappers, tar, ISO 9660 images, RAR 5, 7z, fonts and WebAssembly.</li>
+<li>In the default <code>"none"</code> context <code><a href="../reference/mime_sniff.html">mime_sniff()</a></code> reads containers: ZIP entry names tell Office Open XML (with its macro-enabled, template and slideshow variants), OpenDocument, EPUB, JAR, APK and 3MF documents from plain ZIP; OLE2 directories tell Word, Excel, PowerPoint, Outlook and installer files; ISO base media brands tell MP4, M4A, M4V, QuickTime, 3GP, HEIC, HEIF, AVIF and CR3 apart; EBML and Ogg headers name their codecs.</li>
+<li>R’s own files are recognised through gzip: RDS and RData, as are Parquet, Arrow and Feather, fst, qs2, SQLite, DuckDB, HDF5, NetCDF, Stata, SPSS and SAS files.</li>
+<li>Structured text is typed at <code>"probable"</code>: XML dialects by root element and namespace, JSON and its dialects by top-level keys, NDJSON, and line-oriented formats such as vCard, iCalendar, WebVTT and PEM.</li>
+<li>
+<code>encrypted</code> reports ZIP entries encrypted with the classic flag or AES, and OLE2 files holding an <code>EncryptionInfo</code> stream; <code>interpreter</code> names a script’s shebang program.</li>
+<li>
+<code>text/xml</code> is now an alias of <code>application/xml</code>.</li>
 </ul></div>
   </main></div>
 

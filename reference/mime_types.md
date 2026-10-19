@@ -28,12 +28,12 @@ for one type's lineage.
 ``` r
 types <- mime_types()
 nrow(types)
-#> [1] 2613
+#> [1] 2628
 types[types$type == "application/zip", ]
 #>                 type                   parent
-#> 1978 application/zip application/octet-stream
+#> 1992 application/zip application/octet-stream
 #>                                              aliases extensions    category
-#> 1978 application/x-zip, application/x-zip-compressed        zip application
+#> 1992 application/x-zip, application/x-zip-compressed        zip application
 #>      detected_by
-#> 1978   signature
+#> 1992   signature
 ```

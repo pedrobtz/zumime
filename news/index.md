@@ -31,3 +31,21 @@
   reports the charset the bytes declare and their line endings. Beyond
   the standard it knows the compression wrappers, tar, ISO 9660 images,
   RAR 5, 7z, fonts and WebAssembly.
+- In the default `"none"` context
+  [`mime_sniff()`](https://pedrobtz.github.io/zumime/reference/mime_sniff.md)
+  reads containers: ZIP entry names tell Office Open XML (with its
+  macro-enabled, template and slideshow variants), OpenDocument, EPUB,
+  JAR, APK and 3MF documents from plain ZIP; OLE2 directories tell Word,
+  Excel, PowerPoint, Outlook and installer files; ISO base media brands
+  tell MP4, M4A, M4V, QuickTime, 3GP, HEIC, HEIF, AVIF and CR3 apart;
+  EBML and Ogg headers name their codecs.
+- R’s own files are recognised through gzip: RDS and RData, as are
+  Parquet, Arrow and Feather, fst, qs2, SQLite, DuckDB, HDF5, NetCDF,
+  Stata, SPSS and SAS files.
+- Structured text is typed at `"probable"`: XML dialects by root element
+  and namespace, JSON and its dialects by top-level keys, NDJSON, and
+  line-oriented formats such as vCard, iCalendar, WebVTT and PEM.
+- `encrypted` reports ZIP entries encrypted with the classic flag or
+  AES, and OLE2 files holding an `EncryptionInfo` stream; `interpreter`
+  names a script’s shebang program.
+- `text/xml` is now an alias of `application/xml`.
