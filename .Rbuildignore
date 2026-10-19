@@ -14,3 +14,7 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^\.worktrees$
+^tools$
+^tests/testthat/fixtures$
+^src/.*\.a$

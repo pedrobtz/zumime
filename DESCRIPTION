@@ -1,14 +1,32 @@
 Package: zumime
-Title: What the Package Does (One Line, Title Case)
+Title: Media Type Detection from Bytes and File Names
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    person("Pedro", "Baltazar", , "pedrobtz@gmail.com", role = c("aut", "cre", "cph"))
+Description: Tells what a file is from its first bytes and from its name,
+    with no system library. Implements the 'WHATWG' 'MIME' Sniffing
+    Standard <https://mimesniff.spec.whatwg.org/> over raw vectors and
+    paths, inspects containers ('ZIP' entry names, 'ISO' base media
+    brands, 'RIFF', 'EBML', 'Ogg', 'OLE2' directories) and recognises the
+    data formats R users hold, such as 'RDS', 'Parquet', 'SQLite' and
+    'Stata'. Every type has a parent ending at 'application/octet-stream',
+    and an extension table generated from the 'IANA' media types registry
+    and the 'Apache' 'httpd' type map answers from the name. One call
+    reports both answers, whether they agree, and whether a file is
+    compressed, encrypted or truncated.
 License: MIT + file LICENSE
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.1.0
+URL: https://github.com/pedrobtz/zumime, https://pedrobtz.github.io/zumime/
+BugReports: https://github.com/pedrobtz/zumime/issues
+Depends: 
+    R (>= 4.1)
 Suggests: 
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr,
+    zucsv,
+    zujson,
+    zukomp
 Config/testthat/edition: 3
-URL: https://pedrobtz.github.io/zumime/
+Config/roxygen2/version: 8.1.0
+Encoding: UTF-8
+Language: en-GB
+Roxygen: list(markdown = TRUE)

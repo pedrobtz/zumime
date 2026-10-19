@@ -1,0 +1,8 @@
+# $(C_VISIBILITY) is R's own substitution for -fvisibility=hidden, empty on a
+# toolchain without it and on Windows, where R exports from a .def file. With
+# it, zumime.so exports R_init_zumime and nothing else: every .Call entry
+# point is reached through R_registerRoutines. tests/testthat/test-abi.R
+# asserts the export set on the installed object (alignment R3).
+#
+# No optimisation or warning flags here: CRAN sets those.
+PKG_CFLAGS = $(C_VISIBILITY)

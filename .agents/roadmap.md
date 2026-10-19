@@ -17,7 +17,7 @@ lands in Stage 1 with the tables it covers.
 
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
-| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | | |
+| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | | 2026-10-19 |
 | 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | | |
 | 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | | |
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | | |
@@ -74,6 +74,22 @@ any `zumime` code exists.
 - `test-abi.R` passes.
 - `.agents/benchmarks.md` holds a number for the incumbents on each §10
   row that an installed tool can answer.
+
+**Deviations (2026-10-19).**
+
+- `Suggests` lists `zukomp`, `zucsv` and `zujson` only. `zuutf` and
+  `zutoml` are not on CRAN, and a suggested package outside the mainstream
+  repositories is a NOTE under `--as-cran`. They are added when they reach
+  CRAN; until then `charset = "detect"` and the `zutoml` hook of
+  `text = "family"` find them absent and degrade as D6 says.
+- `NEWS.md` is headed `# zumime 0.0.0.9000`, not `(development version)`:
+  R 4.5's news parser skips a heading without a version, and `R CMD check`
+  then notes "No news entries found".
+- `native-checks.yaml` (sanitizers with ASan, valgrind, LTO, gctorture,
+  rchk, analyzers, cran-special) is added here rather than in Stage 2, so
+  Stage 2's full run has it from its first push.
+- The coverage badge goes to `gh-pages`: the `main` ruleset requires pull
+  requests and rejected the badge commit on every push.
 
 **Design.** §3, §10 (baseline), §11 stage 0.
 
