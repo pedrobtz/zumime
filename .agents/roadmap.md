@@ -19,7 +19,7 @@ lands in Stage 1 with the tables it covers.
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | [#13](https://github.com/pedrobtz/zumime/pull/13) | 2026-10-19 |
 | 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | [#14](https://github.com/pedrobtz/zumime/pull/14) | 2026-10-19 |
-| 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | | |
+| 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | | 2026-10-19 |
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | | |
 | 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | | |
 | 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | | |
@@ -212,6 +212,31 @@ declare one.
   and no warnings.
 - Full profile green on the pull request: gctorture, valgrind, ASan and
   every platform leg.
+
+**Decisions (2026-10-19).**
+
+- The `"none"` context is the standard's algorithm plus zumime's own
+  signature rows (compression wrappers, tar with its checksum, ISO 9660,
+  RAR 5, 7z, fonts, WebAssembly), consulted only where the standard found
+  binary bytes and nothing else; Stage 3's readers attach there too.
+  `"browsing"` is the standard's tables alone.
+- Confidence (D3): a table or algorithm match is `definite`; text by the
+  no-binary-bytes rule is `probable`; the floor `application/octet-stream`
+  and a supplied type returned unverified are `none`. `confidence` is an
+  ordered factor `none < extension < probable < definite`, so
+  `confidence >= "probable"` works as D15 needs.
+- `type` is always the canonical name: the standard's `image/x-icon`,
+  `audio/wave`, `video/avi` and `application/x-gzip` come back as their
+  registry names, and the Go oracle compares through `mime_is()`.
+- The standard's MP3 steps have operator-precedence slips and an inverted
+  rate table; the code follows Mozilla's `mp3sniff.c`, which they
+  describe. Its vint parse starts at the DocType's offset, not 0.
+- Declared charset labels are reported as written (the `<meta>` prescan
+  lower-cases them), not resolved through the Encoding Standard's label
+  table; only the prescan's own UTF-16 and `x-user-defined` remappings are
+  applied.
+- The registry generator sorts in byte order (`method = "radix"`), so its
+  output does not depend on the locale and C can binary-search the names.
 
 **Design.** §4 layer 2, §6.1, §6.2 (signatures), §6.5, §7.2, D2, D3, D4.
 

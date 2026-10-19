@@ -29,6 +29,7 @@ types:
     parent: text/plain
     aliases: [application/x-xml]
   text/xml:
+    detected_by: signature
     parent: application/xml
   application/json:
     parent: text/plain
@@ -58,23 +59,31 @@ types:
   # Compression wrappers. The compounds are known as such, so .tar.gz is
   # one suffix; the bytes say gzip, and `inner` names the tar.
   application/gzip:
+    detected_by: signature
     aliases: [application/x-gzip, application/gzip-compressed]
     extensions: [gz, tgz, tar.gz]
   application/x-bzip2:
+    detected_by: signature
     aliases: [application/bzip2, application/x-bzip2-compressed]
     extensions: [tbz2, tar.bz2]
   application/x-xz:
+    detected_by: signature
     extensions: [txz, tar.xz]
   application/zstd:
+    detected_by: signature
     aliases: [application/x-zstd]
     extensions: [zst, tzst, tar.zst]
   application/x-tar:
+    detected_by: signature
     aliases: [application/tar]
   application/zip:
+    detected_by: signature
     aliases: [application/x-zip-compressed, application/x-zip]
   application/vnd.rar:
+    detected_by: signature
     aliases: [application/x-rar-compressed, application/x-rar]
-  application/x-7z-compressed: {}
+  application/x-7z-compressed:
+    detected_by: signature
 
   # ZIP-based formats.
   application/vnd.openxmlformats-officedocument.wordprocessingml.document:
@@ -116,28 +125,38 @@ types:
 
   # Media whose browser names differ from the registries'.
   audio/wav:
+    detected_by: signature
     aliases: [audio/x-wav, audio/wave, audio/vnd.wave]
   video/x-msvideo:
+    detected_by: signature
     aliases: [video/avi, video/msvideo]
   image/vnd.microsoft.icon:
+    detected_by: signature
     aliases: [image/x-icon]
   audio/aiff:
+    detected_by: signature
     aliases: [audio/x-aiff]
   image/bmp:
+    detected_by: signature
     aliases: [image/x-bmp, image/x-ms-bmp]
   font/ttf:
+    detected_by: signature
     aliases: [application/x-font-ttf, application/font-sfnt]
   font/otf:
+    detected_by: signature
     aliases: [application/x-font-otf]
   font/woff:
+    detected_by: signature
     aliases: [application/font-woff, application/x-font-woff]
   image/jpeg:
+    detected_by: signature
     canonical: jpg
   video/x-matroska:
     aliases: [video/matroska]
   audio/x-matroska:
     parent: video/x-matroska
   video/webm:
+    detected_by: signature
     parent: video/x-matroska
   audio/webm:
     parent: video/webm
@@ -179,3 +198,36 @@ types:
     extensions: [sas7bdat]
   application/x-sas-xport:
     extensions: [xpt]
+
+  # Types the WHATWG tables and zumime's extra signature rows detect
+  # (src/zumime_table.c) that need nothing else here.
+  image/gif:
+    detected_by: signature
+  image/png:
+    detected_by: signature
+  image/webp:
+    detected_by: signature
+  audio/mpeg:
+    detected_by: signature
+  application/ogg:
+    detected_by: signature
+  audio/midi:
+    detected_by: signature
+  video/mp4:
+    detected_by: signature
+  application/vnd.ms-fontobject:
+    detected_by: signature
+  font/collection:
+    detected_by: signature
+  font/woff2:
+    detected_by: signature
+  text/html:
+    detected_by: signature
+  application/pdf:
+    detected_by: signature
+  application/postscript:
+    detected_by: signature
+  application/x-iso9660-image:
+    detected_by: signature
+  application/wasm:
+    detected_by: signature
