@@ -539,6 +539,15 @@ branch's code and everything it finds is fixed.
 - A full-profile run green on the pull request and on its merge commit.
 - The determinism check of design §12 passes on all three platforms.
 
+**Work list (2026-10-19).** The full run on `main` after Stage 6
+(`f519de7`) was green on every R CMD check leg (macOS, Windows release and
+R-devel, Ubuntu release and oldrel, the clang23, ubuntu-clang and
+ubuntu-gcc16 containers, `nosuggests`, `nold`), ASan, UBSan, valgrind, LTO,
+rchk, analyzers and cran-special. The one comment left on #9, valgrind's
+report of R's `memCompress()` after #17, was fixed in #18. This stage adds
+the determinism check of design §12 (`test-determinism.R`), which runs on
+every leg.
+
 **Design.** §12.
 
 ## Stage 8 — v0.1.0 readiness
