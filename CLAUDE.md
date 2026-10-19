@@ -99,12 +99,38 @@ ZUMIME_BENCH_FILES=10000 tools/run-benchmarks    # the same over a smaller tree
 
 Record each run in `.agents/benchmarks.md` with its date and machine.
 
+``` sh
+Rscript tools/generate-tables.R            # regenerate R/sysdata.rda, src/zumime_types.h
+Rscript tools/generate-tables.R --check    # exit 1 if they differ from their sources
+Rscript tools/generate-tables.R --fetch    # download the sources again, record sha256
+tools/fetch-fixtures                       # oracle fixtures into tests/testthat/fixtures/
+```
+
+The registry is generated: edit `tools/types.yaml` (parents, aliases,
+extensions, `detected_by`) and regenerate, never the outputs. The tests
+that need fixtures skip without them; `oracles.yaml` fetches and runs
+them in CI.
+
 ## Architecture
 
-To be written as stages land; see `.agents/design.md`. The scaffold set
-up a C native layer with `usethis::use_c()`: `src/zumime.c` is an empty
-translation unit and `R/zumime-package.R` registers it with
-`@useDynLib zumime, .registration = TRUE`.
+See `.agents/design.md` §4; this section records what has landed.
+
+- **Registry (layer 1).** `tools/generate-tables.R` reads
+  `tools/sources/` (IANA CSVs, Apache `mime.types`, checksummed in
+  `tools/table-sources.yaml`) and `tools/types.yaml`, and writes
+  `R/sysdata.rda` (`types_registry`, `types_ext_map`, `types_alias_map`,
+  `types_table_version`) and `src/zumime_types.h` (enum
+  `ZUMIME_T_<TYPE>` in sorted order, names and parent ids, defined once
+  in `src/registry.c`). `R/registry.R` holds the registry functions;
+  `canonical_type()` is the one place a type string is normalised.
+- **Native layer.** `src/init.c` registers every `.Call` entry point,
+  declared in `src/zumime_r.h`. `src/mime_record.c` is the WHATWG MIME
+  type record over decoded code points; `src/guess.c` extracts suffixes
+  for
+  [`mime_guess()`](https://pedrobtz.github.io/zumime/reference/mime_guess.md).
+- **Conditions.** `zumime_abort(kind, message)` in `R/conditions.R`
+  raises `zumime_<kind>_error`; `check_character()` raises
+  `zumime_type_error`.
 
 ## Invariants that are easy to break
 
@@ -145,9 +171,11 @@ a stage establishes it.
   corpus. Use it as an oracle rather than inventing cases by hand. The
   design’s section 7 names three: web-platform-tests’ `mimesniff/`
   fixtures for parsing, Go’s `net/http` sniff cases for the WHATWG
-  table, and `file-type`’s fixtures for containers. None is wired in
-  yet.
-- **Helpers live in `tests/testthat/helper-*.R`.** None yet.
+  table, and `file-type`’s fixtures for containers. The WPT fixtures are
+  wired in through `tools/fetch-fixtures`.
+- **Helpers live in `tests/testthat/helper-*.R`.** `helper-abi.R`
+  (symbol audit), `helper-tables.R` (`source_root()`),
+  `helper-fixtures.R` (`fixture_dir()`, `wpt_mime_entries()`).
 - **Keep the suite inside the CRAN time budget.** Only the scaffold’s
   placeholder test exists; no runtime to report.
 

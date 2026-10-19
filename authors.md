@@ -4,6 +4,10 @@
 
 - **Pedro Baltazar**. Author, maintainer, copyright holder.
 
+- **Apache Software Foundation**. Copyright holder.  
+  copyright holder of the httpd mime.types file the extension table is
+  generated from; see inst/COPYRIGHTS
+
 ## Citation
 
 Source:

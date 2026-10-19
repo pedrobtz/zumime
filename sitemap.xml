@@ -7,6 +7,12 @@
 <url><loc>https://pedrobtz.github.io/zumime/index.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zumime/news/index.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zumime/reference/index.html</loc></url>
+<url><loc>https://pedrobtz.github.io/zumime/reference/mime_extensions.html</loc></url>
+<url><loc>https://pedrobtz.github.io/zumime/reference/mime_guess.html</loc></url>
+<url><loc>https://pedrobtz.github.io/zumime/reference/mime_is.html</loc></url>
+<url><loc>https://pedrobtz.github.io/zumime/reference/mime_parent.html</loc></url>
+<url><loc>https://pedrobtz.github.io/zumime/reference/mime_parse.html</loc></url>
+<url><loc>https://pedrobtz.github.io/zumime/reference/mime_types.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zumime/reference/zumime-package.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zumime/reference/zumime_info.html</loc></url>
 </urlset>

@@ -13,8 +13,8 @@ zumime_info()
 ## Value
 
 A list with `version`, the package version as a string, and
-`table_version`, the date of the table sources as a string, or `NA`
-before the tables exist.
+`table_version`, the date of the table sources as a string
+(`"YYYY-MM-DD"`).
 
 ## Examples
 
@@ -24,6 +24,6 @@ zumime_info()
 #> [1] "0.0.0.9000"
 #> 
 #> $table_version
-#> [1] NA
+#> [1] "2026-10-19"
 #> 
 ```

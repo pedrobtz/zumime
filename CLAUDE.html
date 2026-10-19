@@ -81,11 +81,22 @@
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">tools/run-benchmarks</span>                             <span class="co"># design §10 timings, Markdown table</span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="va">ZUMIME_BENCH_FILES</span><span class="op">=</span>10000 <span class="ex">tools/run-benchmarks</span>    <span class="co"># the same over a smaller tree</span></span></code></pre></div>
 <p>Record each run in <code>.agents/benchmarks.md</code> with its date and machine.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R            <span class="co"># regenerate R/sysdata.rda, src/zumime_types.h</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R <span class="at">--check</span>    <span class="co"># exit 1 if they differ from their sources</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R <span class="at">--fetch</span>    <span class="co"># download the sources again, record sha256</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="ex">tools/fetch-fixtures</span>                       <span class="co"># oracle fixtures into tests/testthat/fixtures/</span></span></code></pre></div>
+<p>The registry is generated: edit <code>tools/types.yaml</code> (parents, aliases, extensions, <code>detected_by</code>) and regenerate, never the outputs. The tests that need fixtures skip without them; <code>oracles.yaml</code> fetches and runs them in CI.</p>
 </div>
 <div class="section level2">
 <h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a></h2>
-<p>To be written as stages land; see <code>.agents/design.md</code>. The scaffold set up a C native layer with <code>usethis::use_c()</code>: <code>src/zumime.c</code> is an empty translation unit and <code>R/zumime-package.R</code> registers it with <code>@useDynLib zumime, .registration = TRUE</code>.</p>
-</div>
+<p>See <code>.agents/design.md</code> §4; this section records what has landed.</p>
+<ul><li>
+<strong>Registry (layer 1).</strong> <code>tools/generate-tables.R</code> reads <code>tools/sources/</code> (IANA CSVs, Apache <code>mime.types</code>, checksummed in <code>tools/table-sources.yaml</code>) and <code>tools/types.yaml</code>, and writes <code>R/sysdata.rda</code> (<code>types_registry</code>, <code>types_ext_map</code>, <code>types_alias_map</code>, <code>types_table_version</code>) and <code>src/zumime_types.h</code> (enum <code>ZUMIME_T_&lt;TYPE&gt;</code> in sorted order, names and parent ids, defined once in <code>src/registry.c</code>). <code>R/registry.R</code> holds the registry functions; <code>canonical_type()</code> is the one place a type string is normalised.</li>
+<li>
+<strong>Native layer.</strong> <code>src/init.c</code> registers every <code>.Call</code> entry point, declared in <code>src/zumime_r.h</code>. <code>src/mime_record.c</code> is the WHATWG MIME type record over decoded code points; <code>src/guess.c</code> extracts suffixes for <code><a href="reference/mime_guess.html">mime_guess()</a></code>.</li>
+<li>
+<strong>Conditions.</strong> <code>zumime_abort(kind, message)</code> in <code>R/conditions.R</code> raises <code>zumime_&lt;kind&gt;_error</code>; <code>check_character()</code> raises <code>zumime_type_error</code>.</li>
+</ul></div>
 <div class="section level2">
 <h2 id="invariants-that-are-easy-to-break">Invariants that are easy to break<a class="anchor" aria-label="anchor" href="#invariants-that-are-easy-to-break"></a></h2>
 <p>The design fixes these (RFC 0040 D6, D7, D8); add each further one when a stage establishes it.</p>
@@ -107,9 +118,9 @@
 <li>
 <strong>Order independence.</strong> <code>devtools::test(shuffle = TRUE)</code> is part of the definition of done.</li>
 <li>
-<strong>Borrow a conformance suite before writing one.</strong> Mainstream implementations in Python, Java, Go or Node usually ship a test corpus. Use it as an oracle rather than inventing cases by hand. The design’s section 7 names three: web-platform-tests’ <code>mimesniff/</code> fixtures for parsing, Go’s <code>net/http</code> sniff cases for the WHATWG table, and <code>file-type</code>’s fixtures for containers. None is wired in yet.</li>
+<strong>Borrow a conformance suite before writing one.</strong> Mainstream implementations in Python, Java, Go or Node usually ship a test corpus. Use it as an oracle rather than inventing cases by hand. The design’s section 7 names three: web-platform-tests’ <code>mimesniff/</code> fixtures for parsing, Go’s <code>net/http</code> sniff cases for the WHATWG table, and <code>file-type</code>’s fixtures for containers. The WPT fixtures are wired in through <code>tools/fetch-fixtures</code>.</li>
 <li>
-<strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> None yet.</li>
+<strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> <code>helper-abi.R</code> (symbol audit), <code>helper-tables.R</code> (<code>source_root()</code>), <code>helper-fixtures.R</code> (<code>fixture_dir()</code>, <code>wpt_mime_entries()</code>).</li>
 <li>
 <strong>Keep the suite inside the CRAN time budget.</strong> Only the scaffold’s placeholder test exists; no runtime to report.</li>
 </ul></div>

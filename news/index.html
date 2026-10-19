@@ -37,6 +37,13 @@
 <ul><li>Initial CRAN submission.</li>
 <li>
 <code><a href="../reference/zumime_info.html">zumime_info()</a></code> reports the package version and the version of the type tables.</li>
+<li>A type registry generated from IANA’s media types registry and Apache httpd’s <code>mime.types</code>, with parents ending at <code>application/octet-stream</code> and aliases. <code><a href="../reference/mime_types.html">mime_types()</a></code> returns it; <code>zumime_info()$table_version</code> is the date of its sources.</li>
+<li>
+<code><a href="../reference/mime_guess.html">mime_guess()</a></code> guesses a type from a file name, knowing compound suffixes such as <code>.tar.gz</code>; <code><a href="../reference/mime_extensions.html">mime_extensions()</a></code> is the reverse.</li>
+<li>
+<code><a href="../reference/mime_parent.html">mime_parent()</a></code> gives a type’s lineage and <code><a href="../reference/mime_is.html">mime_is()</a></code> tests whether a type is, or descends from, a type, an alias or a top-level type.</li>
+<li>
+<code><a href="../reference/mime_parse.html">mime_parse()</a></code> and <code><a href="../reference/mime_parse.html">mime_format()</a></code> parse and serialise a MIME type as the WHATWG MIME Sniffing Standard defines it.</li>
 </ul></div>
   </main></div>
 

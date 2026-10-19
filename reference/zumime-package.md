@@ -29,3 +29,9 @@ Useful links:
 Authors:
 
 - Pedro Baltazar <pedrobtz@gmail.com> \[copyright holder\]
+
+Other contributors:
+
+- Apache Software Foundation (copyright holder of the httpd mime.types
+  file the extension table is generated from; see inst/COPYRIGHTS)
+  \[copyright holder\]
