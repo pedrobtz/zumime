@@ -42,6 +42,7 @@ test_that("mime_format() rejects what is not a record", {
 })
 
 test_that("every web-platform-tests parse fixture passes", {
+  skip_if_gctorture()
   dir <- fixture_dir("wpt")
   for (f in c("mime-types.json", "generated-mime-types.json")) {
     entries <- wpt_mime_entries(file.path(dir, f))
