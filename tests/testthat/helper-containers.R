@@ -19,25 +19,30 @@ deflate_raw <- function(x) {
 
 # A ZIP archive. `entries` is a named list of contents; `method` 0 stores,
 # 8 deflates. `flags` and `extra` apply to every entry. With
-# `descriptor = TRUE` the local headers carry flag 3 and zero sizes.
+# `descriptor = TRUE` the local headers carry flag 3 and a data descriptor
+# follows each entry's data; the local sizes are zero unless `sizes`, and
+# the descriptor has no signature unless `signature`. `zip64` writes the
+# Zip64 marker 0xFFFFFFFF as the directory's offset, and `comment` is the
+# archive comment.
 build_zip <- function(entries, method = 0L, flags = 0L, extra = raw(),
-                      descriptor = FALSE) {
+                      descriptor = FALSE, sizes = !descriptor,
+                      signature = TRUE, zip64 = FALSE, comment = raw()) {
   local <- raw()
   central <- raw()
   for (name in names(entries)) {
     data <- bytes(entries[[name]])
     stored <- if (method == 8L) deflate_raw(data) else data
     f <- flags + if (descriptor) 8L else 0L
-    csize <- if (descriptor) 0L else length(stored)
+    csize <- if (sizes) length(stored) else 0L
     nm <- charToRaw(name)
     offset <- length(local)
     local <- c(local, charToRaw("PK"), as.raw(c(3, 4)), u16(20), u16(f),
       u16(method), u16(0), u16(0), u32(0), u32(csize),
-      u32(if (descriptor) 0L else length(data)), u16(length(nm)),
+      u32(if (sizes) length(data) else 0L), u16(length(nm)),
       u16(length(extra)), nm, extra, stored)
     if (descriptor) {
-      local <- c(local, charToRaw("PK"), as.raw(c(7, 8)), u32(0),
-        u32(length(stored)), u32(length(data)))
+      local <- c(local, if (signature) c(charToRaw("PK"), as.raw(c(7, 8))),
+        u32(0), u32(length(stored)), u32(length(data)))
     }
     central <- c(central, charToRaw("PK"), as.raw(c(1, 2)), u16(20), u16(20),
       u16(f), u16(method), u16(0), u16(0), u32(0), u32(length(stored)),
@@ -46,7 +51,8 @@ build_zip <- function(entries, method = 0L, flags = 0L, extra = raw(),
   }
   eocd <- c(charToRaw("PK"), as.raw(c(5, 6)), u16(0), u16(0),
     u16(length(entries)), u16(length(entries)), u32(length(central)),
-    u32(length(local)), u16(0))
+    u32(if (zip64) 2^32 - 1 else length(local)), u16(length(comment)),
+    comment)
   c(local, central, eocd)
 }
 

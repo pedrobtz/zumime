@@ -75,3 +75,31 @@ test_that("without the central directory the local headers are walked", {
     "zzz" = "y"), descriptor = TRUE)
   expect_identical(mime_sniff(d, limit = 60)$type, "application/zip")
 })
+
+test_that("a Zip64 marker falls back to the local headers", {
+  z <- build_zip(ooxml_entries("word"), zip64 = TRUE)
+  expect_identical(sniff_type(z), docx_type())
+  # A last entry past the head makes the path loop read the tail.
+  big <- c(ooxml_entries("word"), list(media = strrep("x", 5000)))
+  dir <- local_tree(list("a.docx" = build_zip(big, zip64 = TRUE)))
+  expect_identical(mime_type(file.path(dir, "a.docx"))$type, docx_type())
+})
+
+test_that("the local walk steps over data descriptors after known sizes", {
+  # The Zip64 marker forces the walk; [Content_Types].xml and word/ are
+  # only reached by stepping over the earlier entries' descriptors.
+  for (signature in c(TRUE, FALSE)) {
+    z <- build_zip(ooxml_entries("word"), descriptor = TRUE, sizes = TRUE,
+      signature = signature, zip64 = TRUE)
+    expect_identical(sniff_type(z), docx_type(), info = signature)
+  }
+})
+
+test_that("a directory in the head is read when the record is in the tail", {
+  # A maximal comment puts the end record 64 KiB past the directory, which
+  # stays in the 4 KiB head.
+  z <- build_zip(ooxml_entries("word"), comment = raw(65535))
+  dir <- local_tree(list("a.docx" = z))
+  expect_identical(mime_type(file.path(dir, "a.docx"))$type, docx_type())
+  expect_identical(mime_sniff(z)$type, docx_type())
+})
