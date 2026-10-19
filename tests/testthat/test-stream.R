@@ -19,6 +19,13 @@ test_that("text decides only at the limit or the finish", {
   expect_identical(r$complete, NA)
 })
 
+test_that("a decided sniffer ignores further chunks", {
+  s <- mime_sniffer()
+  first <- mime_push(s, charToRaw("GIF89a"))
+  expect_identical(mime_push(s, charToRaw("more bytes")), first)
+  expect_output(print(s), "6 of 4096 bytes, decided")
+})
+
 test_that("a finished sniffer refuses pushes", {
   s <- mime_sniffer()
   mime_push(s, charToRaw("abc"))

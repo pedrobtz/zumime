@@ -2,10 +2,14 @@
 #'
 #' `mime_sniffer()` starts an incremental sniffer; `mime_push()` hands it
 #' the next chunk and returns `NULL` while the bytes seen cannot yet decide
-#' the type, or the result row once they can, after which further pushes
-#' are ignored. `mime_finish()` forces an answer from what has been seen,
-#' as the end of a short stream would. The answer is the one
-#' [mime_sniff()] gives for the same first `limit` bytes.
+#' the type, or the result row once they can. `mime_finish()` forces an
+#' answer from what has been seen, as the end of a short stream would. The
+#' answer is the one [mime_sniff()] gives for the same first `limit` bytes.
+#'
+#' Once the sniffer has decided, further pushes ignore their chunks and
+#' return the same row. Once it has finished, a push raises a
+#' `zumime_state_error`; `mime_finish()` can still be called and returns
+#' the same row.
 #'
 #' The bytes decide when no longer signature could still override the
 #' match, the container reader for the type has what it needs, or `limit`
@@ -56,7 +60,7 @@ mime_push <- function(s, chunk) {
   if (!is.raw(chunk)) {
     zumime_abort("type", "`chunk` must be a raw vector.")
   }
-  if (.Call(zumime_stream_state, s)[1] == 3) {
+  if (stream_state(s)$state == "finished") {
     zumime_abort("state", "The sniffer is finished; start a new one.")
   }
   stream_result(s, chunk, final = FALSE)
@@ -71,11 +75,10 @@ mime_finish <- function(s) {
 
 #' @export
 print.zumime_sniffer <- function(x, ...) {
-  st <- .Call(zumime_stream_state, x)
+  st <- stream_state(x)
   p <- attr(x, "params")
-  state <- c("undecided", "decided", "finished")[st[1]]
-  cat(sprintf("<zumime_sniffer: %s of %s bytes, %s>\n", format(st[2]),
-    if (p$limit > 0) format(p$limit) else "unlimited", state))
+  cat(sprintf("<zumime_sniffer: %s of %s bytes, %s>\n", format(st$n),
+    if (p$limit > 0) format(p$limit) else "unlimited", st$state))
   invisible(x)
 }
 
@@ -112,9 +115,15 @@ stream_result <- function(s, chunk, final) {
   out
 }
 
+# A sniffer's state, "undecided", "decided" or "finished", and the number
+# of bytes it holds.
+stream_state <- function(s) {
+  st <- .Call(zumime_stream_state, s)
+  list(state = c("undecided", "decided", "finished")[st[1]], n = st[2])
+}
+
 # The bytes a sniffer holds, for function rules.
 stream_bytes <- function(s) {
-  st <- .Call(zumime_stream_state, s)
   buf <- .Call(zumime_stream_buffer, s)
-  buf[seq_len(st[2])]
+  buf[seq_len(stream_state(s)$n)]
 }
