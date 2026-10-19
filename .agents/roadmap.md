@@ -240,9 +240,11 @@ needs to open each file.
   `complete`; `newline`; `interpreter`; `by_name` and `agree`.
 - `charset = "detect"` through `zuutf`; `zumime_dependency_error` when a
   suggested package is asked for and absent.
-- `mime_check(x, allowed)` running only the allowed types' detectors and
-  their ancestors; `mime_register()` and `mime_unregister()` with data
-  rules in C and function rules in R (design §6.9).
+- `mime_check(x, allowed, min_confidence)` as D15 fixes it: a bare logical,
+  byte evidence only, running only the allowed types' detectors and their
+  ancestors; an unexported `probe_count()` reading a static counter;
+  `mime_register()` and `mime_unregister()` with data rules in C and function
+  rules in R (design §6.9).
 - `mime_sniff()` accepts paths through the same loop.
 
 **Exit criteria.**
@@ -251,15 +253,17 @@ needs to open each file.
   frame, with `agree` `TRUE`, `FALSE` and `NA` cases.
 - Each how-to-open column has a test per format it applies to, including
   an encrypted ZIP, a truncated PDF and a `.csv.gz`.
-- `mime_check()` with three allowed types probes only those types, shown
-  by a counter exposed under a test switch.
+- `mime_check(x, a, m)` equals `mime_is(t$type, a) & t$confidence >= m` with
+  `t <- mime_type(x)` over every fixture and every subset of three allowed
+  types (D15), and the probe counter shows three probes for three allowed
+  types.
 - A registered data rule is detected at `definite`, a function rule at
   `probable`; an unknown parent is `zumime_registry_error`.
 - A missing path is an `NA` row by default and `zumime_io_error` with
   `strict = TRUE`.
 - Quick profile green.
 
-**Design.** §4 layer 4, §5 Results, §6.7, §6.9, D5, D6, D12, D13.
+**Design.** §4 layer 4, §5 Results, §6.7, §6.9, D5, D6, D12, D13, D15.
 
 ## Stage 5 — Incremental sniffer, fuzz, benchmarks
 
@@ -408,9 +412,8 @@ From design §15:
   4 measures the cost on a cold cache; D5 holds until then. Blocks nothing.
 - **Q2** (IANA alone for extensions): revisited at each regeneration;
   blocks nothing before 0.1.0.
-- **Q3** (whether `mime_check()`'s partial detection is observable): must
-  be settled in Stage 4, which otherwise exposes it only under a test
-  switch.
+- **Q3** (whether `mime_check()`'s partial detection is observable): settled
+  2026-10-19 by design D15; Stage 4 implements it.
 - **Q4** (CRAN submission or GitHub release): the board's `CRAN intent`
   field; this roadmap assumes `Planned`. Decides whether Stage 8 and the
   `CRAN-submission` issue apply as written.

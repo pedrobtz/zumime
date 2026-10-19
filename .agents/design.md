@@ -1,14 +1,16 @@
 # RFC 0040: `zumime`, what a file is, from its bytes and its name
 
-Adopted from [RFC 0040](https://github.com/pedrobtz/packages/blob/main/rfcs/started/0040-zumime-media-type-detection.md) on 2026-10-18. From here on this file is authoritative; the RFC is history.
+Adopted from [RFC 0040](https://github.com/pedrobtz/packages/blob/main/rfcs/started/0040-zumime-media-type-detection.md)
+on 2026-10-18. From here on this file is authoritative; the RFC is history.
 
 - **Status:** Proposed. Merging this file adopts the design as the starting
   point for the package's own `.agents/design.md`; each decision in section
-  13 stays the maintainer's until the package repository records it. Every
-  decision here is **(C)**: the maintainer asked for the RFC to be written
-  from the sketch without a design conversation, so none is marked **(M)**
-  and D3 (confidence levels), D6 (host-independent output) and D9 (the
-  incremental sniffer's shape) are the ones most worth a second look.
+  13 stays the maintainer's until the package repository records it. D15 was
+  added on 2026-10-19 after a review of the sketch's Q3. Every decision here
+  is **(C)**: the maintainer asked for the RFC to be written from the sketch
+  without a design conversation, so none is marked **(M)** and D3 (confidence
+  levels), D6 (host-independent output) and D9 (the incremental sniffer's
+  shape) are the ones most worth a second look.
 - **Date:** 2026-10-18.
 - **Packages:** `zumime` (repository `pedrobtz/zumime` created 2026-10-18
   from the `create-pkg.sh` scaffold; the name was free on crandb on
@@ -224,7 +226,7 @@ mime_type(path, limit = 4096L, complete = FALSE,
 # the hierarchy
 mime_parent(type)                       # lineage up to application/octet-stream
 mime_is(x, what)                        # type, alias or category; descendants count
-mime_check(x, allowed)                  # the upload question, vectorised
+mime_check(x, allowed, min_confidence = "probable")  # the upload question
 mime_types()                            # the registry as a data frame
 # the MIME type record (WHATWG)
 mime_parse("text/html; charset=UTF-8")  # list(type, subtype, parameters)
@@ -345,9 +347,17 @@ root. `mime_is(x, what)` is `TRUE` when `x`'s canonical type equals
 `what`, descends from it, or has `what` as its top-level type
 (`"image"`); aliases, parameters and case are ignored on both sides, so
 `mime_is("application/x-sqlite3", "application/vnd.sqlite3")` is `TRUE`.
-`mime_check(x, allowed)` vectorises `mime_is()` over paths against a set
-and, when sniffing a path, runs only the detectors for the allowed types
-and their ancestors, so an allowlist of three types costs three probes.
+`mime_check(x, allowed, min_confidence)` is the upload question: a bare
+logical, one per input, `TRUE` when the byte answer is one of `allowed` or a
+descendant at `min_confidence` or better. The default `"probable"` accepts
+byte evidence of either kind; `"definite"` is for allowlists that must not
+trust a text heuristic. The name is never consulted, since the question exists
+because names lie. As an optimisation it runs only the detectors for the
+allowed types and their ancestors, so an allowlist of three types costs three
+probes, and that shortcut is invisible by design (D15): for every input,
+`mime_check(x, a, m)` equals `mime_is(t$type, a) & t$confidence >= m` with `t
+<- mime_type(x)`. A caller who wants to know why a file was refused calls
+`mime_type()`.
 
 Canonical names are the registry's and are versioned with the table:
 `zumime_info()$table_version` is the date of the table sources, and a
@@ -527,25 +537,26 @@ Every condition inherits from `zumime_error`; tests assert on class.
 
 ## 9. Testing
 
-`testthat` 3e. One file per subsection of §6. The WHATWG algorithm is
-tested first on hand-built inputs, one per table row, generated from the
-table itself (pattern bytes under the mask, padded to the resource header
-length) so that every row is exercised, then against the oracles of §7.
-Each container reader has fixtures built in the test from bytes, not
-files: a minimal ZIP with named entries, an OLE2 directory with the
-stream names, a `ftyp` box per brand, so the tests need no corpus to
-run. The extension table has a round-trip property: for every type,
-every extension in `mime_extensions(type)` maps back by `mime_guess()`
-to that type or a descendant. The hierarchy test walks every type to the
-root and finds no cycle. Charset has a table of inputs per rule in §6.5.
-The incremental sniffer is tested by feeding every fixture one byte at a
-time and checking it decides at the same type as the whole, and never
-later than `limit`. Snapshot tests cover printing and the `agree` column
-on a small tree under `tempdir()`. A fuzz target under
-`ZUMIME_STANDALONE` runs random and mutated-fixture bytes through layers
-2 and 3 and checks: no crash, no read past the buffer, every type id is
-in the registry, and the result for a prefix is the whole's type or one
-of its ancestors. From the family (R3): `test-abi.R`, that the shared
+`testthat` 3e. One file per subsection of §6. The WHATWG algorithm is tested
+first on hand-built inputs, one per table row, generated from the table itself
+(pattern bytes under the mask, padded to the resource header length) so that
+every row is exercised, then against the oracles of §7. Each container reader
+has fixtures built in the test from bytes, not files: a minimal ZIP with named
+entries, an OLE2 directory with the stream names, a `ftyp` box per brand, so
+the tests need no corpus to run. The extension table has a round-trip
+property: for every type, every extension in `mime_extensions(type)` maps back
+by `mime_guess()` to that type or a descendant. The hierarchy test walks every
+type to the root and finds no cycle. `mime_check()` has the equivalence
+property of D15 over every fixture and every subset of three allowed types,
+and a probe-count test that reads an unexported static counter to show the
+shortcut ran. Charset has a table of inputs per rule in §6.5. The incremental
+sniffer is tested by feeding every fixture one byte at a time and checking it
+decides at the same type as the whole, and never later than `limit`. Snapshot
+tests cover printing and the `agree` column on a small tree under `tempdir()`.
+A fuzz target under `ZUMIME_STANDALONE` runs random and mutated-fixture bytes
+through layers 2 and 3 and checks: no crash, no read past the buffer, every
+type id is in the registry, and the result for a prefix is the whole's type or
+one of its ancestors. From the family (R3): `test-abi.R`, that the shared
 object exports `R_init_zumime` only.
 
 ## 10. Performance targets
@@ -616,59 +627,65 @@ them. None was discussed before writing; the sketch's open questions are
 Q1 to Q5 of `base-layer-candidates.md` §5.1 as of commit `074b398`, in
 the order that sketch listed them.
 
-- **D1 (C).** Both halves in one package: sniffing and the extension
-  table, so a consumer takes no `Imports` and one call answers from two
-  signals. (The sketch's shape.)
+- **D1 (C).** Both halves in one package: sniffing and the extension table, so
+  a consumer takes no `Imports` and one call answers from two signals. (The
+  sketch's shape.)
 - **D2 (C).** The byte answer is the whole WHATWG algorithm with supplied
   type, no-sniff flag and context, not only its signature table, because
   `zuhttp` and `zusocks` need the computed type a browser would compute.
-- **D3 (C).** Confidence is four ordered levels, not a number:
-  `definite` (signature or container), `probable` (grammar of text, C1
-  charset guess, function detectors, family sniffers), `extension` (name
-  only), `none`. A number would be invented; the levels name the kind of
-  evidence, which is what a caller branches on. (Sketch Q1, which offered
-  three; container evidence is as definite as a signature, so it joins
-  that level, and `none` is needed for the floor.)
-- **D4 (C).** `mime_type()` reads 4096 bytes by default, as `mimetype`
-  does, because the WHATWG resource header is 1445 bytes and the ZIP,
-  OLE2 and BMFF readers want a little more; containers do not opt in to
-  a longer read. `limit = 0` reads everything. (Sketch Q2.)
-- **D5 (C).** The completeness check is opt-in, `complete = TRUE`, and
-  stays opt-in for paths too, because it is a second read at the end of
-  every file and a tree scan should not pay for it unasked. (Sketch Q5.)
-- **D6 (C).** The default answer depends on nothing outside the package:
-  no host tables, and no suggested package is consulted unless an
-  argument asks (`inner = "decompress"`, `text = "family"`,
-  `charset = "detect"`). Two machines with `zumime` installed give the
-  same frame for the same bytes.
-- **D7 (C).** No vendored code. The sniffer, the readers and the
-  algorithm are written for this package against the standard and the
-  three reference implementations; the pieces are small and the oracles
-  make divergence visible.
+- **D3 (C).** Confidence is four ordered levels, not a number: `definite`
+  (signature or container), `probable` (grammar of text, C1 charset guess,
+  function detectors, family sniffers), `extension` (name only), `none`. A
+  number would be invented; the levels name the kind of evidence, which is
+  what a caller branches on. (Sketch Q1, which offered three; container
+  evidence is as definite as a signature, so it joins that level, and `none`
+  is needed for the floor.)
+- **D4 (C).** `mime_type()` reads 4096 bytes by default, as `mimetype` does,
+  because the WHATWG resource header is 1445 bytes and the ZIP, OLE2 and BMFF
+  readers want a little more; containers do not opt in to a longer read.
+  `limit = 0` reads everything. (Sketch Q2.)
+- **D5 (C).** The completeness check is opt-in, `complete = TRUE`, and stays
+  opt-in for paths too, because it is a second read at the end of every file
+  and a tree scan should not pay for it unasked. (Sketch Q5.)
+- **D6 (C).** The default answer depends on nothing outside the package: no
+  host tables, and no suggested package is consulted unless an argument asks
+  (`inner = "decompress"`, `text = "family"`, `charset = "detect"`). Two
+  machines with `zumime` installed give the same frame for the same bytes.
+- **D7 (C).** No vendored code. The sniffer, the readers and the algorithm are
+  written for this package against the standard and the three reference
+  implementations; the pieces are small and the oracles make divergence
+  visible.
 - **D8 (C).** The registry is generated from IANA's registry and Apache's
   `mime.types`, with a hand-maintained `tools/types.yaml` for what neither
-  has, and emitted as both `R/sysdata.rda` and a C header so R and C
-  share one set of ids. Nothing is taken from the GPL `mime` package.
-  IANA alone does not suffice today because its registry carries few
-  extensions; Apache's file is kept until it does, and §15 Q2 records the
-  question. (Sketch Q3.)
-- **D9 (C).** The incremental sniffer is an external pointer whose
-  protected field is an R raw vector holding the buffer, following the
-  family's rule that heap state across a longjmp is owned by R. A closure
-  would copy the buffer on every push. (Sketch Q4.)
-- **D10 (C).** The result is a plain `data.frame` with a printing class,
-  one row per input, the lineage reachable by `mime_parent()` rather
-  than a list column, so it drops into `dplyr`, `data.table` and
-  `write.csv()` unchanged.
-- **D11 (C).** The R prefix is `mime_`, the condition root `zumime_error`,
-  the internal C prefix `zumime_`. No public C prefix until §14's header.
+  has, and emitted as both `R/sysdata.rda` and a C header so R and C share one
+  set of ids. Nothing is taken from the GPL `mime` package. IANA alone does
+  not suffice today because its registry carries few extensions; Apache's file
+  is kept until it does, and §15 Q2 records the question. (Sketch Q3.)
+- **D9 (C).** The incremental sniffer is an external pointer whose protected
+  field is an R raw vector holding the buffer, following the family's rule
+  that heap state across a longjmp is owned by R. A closure would copy the
+  buffer on every push. (Sketch Q4.)
+- **D10 (C).** The result is a plain `data.frame` with a printing class, one
+  row per input, the lineage reachable by `mime_parent()` rather than a list
+  column, so it drops into `dplyr`, `data.table` and `write.csv()` unchanged.
+- **D11 (C).** The R prefix is `mime_`, the condition root `zumime_error`, the
+  internal C prefix `zumime_`. No public C prefix until §14's header.
 - **D12 (C).** Unreadable paths are `NA` rows by default and an error only
   with `strict = TRUE`, because the main consumer is a tree scan.
 - **D13 (C).** Registered detectors are session-scoped and attach under a
-  parent; there is no persistent user table, so D6 holds within a
-  session's own additions only.
-- **D14 (C).** Performance targets (§10) are measured and recorded but do
-  not gate v0.1.0; the API and the oracles do.
+  parent; there is no persistent user table, so D6 holds within a session's
+  own additions only.
+- **D14 (C).** Performance targets (§10) are measured and recorded but do not
+  gate v0.1.0; the API and the oracles do.
+- **D15 (C).** `mime_check()` returns a bare logical and its partial detection
+  stays hidden, held to the equivalence with `mime_type()` stated in §6.3 by a
+  property test. No attribute lists the types probed: an attribute on a
+  logical is dropped by subsetting and `c()`, and it would leak the hierarchy
+  walk into the API. The evidence it accepts is explicit instead, through
+  `min_confidence`, default `"probable"`, because the equivalence cannot hold
+  without saying which confidence levels count. The probe counter that proves
+  the shortcut is an unexported function, not API. (Sketch Q3, settled
+  2026-10-19.)
 
 ## 14. Later versions, in the order they are expected
 
@@ -695,9 +712,8 @@ the order that sketch listed them.
   Apache file and its copyright line can be dropped? Revisit at each
   regeneration; a table diff that shows Apache adding nothing for a year
   is the signal.
-- **Q3.** Should `mime_check()`'s partial detection be observable, for
-  example a `checked` attribute listing the types probed, or stay an
-  optimisation?
+- **Q3.** Settled on 2026-10-19 by D15: hidden, held to an equivalence with
+  `mime_type()`, with `min_confidence` making the accepted evidence explicit.
 - **Q4.** Is v0.1.0 a CRAN submission or a GitHub release? The board's
   `CRAN intent` field records the answer; this RFC assumes `Planned`.
 
