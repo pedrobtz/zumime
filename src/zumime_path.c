@@ -235,6 +235,8 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
              errno ? strerror(errno) : "cannot open");
     return;
   }
+  /* Not reachable from the tests: seeking a regular file that opened fails
+   * only on an I/O error or a file over the platform's off_t. */
   int64_t size = file_size(f);
   if (size < 0) {
     out->failed = 1;
@@ -247,6 +249,8 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
   size_t cap = limit;
   if (limit == 0) {
     cap = (size_t) size;
+    /* Allocation failure is not provoked by the tests; the alloc-failure
+     * workflow of r-actions is where it would be exercised. */
     own = (unsigned char *) malloc(cap ? cap : 1);
     if (own == NULL) {
       out->failed = 1;
@@ -258,6 +262,8 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
     head = own;
   }
   size_t head_len = fread(head, 1, cap, f);
+  /* Not reachable from the tests: a read error on an open regular file
+   * needs failing hardware or a vanished network share. */
   if (ferror(f)) {
     out->failed = 1;
     snprintf(out->error, sizeof(out->error), "read error");
@@ -358,6 +364,8 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
   unsigned char *head = lim > 0 ? (unsigned char *) R_alloc(lim, 1) : NULL;
 
   for (R_xlen_t i = 0; i < n; i++) {
+    /* testthat cannot send an interrupt; the check runs between files with
+     * nothing open, which is what makes it safe. */
     if (i > 0 && i % 256 == 0) R_CheckUserInterrupt();
     SEXP s = STRING_ELT(paths, i);
     path_result pr;

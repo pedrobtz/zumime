@@ -53,6 +53,12 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
     zumime_abort("type", "`parent` must be a single type string.")
   }
   parent <- canonical_type(parent)
+  if (nchar(essence, type = "bytes") > 127L) {
+    zumime_abort("registry", sprintf(
+      "A registered type is at most 127 bytes long, not %d.",
+      nchar(essence, type = "bytes")
+    ))
+  }
   if (essence %in% all_types() || essence %in% names(types_alias_map)) {
     zumime_abort("registry", sprintf("\"%s\" is already a type.", essence))
   }

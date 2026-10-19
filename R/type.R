@@ -120,7 +120,7 @@ check_strict <- function(path, res, strict) {
 }
 
 need_package <- function(pkg, what) {
-  if (!requireNamespace(pkg, quietly = TRUE)) {
+  if (!has_package(pkg)) {
     zumime_abort("dependency", sprintf(
       "%s needs the %s package, which is not installed.", what, pkg
     ), call = sys.call(-1L))
@@ -202,7 +202,7 @@ decompress_type <- function(path, limit) {
   size <- file.size(path)
   if (is.na(size) || size > cap) return(NA_character_)
   bytes <- readBin(path, "raw", size)
-  decompress <- getExportedValue("zukomp", "komp_decompress")
+  decompress <- suggested_fun("zukomp", "komp_decompress")
   out <- tryCatch(decompress(bytes, "gzip", max_output = cap),
     error = function(e) NULL)
   if (is.null(out)) return(NA_character_)
@@ -232,11 +232,10 @@ family_refine <- function(out) {
 family_packages <- function() c("zucsv", "zujson", "zutoml")
 
 family_sniffers <- function() {
-  have <- vapply(family_packages(), requireNamespace, logical(1),
-    quietly = TRUE)
+  have <- vapply(family_packages(), has_package, logical(1))
   sniffers <- list(
     zucsv = function(path) {
-      sniff <- getExportedValue("zucsv", "sniff_csv")
+      sniff <- suggested_fun("zucsv", "sniff_csv")
       for (d in c(",", "\t", ";")) {
         s <- sniff(path, delimiter = d)
         if (isTRUE(s$ncol >= 2L) && isTRUE(s$nrow >= 1L)) {
@@ -246,12 +245,12 @@ family_sniffers <- function() {
       NA_character_
     },
     zujson = function(path) {
-      validate <- getExportedValue("zujson", "json_validate")
+      validate <- suggested_fun("zujson", "json_validate")
       txt <- readChar(path, file.size(path), useBytes = TRUE)
       if (isTRUE(validate(txt))) "application/json" else NA_character_
     },
     zutoml = function(path) {
-      validate <- getExportedValue("zutoml", "toml_validate")
+      validate <- suggested_fun("zutoml", "toml_validate")
       bytes <- readBin(path, "raw", file.size(path))
       if (isTRUE(validate(bytes))) "application/toml" else NA_character_
     }
@@ -262,7 +261,7 @@ family_sniffers <- function() {
 # charset = "detect": zuutf's statistical detection where the bytes declare
 # no charset or only the C1 guess.
 detect_charset <- function(out, limit) {
-  detect <- getExportedValue("zuutf", "utf_detect")
+  detect <- suggested_fun("zuutf", "utf_detect")
   rows <- which(mime_is(out$type, "text/plain") %in% TRUE &
     (is.na(out$charset) | out$charset %in% c("windows-1252", "ISO-8859-1")))
   for (i in rows) {
@@ -273,3 +272,9 @@ detect_charset <- function(out, limit) {
   }
   out
 }
+
+# The one place a suggested package is looked up, so tests can stand in for
+# packages CI does not install (zuutf and zutoml are not on CRAN).
+has_package <- function(pkg) requireNamespace(pkg, quietly = TRUE)
+
+suggested_fun <- function(pkg, name) getExportedValue(pkg, name)

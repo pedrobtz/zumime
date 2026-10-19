@@ -213,3 +213,37 @@ stream_inputs <- function() {
     ws = charToRaw("      "), short = as.raw(0xff)
   ))
 }
+
+# A gzip member over raw DEFLATE `deflate`, with optional header fields
+# (FEXTRA, FNAME, FCOMMENT, FHCRC) and a trailer whose size is `isize`. The
+# CRC is zero: zumime does not check it.
+gzip_member <- function(deflate, isize, extra = NULL, name = NULL,
+                        comment = NULL, hcrc = FALSE) {
+  flg <- 0L
+  fields <- raw()
+  if (!is.null(extra)) {
+    flg <- flg + 4L
+    fields <- c(fields, u16(length(extra)), extra)
+  }
+  if (!is.null(name)) {
+    flg <- flg + 8L
+    fields <- c(fields, charToRaw(name), as.raw(0))
+  }
+  if (!is.null(comment)) {
+    flg <- flg + 16L
+    fields <- c(fields, charToRaw(comment), as.raw(0))
+  }
+  if (hcrc) {
+    flg <- flg + 2L
+    fields <- c(fields, raw(2))
+  }
+  c(as.raw(c(0x1f, 0x8b, 8, flg)), raw(4), as.raw(c(0, 3)), fields, deflate,
+    raw(4), u32(isize))
+}
+
+# Bits, least significant first, packed into bytes.
+pack_bits <- function(bits) {
+  bits <- c(bits, rep(0L, (8 - length(bits) %% 8) %% 8))
+  m <- matrix(bits, nrow = 8)
+  as.raw(colSums(m * 2^(0:7)))
+}

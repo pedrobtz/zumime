@@ -92,3 +92,46 @@ test_that("a data rule cannot sit under a function-rule type", {
   expect_identical(mime_sniff(charToRaw("hello world"))$type,
     "text/x-zt-datachild")
 })
+
+test_that("an over-long name and a full table are registry errors", {
+  long <- paste0("application/x-", strrep("a", 130))
+  expect_error(mime_register(long, "application/octet-stream"),
+    class = "zumime_registry_error")
+  added <- character()
+  withr::defer(for (t in added) try(mime_unregister(t), silent = TRUE))
+  full <- NULL
+  for (i in 1:300) {
+    t <- sprintf("application/x-zt-fill-%03d", i)
+    full <- tryCatch({
+      mime_register(t, "application/octet-stream")
+      NULL
+    }, zumime_registry_error = function(e) e)
+    if (!is.null(full)) break
+    added <- c(added, t)
+  }
+  expect_s3_class(full, "zumime_registry_error")
+  expect_gte(length(added), 200L)
+})
+
+test_that("a function rule decides a stream at the limit", {
+  withr::defer(try(mime_unregister("text/x-zt-stream"), silent = TRUE))
+  mime_register("text/x-zt-stream", "text/plain",
+    rule = function(x) grepl("^MAGIC", rawToChar(x)))
+  s <- mime_sniffer(limit = 16)
+  expect_null(mime_push(s, charToRaw("MAGIC ")))
+  expect_identical(mime_push(s, charToRaw("text and more"))$type,
+    "text/x-zt-stream")
+})
+
+test_that("registration arguments are checked", {
+  expect_error(mime_register("application/x-zt-c", 1),
+    class = "zumime_type_error")
+  expect_error(mime_unregister(1), class = "zumime_type_error")
+  expect_error(mime_register("application/x-zt-c", "text/plain",
+    extensions = NA_character_), class = "zumime_type_error")
+  for (off in list(-1, 1.5, NA)) {
+    expect_error(mime_register("application/x-zt-c", "text/plain",
+      rule = list(offset = off, bytes = "ab")), class = "zumime_type_error")
+  }
+  expect_false("application/x-zt-c" %in% mime_types()$type)
+})

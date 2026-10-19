@@ -96,6 +96,7 @@ test_that("every fixture decides at the whole's type", {
     want <- mime_sniff(x, limit = 4096)$type
     got <- .Call(zumime_stream_bytewise, x, 4096)
     expect_identical(got[[2]], want, info = basename(f))
+    expect_lte(got[[1]], 4096, label = basename(f))
     # Through mime_push() in 512-byte chunks, which may skip work once
     # nothing can decide before the limit.
     s <- mime_sniffer()
