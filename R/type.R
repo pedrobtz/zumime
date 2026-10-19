@@ -179,7 +179,7 @@ need_package <- function(pkg, what) {
     zumime_abort(
       "dependency",
       sprintf(
-        "%s needs the %s package, which is not installed.",
+        "`%s` needs the %s package, which is not installed.",
         what,
         pkg
       ),
