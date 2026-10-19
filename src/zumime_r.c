@@ -311,13 +311,18 @@ SEXP zumime_stream_push(SEXP s, SEXP chunk, SEXP final, SEXP limit,
 
 /* Test support: feed `x` one byte at a time to a fresh sniffer, in C, and
  * report how many bytes it took to decide and what it decided. */
-SEXP zumime_stream_bytewise(SEXP x, SEXP limit) {
+SEXP zumime_stream_bytewise(SEXP x, SEXP limit, SEXP supplied,
+                            SEXP apache_bug, SEXP no_sniff, SEXP context) {
   double lim = REAL(limit)[0];
   size_t ulim = lim > 0 ? (size_t) lim : 0;
   size_t len = (size_t) XLENGTH(x);
   zumime_input in;
   memset(&in, 0, sizeof(in));
-  in.context = ZUMIME_CTX_NONE;
+  in.supplied = Rf_isNull(supplied) ? NULL : CHAR(STRING_ELT(supplied, 0));
+  in.supplied_id = in.supplied ? zumime_type_lookup(in.supplied) : -1;
+  in.apache_bug = LOGICAL(apache_bug)[0];
+  in.no_sniff = LOGICAL(no_sniff)[0];
+  in.context = INTEGER(context)[0];
   zumime_result r;
   size_t n = 0;
   int decided = 0;
@@ -336,7 +341,10 @@ SEXP zumime_stream_bytewise(SEXP x, SEXP limit) {
   }
   SEXP out = PROTECT(Rf_allocVector(VECSXP, 3));
   SET_VECTOR_ELT(out, 0, Rf_ScalarReal((double) n));
-  SET_VECTOR_ELT(out, 1, zumime_scalar_string(zumime_type_charsxp(r.type)));
+  SET_VECTOR_ELT(out, 1,
+                 zumime_scalar_string(r.type == ZUMIME_SUPPLIED
+                                          ? NA_STRING
+                                          : zumime_type_charsxp(r.type)));
   SET_VECTOR_ELT(out, 2, Rf_ScalarLogical(decided));
   UNPROTECT(1);
   return out;
