@@ -46,6 +46,14 @@ test_that("the Apache bug strings run the text-or-binary rule", {
   r <- mime_sniff(bom, type = "text/plain")
   expect_identical(r$type, "text/plain")
   expect_identical(as.character(r$confidence), "definite")
+  expect_identical(r$charset, "UTF-16LE")
+  r <- mime_sniff(
+    c(as.raw(c(0xef, 0xbb, 0xbf)), charToRaw("x")),
+    type = "text/plain"
+  )
+  expect_identical(r$type, "text/plain")
+  expect_identical(as.character(r$confidence), "definite")
+  expect_identical(r$charset, "UTF-8")
 })
 
 test_that("an image or media supplied type is checked against its tables", {
