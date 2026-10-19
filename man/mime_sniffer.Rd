@@ -54,11 +54,11 @@ return the same row. Once it has finished, a push raises a
 \code{zumime_state_error}; \code{mime_finish()} can still be called and returns
 the same row.
 
-The bytes decide when no longer signature could still override the
-match, the container reader for the type has what it needs, or \code{limit}
-bytes have arrived. Text decides only at \code{limit} or at the finish, since
-a later byte can still change it. The tail-reading columns (\code{complete})
-are \code{NA} for a stream.
+The bytes decide as soon as one of three things holds. No longer
+signature could still override the match. The container reader for the
+type has what it needs. Or \code{limit} bytes have arrived. Text decides only
+at \code{limit} or at the finish, since a later byte can still change it. The
+tail-reading column, \code{complete}, is \code{NA} for a stream.
 
 The sniffer keeps its bytes in an R raw vector. A sniffer saved and
 loaded again keeps those bytes but forgets its decision, and is

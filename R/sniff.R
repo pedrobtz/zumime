@@ -33,9 +33,10 @@
 #' @param limit The number of bytes to read; `0` reads them all. A raw
 #'   vector longer than `limit` is sniffed on its first `limit` bytes.
 #' @return A `zumime_result` data frame with one row per path (one for a
-#'   raw vector) and columns `path` (`NA` for a raw vector), `type` (a canonical type), `confidence` (an
-#'   ordered factor: `none < extension < probable < definite`), `charset`,
-#'   `inner`, `encrypted`, `complete`, `newline` (`"lf"`, `"crlf"`, `"cr"`,
+#'   raw vector) and columns `path` (`NA` for a raw vector), `type` (a
+#'   canonical type), `confidence` (an ordered factor:
+#'   `none < extension < probable < definite`), `charset`, `inner`,
+#'   `encrypted`, `complete`, `newline` (`"lf"`, `"crlf"`, `"cr"`,
 #'   `"mixed"`, or `NA`) and `interpreter`.
 #' @references <https://mimesniff.spec.whatwg.org/>
 #' @seealso [mime_parse()] for the supplied type's grammar.

@@ -7,7 +7,7 @@
 mime_check(x, allowed, min_confidence = "probable")
 }
 \arguments{
-\item{x}{A character vector of paths, or one raw vector.}
+\item{x}{A raw vector, or a character vector of paths.}
 
 \item{allowed}{A character vector of types, aliases or top-level types,
 as \code{\link[=mime_is]{mime_is()}} takes them.}
@@ -28,11 +28,12 @@ The upload question: \code{TRUE} when the bytes say the file is one of
 is never consulted, since the question exists because names lie.
 }
 \details{
-The answer always equals \code{mime_is(t$type, allowed) & t$confidence >= min_confidence} with \code{t <- mime_type(x)} (or \code{mime_sniff(x)} for a raw
-vector). It is computed in one pass with a shortcut that this equality
-hides: the container and text readers and tail reads are skipped for
-every input whose first answer could not end as an allowed type, and no
-result frame is built.
+The answer always equals
+\code{mime_is(t$type, allowed) & t$confidence >= min_confidence}, with
+\code{t <- mime_type(x)}, or \code{mime_sniff(x)} for a raw vector. It is computed
+in one pass, with a shortcut that this equality hides. The container
+readers, text readers and tail reads are skipped for every input whose
+first answer could not end as an allowed type. No result frame is built.
 Call \code{\link[=mime_type]{mime_type()}} to learn why a file was refused.
 }
 \examples{

@@ -66,10 +66,11 @@ named \code{.txt}; and \code{NA} when either is unknown. A disagreement is a
 finding, not an error.
 
 The default answer depends on nothing outside the package. Three
-arguments ask for a suggested package: \code{inner = "decompress"} (zukomp),
-\code{text = "family"} (zucsv, zujson and zutoml, each used when installed),
-and \code{charset = "detect"} (zuutf). An argument whose package is absent
-raises \code{zumime_dependency_error}; \code{text = "family"} uses whichever
+arguments ask for an optional family package. \code{inner = "decompress"}
+uses zukomp. \code{charset = "detect"} uses zuutf. \code{text = "family"} uses
+zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
+yet on CRAN; install them from GitHub. An argument whose package is
+absent raises \code{zumime_dependency_error}. \code{text = "family"} uses whichever
 sniffers are installed, listed by \code{zumime_info()$family}.
 }
 \examples{

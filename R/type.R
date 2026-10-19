@@ -18,10 +18,11 @@
 #' finding, not an error.
 #'
 #' The default answer depends on nothing outside the package. Three
-#' arguments ask for a suggested package: `inner = "decompress"` (zukomp),
-#' `text = "family"` (zucsv, zujson and zutoml, each used when installed),
-#' and `charset = "detect"` (zuutf). An argument whose package is absent
-#' raises `zumime_dependency_error`; `text = "family"` uses whichever
+#' arguments ask for an optional family package. `inner = "decompress"`
+#' uses zukomp. `charset = "detect"` uses zuutf. `text = "family"` uses
+#' zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
+#' yet on CRAN; install them from GitHub. An argument whose package is
+#' absent raises `zumime_dependency_error`. `text = "family"` uses whichever
 #' sniffers are installed, listed by `zumime_info()$family`.
 #'
 #' @param path A character vector of paths.
