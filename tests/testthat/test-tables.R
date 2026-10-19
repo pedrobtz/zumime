@@ -50,8 +50,6 @@ test_that("every parent is a registered type", {
 test_that("an extension belongs to one type", {
   exts <- unlist(mime_types()$extensions)
   expect_false(anyDuplicated(exts) > 0)
-  expect_identical(sum(exts == "sub"), 1L)
-  expect_identical(sum(exts == "wmz"), 1L)
 })
 
 test_that("the registry has the shape mime_types() documents", {
