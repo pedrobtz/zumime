@@ -237,6 +237,11 @@ declare one.
   applied.
 - The registry generator sorts in byte order (`method = "radix"`), so its
   output does not depend on the locale and C can binary-search the names.
+- gctorture at step 20 ran past its 120-minute limit on the first full run
+  (expectations cost about 2 s each there). Property tests that loop in R
+  over the registry or a corpus now skip when the job sets
+  `ZUMIME_GCTORTURE=true` (`helper-skip.R`), as r-actions recommends; they
+  test data, not memory paths, and run everywhere else.
 
 **Design.** §4 layer 2, §6.1, §6.2 (signatures), §6.5, §7.2, D2, D3, D4.
 
