@@ -201,3 +201,15 @@ test_that("the byte count is kept as a double", {
   expect_type(st, "double")
   expect_identical(st[2], 10)
 })
+
+test_that("a sniffer's buffer grows by need up to its limit", {
+  size <- function(s) length(.Call(zumime_stream_buffer, s))
+  s <- mime_sniffer(limit = 1e9)
+  expect_lte(size(s), 4096)
+  t <- mime_sniffer(limit = 10000)
+  mime_push(t, charToRaw(strrep("words ", 1000)))
+  expect_gte(size(t), 6000)
+  mime_push(t, charToRaw(strrep("words ", 1000)))
+  expect_identical(size(t), 10000L)
+  expect_output(print(t), "10000 of 10000 bytes")
+})

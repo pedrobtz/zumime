@@ -448,3 +448,22 @@ test_that("suggested packages are reached only when asked, through one door", {
   expect_identical(t$inner[3], NA_character_)
   expect_identical(zumime_info()$family, c("zucsv", "zujson", "zutoml"))
 })
+
+test_that("an interrupt caught in C is raised again as an interrupt", {
+  # testthat cannot send an interrupt, so the R half is tested alone: the
+  # condition reaches an interrupt handler, as a real one would.
+  got <- tryCatch(resignal_interrupt(), interrupt = function(c) "interrupt")
+  expect_identical(got, "interrupt")
+})
+
+test_that("a large limit costs nothing for small files", {
+  dir <- local_tree(list(a.png = png_bytes(), b.txt = "hello\n"))
+  paths <- file.path(dir, c("a.png", "b.txt"))
+  # 2e9 bytes were allocated up front before; now the buffer follows the
+  # files, so this is quick and gives the default answer.
+  expect_identical(
+    mime_type(paths, limit = 2e9)$type,
+    mime_type(paths)$type
+  )
+  expect_identical(mime_check(paths, "image", "definite"), c(TRUE, FALSE))
+})

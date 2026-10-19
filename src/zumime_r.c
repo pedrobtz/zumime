@@ -188,7 +188,9 @@ static void set_state(SEXP s, int state) {
 
 SEXP zumime_stream_new(SEXP limit) {
   double lim = REAL(limit)[0];
-  R_xlen_t cap = lim > 0 ? (R_xlen_t) lim : 4096;
+  /* Small at first and grown by need up to the limit, so a large limit
+   * costs nothing until bytes arrive. */
+  R_xlen_t cap = lim > 0 && lim < 4096 ? (R_xlen_t) lim : 4096;
   SEXP prot = PROTECT(Rf_allocVector(VECSXP, 4));
   /* Zeroed: the whole vector is serialised with the sniffer, and bytes
    * never pushed must not be uninitialised memory. */
@@ -236,9 +238,10 @@ SEXP zumime_stream_push(SEXP s, SEXP chunk, SEXP final, SEXP limit,
   R_xlen_t add = Rf_isNull(chunk) ? 0 : XLENGTH(chunk);
   if (lim > 0 && n + add > (R_xlen_t) lim) add = (R_xlen_t) lim - n;
   if (add > 0 && n + add > XLENGTH(buf)) {
-    /* No limit: grow the buffer, doubling, still owned by R. */
+    /* Grow the buffer, doubling up to the limit, still owned by R. */
     R_xlen_t cap = XLENGTH(buf);
     while (cap < n + add) cap *= 2;
+    if (lim > 0 && cap > (R_xlen_t) lim) cap = (R_xlen_t) lim;
     SEXP bigger = PROTECT(Rf_allocVector(RAWSXP, cap));
     memcpy(RAW(bigger), RAW(buf), (size_t) n);
     memset(RAW(bigger) + n, 0, (size_t) (cap - n));
