@@ -430,7 +430,9 @@ The how-to-open columns come from the same bytes:
 
 - **`inner`.** For gzip, zstd, xz and bzip2, the type inside. The default
   `inner = "name"` takes it from the remaining extension (`.tar` of
-  `.tar.gz`, `.csv` of `.csv.gz`) at `confidence = "extension"`;
+  `.tar.gz`, `.csv` of `.csv.gz`). The row's one `confidence` column
+  (D10) describes `type`, not `inner`, so a name-derived `inner` carries
+  no confidence of its own;
   `inner = "decompress"` decompresses the first block through `zukomp`
   and sniffs it, erroring with `zumime_dependency_error` if `zukomp` is
   not installed. With `inner = "name"` the default answer never depends on
