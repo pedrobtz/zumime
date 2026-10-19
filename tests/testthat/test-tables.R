@@ -1,8 +1,8 @@
 test_that("regenerating from the recorded sources reproduces the tables", {
   root <- source_root()
   skip_if(is.null(root), "tools/ is not available outside a source tree")
-  skip_if_not_installed("yaml")
-  skip_if_not_installed("digest")
+  skip_if_not_oracle_package("yaml")
+  skip_if_not_oracle_package("digest")
   out <- withr::local_tempdir()
   status <- withr::with_dir(root, system2(
     file.path(R.home("bin"), "Rscript"),

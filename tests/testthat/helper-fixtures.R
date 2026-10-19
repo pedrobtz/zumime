@@ -19,11 +19,21 @@ require_oracles <- function(msg) {
   }
 }
 
+# A package an oracle needs: a failure under require_oracles(), a skip
+# otherwise.
+skip_if_not_oracle_package <- function(pkg) {
+  if (!requireNamespace(pkg, quietly = TRUE)) {
+    msg <- paste0(pkg, " is needed to read the oracle")
+    require_oracles(msg)
+    skip(msg)
+  }
+}
+
 # The WPT mime-types entries as a list of list(input, output). An input
 # holding U+0000 cannot be an R string, so those entries are dropped and
 # counted in attr(, "dropped").
 wpt_mime_entries <- function(file) {
-  skip_if_not_installed("jsonlite")
+  skip_if_not_oracle_package("jsonlite")
   text <- paste(readLines(file, warn = FALSE, encoding = "UTF-8"),
     collapse = "\n")
   text <- gsub("\\u0000", "<<NUL>>", text, fixed = TRUE)
