@@ -22,7 +22,8 @@ dependency and no system library.
 * `mime_type()` types paths from bytes and name in one C loop, says whether
   the two agree, and reports what a consumer needs before opening a file:
   the type inside a compression wrapper, encryption, completeness (with
-  `complete = TRUE`), line endings and a script's interpreter.
+  `complete = TRUE`), line endings and a script's interpreter. Directories,
+  FIFOs, devices and sockets are typed `inode/*` without being opened.
 * `mime_check()` answers whether files are one of a set of allowed types
   from their bytes alone, with the same answer as `mime_type()`.
 * `mime_sniffer()`, `mime_push()` and `mime_finish()` sniff a stream chunk by

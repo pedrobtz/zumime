@@ -7,6 +7,8 @@
   R-release, Windows on R-devel, and Ubuntu on R-oldrel-1
 * R-hub CRAN-like containers on R-devel: `clang23`, `ubuntu-clang` and
   `ubuntu-gcc16`, compiling with `CC += -std=gnu23` and `CFLAGS += -pedantic`
+* `nosuggests` (no suggested packages installed) and `nold` (R-devel
+  without long double)
 * Additional checks in CI: ASan and UBSan (clang and gcc), valgrind, LTO,
   rchk, gctorture, `-fanalyzer`, and a check without Suggests
 

@@ -577,6 +577,21 @@ every leg.
 - Both review skills have run and left no open finding.
 - `urlchecker` and `spelling` clean.
 
+**Record (2026-10-19).**
+
+- `pkg-critical-review` ran on `f519de7` with Posit's
+  critical-code-reviewer, review-testing and r-tidyverse-style, and filed
+  #21–#59. The blocking and required findings (#21–#24, #33–#42) are fixed
+  in #60; the suggestions, questions and notes stay open for after 0.1.0.
+- `pkg-cran-review` found three items, all fixed here: the `Description`
+  expanded its acronyms (WHATWG, MIME, IANA) and dropped the format
+  acronyms; the README installs from CRAN first; `cran-comments.md` names
+  the `nosuggests` and `nold` legs.
+- Local `R CMD check --as-cran` on the tarball: 0 errors, 0 warnings, the
+  "New submission" note, and a "future file timestamps" note from a time
+  service the local machine could not reach. `urlchecker` and `spelling`
+  clean.
+
 **Design.** §12.
 
 ## After 0.1.0
