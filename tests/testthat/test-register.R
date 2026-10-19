@@ -123,6 +123,19 @@ test_that("a function rule decides a stream at the limit", {
     "text/x-zt-stream")
 })
 
+test_that("a function rule under a binary parent holds a stream's decision", {
+  gif <- c(charToRaw("GIF89a"), raw(20))
+  withr::defer(try(mime_unregister("image/x-zt-gif"), silent = TRUE))
+  mime_register("image/x-zt-gif", "image/gif", rule = function(x) TRUE)
+  s <- mime_sniffer()
+  expect_null(mime_push(s, gif))
+  r <- mime_finish(s)
+  expect_identical(r$type, "image/x-zt-gif")
+  expect_identical(as.character(r$confidence), "probable")
+  mime_unregister("image/x-zt-gif")
+  expect_identical(mime_push(mime_sniffer(), gif)$type, "image/gif")
+})
+
 test_that("registration arguments are checked", {
   expect_error(mime_register("application/x-zt-c", 1),
     class = "zumime_type_error")
