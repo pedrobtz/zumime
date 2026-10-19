@@ -55,8 +55,8 @@ static SEXP newline_charsxp(int nl) {
 
 /* x: raw; limit: double (0 = all); supplied: canonical essence or NULL;
  * apache_bug, no_sniff: logical; context: integer (enum zumime_context).
- * Returns list(type, confidence, charset, newline, is_text); type is NA when
- * the computed type is the supplied one. */
+ * Returns list(type, confidence, charset, newline, is_text, encrypted,
+ * interpreter); type is NA when the computed type is the supplied one. */
 SEXP zumime_sniff_raw(SEXP x, SEXP limit, SEXP supplied, SEXP apache_bug,
                       SEXP no_sniff, SEXP context) {
   size_t len = (size_t) XLENGTH(x);
@@ -74,11 +74,14 @@ SEXP zumime_sniff_raw(SEXP x, SEXP limit, SEXP supplied, SEXP apache_bug,
   in.no_sniff = LOGICAL(no_sniff)[0];
   in.context = INTEGER(context)[0];
   in.truncated = truncated;
+  in.tail = NULL;
+  in.tail_len = 0;
+  in.tail_off = 0;
 
   zumime_result r;
   zumime_sniff(RAW(x), len, &in, &r);
 
-  SEXP out = PROTECT(Rf_allocVector(VECSXP, 5));
+  SEXP out = PROTECT(Rf_allocVector(VECSXP, 7));
   SET_VECTOR_ELT(out, 0,
                  zumime_scalar_string(r.type == ZUMIME_SUPPLIED ? NA_STRING
                                                           : type_charsxp(r.type)));
@@ -93,6 +96,9 @@ SEXP zumime_sniff_raw(SEXP x, SEXP limit, SEXP supplied, SEXP apache_bug,
   else
     is_text = zumime_type_is(r.type, ZUMIME_T_TEXT_PLAIN);
   SET_VECTOR_ELT(out, 4, Rf_ScalarLogical(is_text));
+  SET_VECTOR_ELT(out, 5, Rf_ScalarLogical(r.encrypted < 0 ? NA_LOGICAL : r.encrypted));
+  SET_VECTOR_ELT(out, 6, zumime_scalar_string(r.interpreter[0] ? Rf_mkChar(r.interpreter)
+                                                               : NA_STRING));
   UNPROTECT(1);
   return out;
 }

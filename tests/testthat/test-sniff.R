@@ -88,14 +88,18 @@ test_that("MP4 is found by a compatible brand within the ftyp box", {
   ftyp <- c(as.raw(c(0, 0, 0, 0x18)), charToRaw("ftypisom"),
     as.raw(c(0, 0, 2, 0)), charToRaw("isommp41"), raw(16))
   expect_identical(mime_sniff(ftyp)$type, "video/mp4")
-  # A box larger than the bytes in hand is not MP4 (the standard's rule).
+  # A box larger than the bytes in hand is not MP4 (the standard's rule),
+  # nor is a box size that is not a multiple of four. In the "none" context
+  # the ISO base media reader still reads the brands.
   big <- ftyp
   big[4] <- as.raw(0xf0)
-  expect_identical(mime_sniff(big)$type, "application/octet-stream")
-  # A box size that is not a multiple of four is not MP4.
+  expect_identical(mime_sniff(big, context = "browsing")$type,
+    "application/octet-stream")
+  expect_identical(mime_sniff(big)$type, "video/mp4")
   odd <- ftyp
   odd[4] <- as.raw(0x17)
-  expect_identical(mime_sniff(odd)$type, "application/octet-stream")
+  expect_identical(mime_sniff(odd, context = "browsing")$type,
+    "application/octet-stream")
 })
 
 test_that("WebM is found by its EBML DocType", {

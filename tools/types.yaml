@@ -25,17 +25,20 @@ types:
   inode/directory: {}
 
   # The structured-text roots.
+  # text/xml is an alias: RFC 7303 makes the two equivalent, and XML
+  # dialects found by the text reader must descend from what the standard's
+  # "<?xml" row says.
   application/xml:
     parent: text/plain
-    aliases: [application/x-xml]
-  text/xml:
+    aliases: [application/x-xml, text/xml]
     detected_by: signature
-    parent: application/xml
   application/json:
     parent: text/plain
     aliases: [text/json, application/x-json]
+    detected_by: text
   application/x-ndjson:
     parent: text/plain
+    detected_by: text
     aliases: [application/jsonl, application/x-jsonlines]
     extensions: [ndjson, jsonl]
   application/yaml:
@@ -47,12 +50,14 @@ types:
     extensions: [toml]
   text/javascript:
     aliases: [application/x-javascript]
+    detected_by: text
   text/markdown:
     aliases: [text/x-markdown]
     extensions: [md, markdown]
   text/x-r:
     aliases: [text/x-r-source, application/x-r]
     extensions: [r]
+    detected_by: text
   text/x-rmarkdown:
     extensions: [rmd]
 
@@ -88,38 +93,50 @@ types:
   # ZIP-based formats.
   application/vnd.openxmlformats-officedocument.wordprocessingml.document:
     parent: application/zip
+    detected_by: container
   application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
     parent: application/zip
+    detected_by: container
   application/vnd.openxmlformats-officedocument.presentationml.presentation:
     parent: application/zip
+    detected_by: container
   application/vnd.oasis.opendocument.text:
     parent: application/zip
+    detected_by: container
   application/vnd.oasis.opendocument.spreadsheet:
     parent: application/zip
+    detected_by: container
   application/vnd.oasis.opendocument.presentation:
     parent: application/zip
+    detected_by: container
   application/vnd.oasis.opendocument.graphics:
     parent: application/zip
+    detected_by: container
   application/java-archive:
     parent: application/zip
     aliases: [application/x-java-archive, application/jar]
+    detected_by: container
   application/vnd.android.package-archive:
     parent: application/java-archive
+    detected_by: container
 
   # OLE2 compound files.
-  application/x-ole-storage:
-    aliases: [application/x-cfb]
   application/msword:
     parent: application/x-ole-storage
+    detected_by: container
   application/vnd.ms-excel:
     parent: application/x-ole-storage
+    detected_by: container
   application/vnd.ms-powerpoint:
     parent: application/x-ole-storage
+    detected_by: container
   application/vnd.ms-outlook:
     parent: application/x-ole-storage
-    extensions: [msg]
+    detected_by: container
+    extensions: [msg, pst]
   application/x-ms-installer:
     parent: application/x-ole-storage
+    detected_by: container
     aliases: [application/x-msi]
     extensions: [msi]
 
@@ -129,7 +146,7 @@ types:
     aliases: [audio/x-wav, audio/wave, audio/vnd.wave]
   video/x-msvideo:
     detected_by: signature
-    aliases: [video/avi, video/msvideo]
+    aliases: [video/avi, video/msvideo, video/vnd.avi]
   image/vnd.microsoft.icon:
     detected_by: signature
     aliases: [image/x-icon]
@@ -153,6 +170,7 @@ types:
     canonical: jpg
   video/x-matroska:
     aliases: [video/matroska]
+    detected_by: signature
   audio/x-matroska:
     parent: video/x-matroska
   video/webm:
@@ -163,40 +181,56 @@ types:
 
   # R and analytic data formats (design section 6.2).
   application/x-rds:
+    detected_by: signature
     extensions: [rds]
   application/x-rdata:
+    detected_by: signature
     extensions: [rdata, rda]
   application/vnd.sqlite3:
+    detected_by: signature
     aliases: [application/x-sqlite3]
   application/vnd.apache.parquet:
+    detected_by: signature
     aliases: [application/x-parquet]
     extensions: [parquet]
   application/vnd.apache.arrow.file:
+    detected_by: signature
     aliases: [application/x-arrow, application/x-feather]
     extensions: [arrow, feather]
   application/vnd.apache.arrow.stream:
     extensions: [arrows]
   application/x-fst:
+    detected_by: signature
     extensions: [fst]
   application/x-qs2:
+    detected_by: signature
     extensions: [qs2]
   application/x-duckdb:
+    detected_by: signature
     extensions: [duckdb, ddb]
   application/x-hdf5:
+    detected_by: signature
     aliases: [application/x-hdf]
     extensions: [h5, hdf5, he5, hdf]
   application/x-netcdf:
+    detected_by: signature
     aliases: [application/netcdf]
   application/x-stata-dta:
+    detected_by: signature
     extensions: [dta]
   application/x-spss-sav:
+    detected_by: signature
     aliases: [application/x-spss]
     extensions: [sav, zsav]
   application/x-spss-por:
+    parent: text/plain
     extensions: [por]
+    detected_by: text
   application/x-sas-data:
+    detected_by: signature
     extensions: [sas7bdat]
   application/x-sas-xport:
+    detected_by: signature
     extensions: [xpt]
 
   # Types the WHATWG tables and zumime's extra signature rows detect
@@ -225,9 +259,299 @@ types:
     detected_by: signature
   application/pdf:
     detected_by: signature
-  application/postscript:
-    detected_by: signature
   application/x-iso9660-image:
     detected_by: signature
   application/wasm:
+    detected_by: signature
+
+  # --- Stage 3: containers, formats and structured text -------------------
+  # Every type a reader refines to descends from the type it refines, so a
+  # prefix of a file is typed as an ancestor of the whole.
+
+  # ZIP-based.
+  application/vnd.ms-word.document.macroenabled.12:
+    parent: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    detected_by: container
+  application/vnd.ms-excel.sheet.macroenabled.12:
+    parent: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    detected_by: container
+  application/vnd.ms-powerpoint.presentation.macroenabled.12:
+    parent: application/vnd.openxmlformats-officedocument.presentationml.presentation
+    detected_by: container
+  application/vnd.oasis.opendocument.text-template:
+    parent: application/zip
+    detected_by: container
+  application/vnd.oasis.opendocument.spreadsheet-template:
+    parent: application/zip
+    detected_by: container
+  application/vnd.oasis.opendocument.presentation-template:
+    parent: application/zip
+    detected_by: container
+  application/vnd.oasis.opendocument.graphics-template:
+    parent: application/zip
+    detected_by: container
+  model/3mf:
+    parent: application/zip
+    detected_by: container
+
+  # Flat (single XML file) OpenDocument.
+  application/vnd.oasis.opendocument.text-flat-xml:
+    parent: application/xml
+    extensions: [fodt]
+    detected_by: text
+  application/vnd.oasis.opendocument.spreadsheet-flat-xml:
+    parent: application/xml
+    extensions: [fods]
+    detected_by: text
+  application/vnd.oasis.opendocument.presentation-flat-xml:
+    parent: application/xml
+    extensions: [fodp]
+    detected_by: text
+  application/vnd.oasis.opendocument.graphics-flat-xml:
+    parent: application/xml
+    extensions: [fodg]
+    detected_by: text
+
+  # ISO base media, under video/mp4 where the standard may already have
+  # said MP4 from a compatible brand.
+  audio/mp4:
+    parent: video/mp4
+    aliases: [audio/x-m4a, audio/m4a]
+    detected_by: container
+  video/x-m4v:
+    parent: video/mp4
+    detected_by: container
+  video/3gpp:
+    parent: video/mp4
+    detected_by: container
+  video/3gpp2:
+    parent: video/mp4
+    detected_by: container
+  video/quicktime:
+    detected_by: container
+  image/heic:
+    detected_by: container
+  image/heic-sequence:
+    detected_by: container
+  image/heif:
+    detected_by: container
+  image/heif-sequence:
+    detected_by: container
+  image/avif:
+    detected_by: container
+  image/x-canon-cr3:
+    extensions: [cr3]
+    detected_by: container
+
+  # Ogg codecs, under application/ogg.
+  audio/ogg:
+    parent: application/ogg
+    detected_by: container
+  audio/opus:
+    parent: audio/ogg
+    detected_by: container
+  video/ogg:
+    parent: application/ogg
+    detected_by: container
+
+  # OLE2 children are detected by the directory reader.
+  application/x-ole-storage:
+    aliases: [application/x-cfb]
+    detected_by: signature
+
+  # Binary signatures (zumime_table.c, EXTRA rows).
+  application/x-elf:
+    aliases: [application/x-executable, application/x-sharedlib]
+    detected_by: signature
+  application/x-mach-binary:
+    aliases: [application/x-mach-o]
+    detected_by: signature
+  application/java-vm:
+    aliases: [application/x-java-class]
+    detected_by: signature
+  application/x-msdownload:
+    aliases: [application/vnd.microsoft.portable-executable, application/x-dosexec]
+    detected_by: signature
+  image/tiff:
+    detected_by: signature
+  image/vnd.adobe.photoshop:
+    aliases: [image/x-photoshop]
+    detected_by: signature
+  audio/flac:
+    aliases: [audio/x-flac]
+    detected_by: signature
+  audio/aac:
+    aliases: [audio/x-aac]
+    detected_by: signature
+  audio/amr:
+    detected_by: signature
+  application/x-shockwave-flash:
+    detected_by: signature
+  video/x-flv:
+    detected_by: signature
+  application/vnd.ms-cab-compressed:
+    detected_by: signature
+  application/x-rpm:
+    extensions: [rpm]
+    detected_by: signature
+  application/x-unix-archive:
+    aliases: [application/x-archive]
+    extensions: [a, ar]
+    detected_by: signature
+  application/x-deb:
+    parent: application/x-unix-archive
+    aliases: [application/vnd.debian.binary-package]
+    extensions: [deb]
+    detected_by: signature
+  application/x-lz4:
+    extensions: [lz4]
+    detected_by: signature
+  application/lzip:
+    aliases: [application/x-lzip]
+    extensions: [lz]
+    detected_by: signature
+  application/x-compress:
+    detected_by: signature
+  application/vnd.tcpdump.pcap:
+    detected_by: signature
+  application/avro:
+    aliases: [avro/binary]
+    extensions: [avro]
+    detected_by: signature
+  application/dicom:
+    detected_by: signature
+  image/jxl:
+    detected_by: signature
+  application/x-blender:
+    extensions: [blend]
+    detected_by: signature
+  image/icns:
+    extensions: [icns]
+    detected_by: signature
+  application/warc:
+    parent: text/plain
+    extensions: [warc]
+    detected_by: text
+
+  # Structured text, under text/plain or a dialect root.
+  application/rtf:
+    parent: text/plain
+    aliases: [text/rtf]
+    detected_by: text
+  image/svg+xml:
+    detected_by: text
+  application/rss+xml:
+    detected_by: text
+  application/atom+xml:
+    detected_by: text
+  application/vnd.google-earth.kml+xml:
+    detected_by: text
+  application/gpx+xml:
+    detected_by: text
+  model/x3d+xml:
+    detected_by: text
+  application/xliff+xml:
+    detected_by: text
+  model/vnd.collada+xml:
+    detected_by: text
+  application/xhtml+xml:
+    detected_by: text
+  application/docbook+xml:
+    detected_by: text
+  application/geo+json:
+    detected_by: text
+  model/gltf+json:
+    detected_by: text
+  application/vnd.cyclonedx+json:
+    detected_by: text
+  application/har+json:
+    extensions: [har]
+    detected_by: text
+  text/vcard:
+    aliases: [text/x-vcard]
+    detected_by: text
+  text/calendar:
+    detected_by: text
+  text/vtt:
+    detected_by: text
+  application/x-subrip:
+    parent: text/plain
+    detected_by: text
+  application/pgp-encrypted:
+    parent: text/plain
+    detected_by: text
+  application/pgp-signature:
+    parent: text/plain
+    detected_by: text
+  application/pgp-keys:
+    parent: text/plain
+    detected_by: text
+  application/x-pem-file:
+    parent: text/plain
+    extensions: [pem]
+    detected_by: text
+  application/x-sh:
+    parent: text/plain
+    aliases: [text/x-shellscript, application/x-shellscript, text/x-sh]
+    detected_by: text
+  text/x-python:
+    aliases: [text/x-script.python, application/x-python]
+    extensions: [py]
+    detected_by: text
+  text/x-perl:
+    aliases: [application/x-perl, text/x-script.perl]
+    extensions: [pl, pm]
+    detected_by: text
+  text/x-php:
+    aliases: [application/x-httpd-php, application/x-php]
+    extensions: [php]
+    detected_by: text
+  text/x-lua:
+    aliases: [application/x-lua]
+    extensions: [lua]
+    detected_by: text
+  application/x-tcl:
+    parent: text/plain
+    aliases: [text/x-tcl]
+    detected_by: text
+
+  # OOXML variants, told apart by [Content_Types].xml.
+  application/vnd.openxmlformats-officedocument.wordprocessingml.template:
+    parent: application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    detected_by: container
+  application/vnd.ms-word.template.macroenabled.12:
+    parent: application/vnd.openxmlformats-officedocument.wordprocessingml.template
+    detected_by: container
+  application/vnd.openxmlformats-officedocument.spreadsheetml.template:
+    parent: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    detected_by: container
+  application/vnd.ms-excel.template.macroenabled.12:
+    parent: application/vnd.openxmlformats-officedocument.spreadsheetml.template
+    detected_by: container
+  application/vnd.openxmlformats-officedocument.presentationml.template:
+    parent: application/vnd.openxmlformats-officedocument.presentationml.presentation
+    detected_by: container
+  application/vnd.ms-powerpoint.template.macroenabled.12:
+    parent: application/vnd.openxmlformats-officedocument.presentationml.template
+    detected_by: container
+  application/vnd.openxmlformats-officedocument.presentationml.slideshow:
+    parent: application/vnd.openxmlformats-officedocument.presentationml.presentation
+    detected_by: container
+  application/vnd.ms-powerpoint.slideshow.macroenabled.12:
+    parent: application/vnd.openxmlformats-officedocument.presentationml.slideshow
+    detected_by: container
+
+  # Refinements of image types and further signatures.
+  image/apng:
+    parent: image/png
+    detected_by: container
+  image/jls:
+    parent: image/jpeg
+    extensions: [jls]
+    detected_by: signature
+  model/gltf-binary:
+    detected_by: signature
+  application/postscript:
+    parent: text/plain
+    aliases: [application/eps, application/x-eps, image/eps, image/x-eps]
     detected_by: signature

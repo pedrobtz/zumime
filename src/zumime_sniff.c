@@ -179,7 +179,9 @@ int zumime_match_webm(const unsigned char *buf, size_t len) {
 /* --- MP3 without ID3 (standard section 6.2.3) -------------------------------
  * The standard's text has operator-precedence slips ("& 0x06 >> 1") and an
  * inverted rate table; this follows Mozilla's mp3sniff.c, which it
- * describes: Layer III frames only, MPEG-1 rates for version bit 0 set. */
+ * describes: Layer III frames only, MPEG-1 rates for version bit 0 set.
+ * Both scale every frame by 144, which is MPEG-1's; a Layer III frame of
+ * MPEG-2 or 2.5 is 72 * bitrate / rate, which is used here. */
 
 static int mp3_header_ok(const unsigned char *p, size_t avail) {
   if (avail < 4) return 0;
@@ -207,7 +209,7 @@ static long mp3_frame_size(const unsigned char *p) {
     freq >>= 2;
   if (freq == 0) return 0;
   int pad = (p[2] & 0x02) >> 1;
-  long scale = (version == 1) ? 72 : 144;
+  long scale = (version == 3) ? 144 : 72; /* MPEG-1 : MPEG-2 and 2.5 */
   long size = bitrate * scale / freq;
   if (pad) size++;
   return size;
@@ -390,8 +392,11 @@ void zumime_sniff(const unsigned char *buf, size_t len, const zumime_input *in,
   else
     context_type(buf, hlen, in, out);
 
-  if (in->context == ZUMIME_CTX_NONE && out->type != ZUMIME_SUPPLIED)
+  out->encrypted = -1;
+  if (in->context == ZUMIME_CTX_NONE && out->type != ZUMIME_SUPPLIED) {
     extend(buf, len, out);
+    zumime_refine(buf, len, in, out);
+  }
 
   /* Charset and line endings, for a text result. */
   int is_text, is_xml, is_html;
@@ -407,7 +412,12 @@ void zumime_sniff(const unsigned char *buf, size_t len, const zumime_input *in,
     is_html = out->type == ZUMIME_T_TEXT_HTML;
     is_text = zumime_type_is(out->type, ZUMIME_T_TEXT_PLAIN);
   }
-  if (is_text) {
+  /* A charset and line endings belong to text: a text type whose bytes are
+   * binary (a DOS EPS header, a WARC record's payload) has neither, unless
+   * a byte-order mark says the binary bytes are UTF-16. */
+  int bom = len >= 2 && ((buf[0] == 0xFE && buf[1] == 0xFF) ||
+                         (buf[0] == 0xFF && buf[1] == 0xFE));
+  if (is_text && (bom || !has_binary_bytes(buf, len))) {
     zumime_charset(buf, len, in->truncated, is_xml, is_html, out);
     out->newline = zumime_newline_style(buf, len);
   }

@@ -46,8 +46,11 @@ row_input <- function(rows, i) {
   if (bitwAnd(rows$flags[i], 4L) != 0L) {
     bytes <- c(tar_header(), raw(1024))
   } else {
-    bytes <- raw(max(1445L, off + length(pat)))
-    bytes[off + seq_along(pat)] <- pat
+    # Zeros before the pattern, letters after it and one NUL at the end: the
+    # input is binary, and no row is matched by fill it never asked for.
+    n <- max(1445L, off + length(pat) + 1L)
+    bytes <- c(raw(off), pat, rep(as.raw(0x41), n - off - length(pat) - 1L),
+      as.raw(0))
   }
   bytes
 }
