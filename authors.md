@@ -2,17 +2,21 @@
 
 ## Authors
 
-- **First Last**. Author, maintainer.
+- **Pedro Baltazar**. Author, maintainer, copyright holder.
 
 ## Citation
 
-Last F (2026). *zumime: What the Package Does (One Line, Title Case)*. R
-package version 0.0.0.9000, <https://pedrobtz.github.io/zumime/>.
+Source:
+[`DESCRIPTION`](https://github.com/pedrobtz/zumime/blob/main/DESCRIPTION)
+
+Baltazar P (2026). *zumime: Media Type Detection from Bytes and File
+Names*. R package version 0.0.0.9000,
+<https://github.com/pedrobtz/zumime>.
 
     @Manual{,
-      title = {zumime: What the Package Does (One Line, Title Case)},
-      author = {First Last},
+      title = {zumime: Media Type Detection from Bytes and File Names},
+      author = {Pedro Baltazar},
       year = {2026},
       note = {R package version 0.0.0.9000},
-      url = {https://pedrobtz.github.io/zumime/},
+      url = {https://github.com/pedrobtz/zumime},
     }

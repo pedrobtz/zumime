@@ -90,8 +90,14 @@ Rscript -e 'devtools::check()'                   # R CMD check
 air format .                                     # format R sources
 ```
 
-No package-specific commands yet. Add them as stages land, for example
-the script that regenerates the extension table.
+Package-specific commands:
+
+``` sh
+tools/run-benchmarks                             # design §10 timings, Markdown table
+ZUMIME_BENCH_FILES=10000 tools/run-benchmarks    # the same over a smaller tree
+```
+
+Record each run in `.agents/benchmarks.md` with its date and machine.
 
 ## Architecture
 
@@ -201,11 +207,19 @@ call `r-cmd-check.yml`, because a hand-rolled one does not count as the
 pre-submission check. This package calls:
 
 - `.github/workflows/R-CMD-check.yaml` → `r-cmd-check.yml@v1`, `quick`
-  on pull requests without the `full-ci` label, `full` otherwise.
-- `.github/workflows/coverage.yaml` → `coverage.yml@v1` with
-  `contents: write`. Still pinned to the tag, not a commit.
+  on pull requests without the `full-ci` label, `full` otherwise, with
+  Windows R-devel added to the default runners.
+- `.github/workflows/native-checks.yaml` → `sanitizers.yml` (with ASan),
+  `valgrind.yml`, `lto.yml`, `gctorture.yml`, `rchk.yml`,
+  `analyzers.yml` and `cran-special.yml`, all `@v1` and all given the
+  same profile.
+- `.github/workflows/coverage.yaml` → `coverage.yml`, pinned to the
+  v1.23.0 commit, with `contents: write`. The badge goes to `gh-pages`,
+  because the `main` ruleset requires pull requests and rejects a bot
+  commit.
 - `.github/workflows/pkgdown.yaml` is a bespoke `r-lib/actions`
-  workflow, because `r-actions` has no pkgdown workflow to call.
+  workflow, because `r-actions` has no pkgdown workflow to call. It
+  deploys with `force: false` so it cannot overwrite a badge commit.
 
 Small edits get a small run. The shared workflows look at the files a
 pull request changes, compared with its merge base:
