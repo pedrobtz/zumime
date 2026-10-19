@@ -83,24 +83,7 @@ mime_sniff <- function(
     no_sniff,
     context
   )
-  out_type <- res[[1]]
-  if (is.na(out_type)) {
-    out_type <- supplied$essence
-  }
-  charset <- res[[3]]
-  if (isTRUE(res[[5]]) && !is.null(supplied$charset)) {
-    charset <- supplied$charset
-  }
-  out <- new_result(
-    path = NA_character_,
-    type = out_type,
-    confidence = res[[2]],
-    charset = charset,
-    encrypted = res[[6]],
-    newline = res[[4]],
-    interpreter = res[[7]]
-  )
-  apply_registered(out, x, limit)
+  apply_registered(raw_result(res, supplied), x, limit)
 }
 
 # The supplied MIME type detection algorithm's outcome: the canonical
@@ -137,22 +120,9 @@ supplied_type <- function(type) {
 
 contexts <- c("none", "browsing", "image", "audio_video", "font")
 
+# The context as the C side's enum value.
 check_context <- function(context) {
-  if (identical(context, contexts)) {
-    context <- "none"
-  }
-  if (
-    !is.character(context) || length(context) != 1L || !(context %in% contexts)
-  ) {
-    zumime_abort(
-      "type",
-      sprintf(
-        "`context` must be one of %s.",
-        paste0("\"", contexts, "\"", collapse = ", ")
-      ),
-      call = sys.call(-1L)
-    )
-  }
+  context <- check_choice(context, contexts, call = sys.call(-1L))
   match(context, contexts) - 1L
 }
 

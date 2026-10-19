@@ -120,23 +120,9 @@ stream_result <- function(s, chunk, final) {
   if (is.null(res)) {
     return(NULL)
   }
-  out_type <- res[[1]]
-  if (is.na(out_type)) {
-    out_type <- p$supplied$essence
-  }
-  charset <- res[[3]]
-  if (isTRUE(res[[5]]) && !is.null(p$supplied$charset)) {
-    charset <- p$supplied$charset
-  }
-  out <- new_result(
-    path = NA_character_,
-    type = out_type,
-    confidence = res[[2]],
-    charset = charset,
-    encrypted = res[[6]],
-    newline = res[[4]],
-    interpreter = res[[7]]
-  )
+  out <- raw_result(res, p$supplied)
+  # Checked here so a sniffer without function rules skips copying its
+  # bytes out for apply_registered().
   if (length(fns)) {
     out <- apply_registered(out, stream_bytes(s), p$limit)
   }

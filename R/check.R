@@ -55,8 +55,10 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
       )
     )
   }
-  m <- factor(min_confidence, levels = confidence_levels, ordered = TRUE)
-  limit <- 4096
+  m <- as_confidence(min_confidence)
+  # The same bytes mime_type() reads by default, which the equality with it
+  # requires.
+  limit <- as.double(formals(mime_type)$limit)
 
   # Function rules run in R after the C pass, so the shortcut cannot see
   # them; answer in full.
@@ -75,7 +77,7 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
     match(min_confidence, confidence_levels) - 1L
   )
   # An unreadable path is type NA at confidence "none".
-  unreadable <- factor("none", levels = confidence_levels, ordered = TRUE)
+  unreadable <- as_confidence("none")
   out[is.na(out)] <- NA & (unreadable >= m)
   out
 }

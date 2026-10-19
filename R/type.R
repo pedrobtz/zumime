@@ -123,7 +123,7 @@ sniff_paths <- function(
   no_sniff = FALSE,
   context = 0L
 ) {
-  .Call(
+  res <- .Call(
     zumime_sniff_paths,
     path.expand(path),
     limit,
@@ -133,6 +133,8 @@ sniff_paths <- function(
     no_sniff,
     context
   )
+  names(res) <- path_fields
+  res
 }
 
 check_paths <- function(path) {
@@ -146,7 +148,12 @@ check_paths <- function(path) {
   path
 }
 
-check_choice <- function(x, choices, arg = deparse(substitute(x))) {
+check_choice <- function(
+  x,
+  choices,
+  arg = deparse(substitute(x)),
+  call = sys.call(-1L)
+) {
   if (identical(x, choices)) {
     return(choices[1])
   }
@@ -158,19 +165,19 @@ check_choice <- function(x, choices, arg = deparse(substitute(x))) {
         arg,
         paste0("\"", choices, "\"", collapse = ", ")
       ),
-      call = sys.call(-1L)
+      call = call
     )
   }
   x
 }
 
 check_strict <- function(path, res, strict) {
-  bad <- which(!is.na(res[[8]]))
+  bad <- which(!is.na(res$error))
   if (strict && length(bad)) {
     i <- bad[1]
     zumime_abort(
       "io",
-      sprintf("Cannot read \"%s\": %s.", path[i], res[[8]][i]),
+      sprintf("Cannot read \"%s\": %s.", path[i], res$error[i]),
       call = sys.call(-1L)
     )
   }
@@ -191,12 +198,12 @@ need_package <- function(pkg, what) {
 }
 
 path_result <- function(path, res, supplied = NULL) {
-  type <- res[[1]]
-  supplied_rows <- is.na(type) & is.na(res[[8]])
+  type <- res$type
+  supplied_rows <- is.na(type) & is.na(res$error)
   if (any(supplied_rows)) {
     type[supplied_rows] <- supplied$essence
   }
-  charset <- res[[3]]
+  charset <- res$charset
   if (!is.null(supplied$charset)) {
     text_rows <- supplied_rows | mime_is(type, "text/plain") %in% TRUE
     charset[text_rows & !is.na(type)] <- supplied$charset
@@ -204,12 +211,12 @@ path_result <- function(path, res, supplied = NULL) {
   new_result(
     path = path,
     type = type,
-    confidence = res[[2]],
+    confidence = res$confidence,
     charset = charset,
-    encrypted = res[[4]],
-    complete = res[[5]],
-    newline = res[[6]],
-    interpreter = res[[7]]
+    encrypted = res$encrypted,
+    complete = res$complete,
+    newline = res$newline,
+    interpreter = res$interpreter
   )
 }
 
@@ -316,7 +323,7 @@ family_refine <- function(out) {
       out$type[i] <- t
       out$confidence[i] <- min(
         out$confidence[i],
-        factor("probable", levels = confidence_levels, ordered = TRUE)
+        as_confidence("probable")
       )
     }
   }

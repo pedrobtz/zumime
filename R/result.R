@@ -3,6 +3,57 @@
 
 confidence_levels <- c("none", "extension", "probable", "definite")
 
+as_confidence <- function(x) {
+  factor(x, levels = confidence_levels, ordered = TRUE)
+}
+
+# The fields of the lists the C routines return, in their order.
+# zumime_sniff_raw and zumime_stream_push: `supplied_charset` is TRUE when
+# the answer is text, so a supplied charset parameter applies.
+raw_fields <- c(
+  "type",
+  "confidence",
+  "charset",
+  "newline",
+  "supplied_charset",
+  "encrypted",
+  "interpreter"
+)
+# zumime_sniff_paths: `error` is the reason a path could not be read.
+path_fields <- c(
+  "type",
+  "confidence",
+  "charset",
+  "encrypted",
+  "complete",
+  "newline",
+  "interpreter",
+  "error"
+)
+
+# The one-row result for bytes in hand, from zumime_sniff_raw or
+# zumime_stream_push. A supplied type that stands comes back as NA.
+raw_result <- function(res, supplied) {
+  names(res) <- raw_fields
+  type <- res$type
+  if (is.na(type)) {
+    type <- supplied$essence
+  }
+  charset <- res$charset
+  if (isTRUE(res$supplied_charset) && !is.null(supplied$charset)) {
+    charset <- supplied$charset
+  }
+  new_result(
+    path = NA_character_,
+    type = type,
+    confidence = res$confidence,
+    charset = charset,
+    encrypted = res$encrypted,
+    newline = res$newline,
+    interpreter = res$interpreter
+  )
+}
+
 new_result <- function(
   path,
   type,
@@ -26,7 +77,7 @@ new_result <- function(
   out <- list(
     path = as.character(path),
     type = as.character(type),
-    confidence = factor(confidence, levels = confidence_levels, ordered = TRUE),
+    confidence = as_confidence(confidence),
     charset = as.character(charset),
     inner = as.character(inner),
     encrypted = as.logical(encrypted),

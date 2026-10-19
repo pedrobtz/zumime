@@ -273,7 +273,7 @@ apply_registered <- function(out, x, limit) {
           out$type[i] <- fns$type[h]
           out$confidence[i] <- min(
             out$confidence[i],
-            factor("probable", levels = confidence_levels, ordered = TRUE)
+            as_confidence("probable")
           )
           changed <- TRUE
           break

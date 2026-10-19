@@ -25,9 +25,7 @@
 #' mime_parse("not a type")
 mime_parse <- function(x, strict = FALSE) {
   x <- check_character(x)
-  if (!isTRUE(strict) && !isFALSE(strict)) {
-    zumime_abort("type", "`strict` must be TRUE or FALSE.")
-  }
+  check_flag(strict)
   out <- .Call(zumime_mime_parse, utf8_or_replace(x))
   if (strict) {
     bad <- which(vapply(out, is.null, logical(1)) & !is.na(x))
