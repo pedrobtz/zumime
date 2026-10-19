@@ -53,6 +53,15 @@
 <code>encrypted</code> reports ZIP entries encrypted with the classic flag or AES, and OLE2 files holding an <code>EncryptionInfo</code> stream; <code>interpreter</code> names a script’s shebang program.</li>
 <li>
 <code>text/xml</code> is now an alias of <code>application/xml</code>.</li>
+<li>
+<code><a href="../reference/mime_type.html">mime_type()</a></code> types files from their bytes and their names in one C loop, says whether the two agree, and reports what a consumer needs to open each file: the type inside a compression wrapper (<code>inner</code>), whether it is encrypted, whether it is complete (<code>complete = TRUE</code> reads the end of ZIP, PDF, gzip and Parquet files), its line endings and a script’s interpreter. Unreadable paths are <code>NA</code> rows unless <code>strict = TRUE</code>.</li>
+<li>
+<code><a href="../reference/mime_sniff.html">mime_sniff()</a></code> also takes paths.</li>
+<li>
+<code><a href="../reference/mime_check.html">mime_check()</a></code> answers whether files are one of a set of allowed types from their bytes alone, faster than <code><a href="../reference/mime_type.html">mime_type()</a></code> and always with the same answer.</li>
+<li>
+<code><a href="../reference/mime_register.html">mime_register()</a></code> and <code><a href="../reference/mime_register.html">mime_unregister()</a></code> add a type for the session, detected by a byte rule in C or by an R function.</li>
+<li>Optional help from the family, never consulted unless asked: <code>inner = "decompress"</code> (zukomp), <code>text = "family"</code> (zucsv, zujson, zutoml) and <code>charset = "detect"</code> (zuutf). <code>zumime_info()$family</code> lists the family sniffers available.</li>
 </ul></div>
   </main></div>
 

@@ -49,3 +49,26 @@
   AES, and OLE2 files holding an `EncryptionInfo` stream; `interpreter`
   names a script’s shebang program.
 - `text/xml` is now an alias of `application/xml`.
+- [`mime_type()`](https://pedrobtz.github.io/zumime/reference/mime_type.md)
+  types files from their bytes and their names in one C loop, says
+  whether the two agree, and reports what a consumer needs to open each
+  file: the type inside a compression wrapper (`inner`), whether it is
+  encrypted, whether it is complete (`complete = TRUE` reads the end of
+  ZIP, PDF, gzip and Parquet files), its line endings and a script’s
+  interpreter. Unreadable paths are `NA` rows unless `strict = TRUE`.
+- [`mime_sniff()`](https://pedrobtz.github.io/zumime/reference/mime_sniff.md)
+  also takes paths.
+- [`mime_check()`](https://pedrobtz.github.io/zumime/reference/mime_check.md)
+  answers whether files are one of a set of allowed types from their
+  bytes alone, faster than
+  [`mime_type()`](https://pedrobtz.github.io/zumime/reference/mime_type.md)
+  and always with the same answer.
+- [`mime_register()`](https://pedrobtz.github.io/zumime/reference/mime_register.md)
+  and
+  [`mime_unregister()`](https://pedrobtz.github.io/zumime/reference/mime_register.md)
+  add a type for the session, detected by a byte rule in C or by an R
+  function.
+- Optional help from the family, never consulted unless asked:
+  `inner = "decompress"` (zukomp), `text = "family"` (zucsv, zujson,
+  zutoml) and `charset = "detect"` (zuutf). `zumime_info()$family` lists
+  the family sniffers available.

@@ -21,7 +21,9 @@ mime_sniff(
 
 - x:
 
-  A raw vector.
+  A raw vector, or a character vector of paths, which are read as
+  [`mime_type()`](https://pedrobtz.github.io/zumime/reference/mime_type.md)
+  reads them; an unreadable path gives a row with `type` `NA`.
 
 - type:
 
@@ -45,8 +47,9 @@ mime_sniff(
 
 ## Value
 
-A `zumime_result` data frame with one row and columns `path` (`NA` for a
-raw vector), `type` (a canonical type), `confidence` (an ordered factor:
+A `zumime_result` data frame with one row per path (one for a raw
+vector) and columns `path` (`NA` for a raw vector), `type` (a canonical
+type), `confidence` (an ordered factor:
 `none < extension < probable < definite`), `charset`, `inner`,
 `encrypted`, `complete`, `newline` (`"lf"`, `"crlf"`, `"cr"`, `"mixed"`,
 or `NA`) and `interpreter`.

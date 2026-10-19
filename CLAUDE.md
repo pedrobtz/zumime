@@ -138,6 +138,14 @@ See `.agents/design.md` §4; this section records what has landed.
   `zumime_inflate.c`), `zumime_text.c` (structured text). A reader’s
   answer is kept only when it descends from the current type; add a
   parent in `tools/types.yaml` rather than an exception.
+- **Paths (layer 4).** `src/zumime_path.c` is the loop: it opens each
+  path (`_wfopen` on Windows, native `fopen` elsewhere), reads the head,
+  the ZIP tail and offset rows, checks completeness, and fills parallel
+  vectors with no R allocation while a file is open. `R/type.R` builds
+  the frame and the name columns; `R/check.R` holds
+  [`mime_check()`](https://pedrobtz.github.io/zumime/reference/mime_check.md)’s
+  shortcut (`zumime_check()` in C) and `probe_count()`; `R/register.R`
+  the session registry, mirrored in C by `zumime_reg[]` in `registry.c`.
 - **Native layer.** `src/init.c` registers every `.Call` entry point,
   declared in `src/zumime_r.h`, which also has `zumime_scalar_string()`:
   never pass a fresh `CHARSXP` to `Rf_ScalarString()` unprotected.

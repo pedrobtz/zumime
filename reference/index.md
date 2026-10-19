@@ -2,6 +2,8 @@
 
 ## All functions
 
+- [`mime_check()`](https://pedrobtz.github.io/zumime/reference/mime_check.md)
+  : Is a file one of these types?
 - [`mime_extensions()`](https://pedrobtz.github.io/zumime/reference/mime_extensions.md)
   : Extensions of a type
 - [`mime_guess()`](https://pedrobtz.github.io/zumime/reference/mime_guess.md)
@@ -13,8 +15,13 @@
 - [`mime_parse()`](https://pedrobtz.github.io/zumime/reference/mime_parse.md)
   [`mime_format()`](https://pedrobtz.github.io/zumime/reference/mime_parse.md)
   : Parse and serialise MIME types
+- [`mime_register()`](https://pedrobtz.github.io/zumime/reference/mime_register.md)
+  [`mime_unregister()`](https://pedrobtz.github.io/zumime/reference/mime_register.md)
+  : Register a type for the session
 - [`mime_sniff()`](https://pedrobtz.github.io/zumime/reference/mime_sniff.md)
   : Sniff a type from bytes
+- [`mime_type()`](https://pedrobtz.github.io/zumime/reference/mime_type.md)
+  : Type files from their bytes and their names
 - [`mime_types()`](https://pedrobtz.github.io/zumime/reference/mime_types.md)
   : The type registry
 - [`zumime_info()`](https://pedrobtz.github.io/zumime/reference/zumime_info.md)

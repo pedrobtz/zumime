@@ -12,9 +12,10 @@ zumime_info()
 
 ## Value
 
-A list with `version`, the package version as a string, and
-`table_version`, the date of the table sources as a string
-(`"YYYY-MM-DD"`).
+A list with `version`, the package version as a string; `table_version`,
+the date of the table sources as a string (`"YYYY-MM-DD"`); and
+`family`, the family sniffers this session can offer text to with
+`mime_type(text = "family")`.
 
 ## Examples
 
@@ -25,5 +26,8 @@ zumime_info()
 #> 
 #> $table_version
 #> [1] "2026-10-19"
+#> 
+#> $family
+#> [1] "zucsv"  "zujson"
 #> 
 ```

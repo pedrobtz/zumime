@@ -62,7 +62,9 @@ the sniffing context.</p>
 
 
 <dl><dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>A raw vector.</p></dd>
+<dd><p>A raw vector, or a character vector of paths, which are read as
+<code><a href="mime_type.html">mime_type()</a></code> reads them; an unreadable path gives a row with <code>type</code>
+<code>NA</code>.</p></dd>
 
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
@@ -89,8 +91,8 @@ vector longer than <code>limit</code> is sniffed on its first <code>limit</code>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>zumime_result</code> data frame with one row and columns <code>path</code>
-(<code>NA</code> for a raw vector), <code>type</code> (a canonical type), <code>confidence</code> (an
+    <p>A <code>zumime_result</code> data frame with one row per path (one for a
+raw vector) and columns <code>path</code> (<code>NA</code> for a raw vector), <code>type</code> (a canonical type), <code>confidence</code> (an
 ordered factor: <code>none &lt; extension &lt; probable &lt; definite</code>), <code>charset</code>,
 <code>inner</code>, <code>encrypted</code>, <code>complete</code>, <code>newline</code> (<code>"lf"</code>, <code>"crlf"</code>, <code>"cr"</code>,
 <code>"mixed"</code>, or <code>NA</code>) and <code>interpreter</code>.</p>
