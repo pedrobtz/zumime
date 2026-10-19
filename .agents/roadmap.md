@@ -24,7 +24,7 @@ lands in Stage 1 with the tables it covers.
 | 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | [#17](https://github.com/pedrobtz/zumime/pull/17) | 2026-10-19 |
 | 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | [#18](https://github.com/pedrobtz/zumime/pull/18) | 2026-10-19 |
 | 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | [#19](https://github.com/pedrobtz/zumime/pull/19) | 2026-10-19 |
-| 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | | |
+| 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | [#20](https://github.com/pedrobtz/zumime/pull/20) | 2026-10-19 |
 | 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | | |
 
 ## Stage 0 — Package identity
@@ -538,6 +538,15 @@ branch's code and everything it finds is fixed.
 
 - A full-profile run green on the pull request and on its merge commit.
 - The determinism check of design §12 passes on all three platforms.
+
+**Work list (2026-10-19).** The full run on `main` after Stage 6
+(`f519de7`) was green on every R CMD check leg (macOS, Windows release and
+R-devel, Ubuntu release and oldrel, the clang23, ubuntu-clang and
+ubuntu-gcc16 containers, `nosuggests`, `nold`), ASan, UBSan, valgrind, LTO,
+rchk, analyzers and cran-special. The one comment left on #9, valgrind's
+report of R's `memCompress()` after #17, was fixed in #18. This stage adds
+the determinism check of design §12 (`test-determinism.R`), which runs on
+every leg.
 
 **Design.** §12.
 
