@@ -164,3 +164,29 @@ test_that("a directory in the head is read when the record is in the tail", {
   expect_identical(mime_type(file.path(dir, "a.docx"))$type, docx_type())
   expect_identical(mime_sniff(z)$type, docx_type())
 })
+
+test_that("an end record inside the archive comment is passed over", {
+  # A fake record in the comment points at a directory that is not there;
+  # the real record's comment reaches the end of the file.
+  fake <- c(
+    charToRaw("PK"),
+    as.raw(c(5, 6)),
+    u16(0),
+    u16(0),
+    u16(1),
+    u16(1),
+    u32(46),
+    u32(9999),
+    u16(0)
+  )
+  # Descriptors without sizes stop the local walk at the first entry, so
+  # only the directory can show word/.
+  z <- build_zip(
+    ooxml_entries("word"),
+    descriptor = TRUE,
+    comment = c(fake, raw(8))
+  )
+  expect_identical(sniff_type(z), docx_type())
+  dir <- local_tree(list("a.docx" = z))
+  expect_identical(mime_type(file.path(dir, "a.docx"))$type, docx_type())
+})

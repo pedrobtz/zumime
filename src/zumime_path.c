@@ -24,8 +24,6 @@
 #include "zumime_r.h"
 #include "zumime_sniff.h"
 
-#define TAIL_LEN (22u + 65535u)
-#define CD_MAX (8u * 1024u * 1024u)
 
 /* --- Files ------------------------------------------------------------------ */
 
@@ -251,10 +249,12 @@ static int completeness(FILE *f, int64_t size, const unsigned char *head,
   int t = r->type;
   unsigned char tail[4096];
   if (zumime_type_is(t, ZUMIME_T_APPLICATION_ZIP)) {
-    size_t n = size < (int64_t) TAIL_LEN ? (size_t) size : TAIL_LEN;
+    uint64_t at;
+    size_t n;
+    zumime_zip_tail_window((uint64_t) size, &at, &n);
     unsigned char *buf = (unsigned char *) malloc(n ? n : 1);
     if (buf == NULL) return -1;
-    size_t got = read_at(f, size - (int64_t) n, buf, n);
+    size_t got = read_at(f, (int64_t) at, buf, n);
     int ok = 0;
     for (size_t i = got >= 22 ? got - 22 + 1 : 0; i-- > 0;)
       if (memcmp(buf + i, "PK\x05\x06", 4) == 0) {
@@ -372,18 +372,20 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
   unsigned char *tail = NULL;
   if (in.truncated && proto->context == ZUMIME_CTX_NONE && !proto->base_only &&
       head_len >= 4 && memcmp(head, "PK\x03\x04", 4) == 0) {
-    size_t n = size < (int64_t) TAIL_LEN ? (size_t) size : TAIL_LEN;
+    uint64_t at;
+    size_t n;
+    zumime_zip_tail_window((uint64_t) size, &at, &n);
     tail = (unsigned char *) malloc(n);
     if (tail != NULL) {
       in.tail = tail;
-      in.tail_len = read_at(f, size - (int64_t) n, tail, n);
-      in.tail_off = (uint64_t) (size - (int64_t) n);
+      in.tail_len = read_at(f, (int64_t) at, tail, n);
+      in.tail_off = at;
       /* A central directory that starts before the tail (an archive of
-       * many entries) is read from its start, up to CD_MAX bytes. */
-      uint64_t cd = 0;
-      if (zumime_zip_cd_offset(tail, in.tail_len, in.tail_off, &cd) &&
-          cd < in.tail_off && cd >= head_len && (uint64_t) size - cd <= CD_MAX) {
-        size_t m = (size_t) ((uint64_t) size - cd);
+       * many entries) is read from its start. */
+      uint64_t cd;
+      size_t m;
+      if (zumime_zip_cd_window(tail, in.tail_len, in.tail_off,
+                               (uint64_t) size, head_len, &cd, &m)) {
         unsigned char *wide = (unsigned char *) malloc(m);
         if (wide != NULL) {
           free(tail);

@@ -13,6 +13,8 @@
  *     rather than O(n^2);
  *   - the sniffer with a separate tail (the path loop's ZIP tail) and in
  *     mime_check()'s base-only first pass;
+ *   - the path loop's window arithmetic on the input as an in-memory file:
+ *     the tail and central-directory windows stay inside the file;
  *   - the bounded and streaming inflaters and the ZIP reader with a tail
  *     survive arbitrary bytes. */
 
@@ -98,6 +100,36 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   tin.tail_off = size / 2;
   zumime_sniff(data, size / 2, &tin, &part);
   check_result(&part);
+
+  /* The path loop on the input as a file, with heads of a few lengths:
+   * the tail and directory windows it chooses must lie inside the file. */
+  size_t heads[3] = {size / 3, size / 2, 4096};
+  for (int h = 0; h < 3; h++) {
+    size_t head_len = heads[h] < size ? heads[h] : size;
+    if (head_len == size || head_len < 4 || memcmp(data, "PK\x03\x04", 4) != 0)
+      continue;
+    uint64_t at;
+    size_t n;
+    zumime_zip_tail_window(size, &at, &n);
+    if (at + n != size) abort();
+    zumime_input pin;
+    memset(&pin, 0, sizeof(pin));
+    pin.context = ZUMIME_CTX_NONE;
+    pin.truncated = 1;
+    pin.tail = data + at;
+    pin.tail_len = n;
+    pin.tail_off = at;
+    uint64_t cd;
+    size_t m;
+    if (zumime_zip_cd_window(data + at, n, at, size, head_len, &cd, &m)) {
+      if (cd < head_len || cd >= at || cd + m != size) abort();
+      pin.tail = data + cd;
+      pin.tail_len = m;
+      pin.tail_off = cd;
+    }
+    zumime_sniff(data, head_len, &pin, &part);
+    check_result(&part);
+  }
 
   /* mime_check()'s first pass. */
   zumime_input bin;
