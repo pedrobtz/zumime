@@ -2,9 +2,9 @@
 
 `mime_sniffer()` starts an incremental sniffer; `mime_push()` hands it
 the next chunk and returns `NULL` while the bytes seen cannot yet decide
-the type, or the result row once they can, after which further pushes
-are ignored. `mime_finish()` forces an answer from what has been seen,
-as the end of a short stream would. The answer is the one
+the type, or the result row once they can. `mime_finish()` forces an
+answer from what has been seen, as the end of a short stream would. The
+answer is the one
 [`mime_sniff()`](https://pedrobtz.github.io/zumime/reference/mime_sniff.md)
 gives for the same first `limit` bytes.
 
@@ -60,6 +60,11 @@ mime_finish(s)
 result.
 
 ## Details
+
+Once the sniffer has decided, further pushes ignore their chunks and
+return the same row. Once it has finished, a push raises a
+`zumime_state_error`; `mime_finish()` can still be called and returns
+the same row.
 
 The bytes decide when no longer signature could still override the
 match, the container reader for the type has what it needs, or `limit`

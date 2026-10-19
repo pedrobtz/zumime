@@ -77,7 +77,7 @@
 <span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "&lt;name&gt;")'</span>   <span class="co"># one test file</span></span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(shuffle = TRUE)'</span>      <span class="co"># order independence</span></span>
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::check()'</span>                   <span class="co"># R CMD check</span></span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">air</span> format .                                     <span class="co"># format R sources</span></span></code></pre></div>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">air</span> format .                                     <span class="co"># format R sources (air.toml)</span></span></code></pre></div>
 <p>Package-specific commands:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">tools/run-benchmarks</span>                             <span class="co"># design §10 timings, Markdown table</span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="va">ZUMIME_BENCH_FILES</span><span class="op">=</span>10000 <span class="ex">tools/run-benchmarks</span>    <span class="co"># the same over a smaller tree</span></span></code></pre></div>
@@ -86,9 +86,10 @@
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R <span class="at">--check</span>    <span class="co"># exit 1 if they differ from their sources</span></span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="ex">Rscript</span> tools/generate-tables.R <span class="at">--fetch</span>    <span class="co"># download the sources again, record sha256</span></span>
 <span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="ex">tools/fetch-fixtures</span>                       <span class="co"># oracle fixtures into tests/testthat/fixtures/</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="ex">tools/fuzz/run-local</span> 60                    <span class="co"># the fuzz harness under ASan+UBSan, 60 s</span></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="ex">Rscript</span> tools/fuzz/make-seeds.R            <span class="co"># rewrite tools/fuzz/seeds/</span></span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::build_readme()'</span>      <span class="co"># README.Rmd -&gt; README.md</span></span></code></pre></div>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="ex">tools/dump-file-type-answers</span>               <span class="co"># file-type's answers into helper-file-type.R</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="ex">tools/fuzz/run-local</span> 60                    <span class="co"># the fuzz harness under ASan+UBSan, 60 s</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="ex">Rscript</span> tools/fuzz/make-seeds.R            <span class="co"># rewrite tools/fuzz/seeds/</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::build_readme()'</span>      <span class="co"># README.Rmd -&gt; README.md</span></span></code></pre></div>
 <p>The registry is generated: edit <code>tools/types.yaml</code> (parents, aliases, extensions, <code>detected_by</code>) and regenerate, never the outputs. The tests that need fixtures skip without them; <code>oracles.yaml</code> fetches and runs them in CI.</p>
 </div>
 <div class="section level2">
