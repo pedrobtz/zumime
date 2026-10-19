@@ -467,7 +467,10 @@ target has a measured number.
 - **Valgrind on #18** reported uninitialised bytes in zlib under
   `saveRDS()` of a sniffer: the buffer's unpushed tail was uninitialised R
   memory, serialised with the object. It is now zeroed on allocation and
-  growth.
+  growth. It also reported 668 KB "possibly lost" inside R's own
+  `memCompress()` (libdeflate), which a test helper called; the helper now
+  writes raw DEFLATE through `gzfile()`. The same report failed the full
+  run on `main` after #17.
 - **Benchmarks**: four of the seven targets are missed and recorded in
   `.agents/benchmarks.md` (D14); the first run's three avoidable costs were
   fixed in this stage.

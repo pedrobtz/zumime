@@ -7,10 +7,14 @@ u32 <- function(x) as.raw(c(x %% 256, (x %/% 256) %% 256,
 u32be <- function(x) rev(u32(x))
 bytes <- function(s) if (is.raw(s)) s else charToRaw(s)
 
-# A raw DEFLATE stream: zlib's, without its 2-byte header and Adler-32.
+# A raw DEFLATE stream: a gzip member without its 10-byte header (R's
+# gzfile() writes no optional fields) and 8-byte trailer. Not
+# memCompress(): under valgrind its libdeflate compressor is reported as
+# possibly lost, in R, on every call.
 deflate_raw <- function(x) {
-  z <- memCompress(bytes(x), type = "gzip")
-  z[3:(length(z) - 4)]
+  z <- gzip_bytes(x)
+  stopifnot(z[4] == as.raw(0))
+  z[11:(length(z) - 8)]
 }
 
 # A ZIP archive. `entries` is a named list of contents; `method` 0 stores,
