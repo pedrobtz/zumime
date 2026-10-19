@@ -61,9 +61,11 @@ test_that("a saved sniffer comes back undecided with its bytes", {
 test_that("each input decides at the whole's type, never past the limit", {
   for (name in names(stream_inputs())) {
     x <- stream_inputs()[[name]]
-    got <- .Call(zumime_stream_bytewise, x, 4096)
-    expect_identical(got[[2]], mime_sniff(x, limit = 4096)$type, info = name)
-    expect_lte(got[[1]], 4096)
+    # Inputs longer than 4096 bytes are read whole.
+    limit <- max(4096, length(x))
+    got <- .Call(zumime_stream_bytewise, x, limit)
+    expect_identical(got[[2]], mime_sniff(x, limit = limit)$type, info = name)
+    expect_lte(got[[1]], limit)
   }
   # Through the R API too, one byte at a time.
   for (name in c("pdf", "gif", "text", "html")) {
@@ -83,6 +85,7 @@ test_that("early decisions happen where the bytes allow them", {
   n <- function(x) .Call(zumime_stream_bytewise, x, 4096)[[1]]
   expect_identical(n(stream_inputs()$pdf), 5)
   expect_identical(n(stream_inputs()$gif), 6)
+  expect_identical(n(stream_inputs()$jpeg), 4)
   # "MZ" waits until the tar row at 257 can no longer match.
   expect_identical(n(c(charToRaw("MZ"), raw(400))), 258)
   expect_identical(n(stream_inputs()$text), as.numeric(length(stream_inputs()$text)))

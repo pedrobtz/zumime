@@ -210,7 +210,19 @@ stream_inputs <- function() {
     text = charToRaw("plain words\n"), bin = as.raw(c(1:20, 0)),
     exe = c(charToRaw("MZ"), raw(100)), elf = c(charToRaw("\x7fELF"), raw(60)),
     rds = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20))),
-    ws = charToRaw("      "), short = as.raw(0xff)
+    ws = charToRaw("      "), short = as.raw(0xff),
+    jpeg = as.raw(c(0xff, 0xd8, 0xff, 0xe0, 0, 0)),
+    apng = c(png_bytes()[1:8], u32be(13), charToRaw("IHDR"), raw(17),
+      u32be(8), charToRaw("acTL"), raw(12), u32be(1), charToRaw("IDAT"),
+      raw(5)),
+    # The directory past 4 KiB.
+    ole_padded = build_ole2(c("WordDocument", "1Table"), pad = 20L),
+    # An offset row past 32 KiB.
+    iso = local({
+      iso <- raw(40000)
+      iso[32770:32774] <- charToRaw("CD001")
+      iso
+    })
   ))
 }
 
