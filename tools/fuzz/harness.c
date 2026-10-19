@@ -4,9 +4,15 @@
  *
  *   - no crash and no read past the buffer, in every context and with
  *     supplied types (the sanitizers report those);
- *   - every type id is in the registry, every confidence in range;
+ *   - every type id is in the registry, and every confidence, charset,
+ *     newline style and encryption flag in range;
  *   - the incremental property: the type the stream decides on, at the
- *     first prefix the can-decide rule accepts, is the type of the whole;
+ *     first prefix the can-decide rule accepts, is the type of the whole.
+ *     Prefixes are taken byte by byte up to 64 bytes and then by a stride
+ *     of about 1/64 of the prefix, so a long input costs O(n log n) sniffs
+ *     rather than O(n^2);
+ *   - the sniffer with a separate tail (the path loop's ZIP tail) and in
+ *     mime_check()'s base-only first pass;
  *   - the bounded and streaming inflaters and the ZIP reader with a tail
  *     survive arbitrary bytes. */
 
@@ -21,6 +27,9 @@ static void check_result(const zumime_result *r) {
     abort();
   if (r->confidence < ZUMIME_CONF_NONE || r->confidence > ZUMIME_CONF_DEFINITE)
     abort();
+  if (r->charset < ZUMIME_CS_NONE || r->charset > ZUMIME_CS_DECLARED) abort();
+  if (r->newline < ZUMIME_NL_NONE || r->newline > ZUMIME_NL_MIXED) abort();
+  if (r->encrypted < -1 || r->encrypted > 1) abort();
   if (r->charset == ZUMIME_CS_DECLARED &&
       strlen(r->cs_label) > ZUMIME_LABEL_MAX)
     abort();
@@ -70,13 +79,33 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   zumime_result whole, part;
   zumime_sniff(data, size, &in, &whole);
   check_result(&whole);
-  for (size_t k = 1; k < size; k++) {
+  for (size_t k = 1; k < size; k += k < 64 ? 1 : k / 64) {
     zumime_sniff(data, k, &in, &part);
     if (zumime_can_decide(data, k, size, &in, &part)) {
       if (part.type != whole.type) abort();
       break;
     }
   }
+
+  /* The first half as the head and the second as a tail read separately,
+   * as the path loop does for a ZIP longer than its head. */
+  zumime_input tin;
+  memset(&tin, 0, sizeof(tin));
+  tin.context = ZUMIME_CTX_NONE;
+  tin.truncated = 1;
+  tin.tail = data + size / 2;
+  tin.tail_len = size - size / 2;
+  tin.tail_off = size / 2;
+  zumime_sniff(data, size / 2, &tin, &part);
+  check_result(&part);
+
+  /* mime_check()'s first pass. */
+  zumime_input bin;
+  memset(&bin, 0, sizeof(bin));
+  bin.context = ZUMIME_CTX_NONE;
+  bin.base_only = 1;
+  zumime_sniff(data, size, &bin, &part);
+  check_result(&part);
 
   /* The ZIP reader with the input as its own tail. */
   int enc;

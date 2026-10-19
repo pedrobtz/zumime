@@ -1,11 +1,16 @@
 # Writes the seed corpus tools/fuzz/seeds/ from the test suite's byte
 # builders: one small input per kind of answer. Run from the package root:
 #   Rscript tools/fuzz/make-seeds.R
+#   Rscript tools/fuzz/make-seeds.R --check   # exit 1 if seeds/ differs
+# Deflated seeds come from the zlib R links to, and macOS's zlib compresses
+# differently from Linux's: check where the seeds were written.
+check <- "--check" %in% commandArgs(trailingOnly = TRUE)
 for (f in list.files("tests/testthat", "^helper-.*\\.R$", full.names = TRUE)) {
   source(f)
 }
 suppressMessages(pkgload::load_all(quiet = TRUE))
-dir <- "tools/fuzz/seeds"
+seeds <- "tools/fuzz/seeds"
+dir <- if (check) tempfile("seeds") else seeds
 unlink(dir, recursive = TRUE)
 dir.create(dir, recursive = TRUE)
 inputs <- c(stream_inputs(), list(
@@ -27,4 +32,15 @@ inputs <- c(stream_inputs(), list(
   utf16 = c(as.raw(c(0xff, 0xfe)), as.vector(rbind(charToRaw("<?xml?>"), as.raw(0))))
 ))
 for (name in names(inputs)) writeBin(inputs[[name]], file.path(dir, name))
-cat(length(inputs), "seeds written to", dir, "\n")
+if (check) {
+  files <- union(list.files(dir), list.files(seeds))
+  md5 <- function(d) unname(tools::md5sum(file.path(d, files)))
+  differ <- files[is.na(md5(dir)) | is.na(md5(seeds)) | md5(dir) != md5(seeds)]
+  if (length(differ) > 0) {
+    cat(seeds, "differs from make-seeds.R in:", differ, "\n")
+    quit(status = 1)
+  }
+  cat(seeds, "matches make-seeds.R\n")
+} else {
+  cat(length(inputs), "seeds written to", dir, "\n")
+}
