@@ -29,6 +29,9 @@ Suggests:
     zucsv,
     zujson,
     zukomp
+Config/Needs/website: 
+    knitr,
+    rmarkdown
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.0
 Encoding: UTF-8

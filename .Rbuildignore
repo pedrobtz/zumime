@@ -18,3 +18,4 @@
 ^tools$
 ^tests/testthat/fixtures$
 ^src/.*\.a$
+^README\.Rmd$
