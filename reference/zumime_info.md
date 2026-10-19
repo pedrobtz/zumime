@@ -22,7 +22,7 @@ the date of the table sources as a string (`"YYYY-MM-DD"`); and
 ``` r
 zumime_info()
 #> $version
-#> [1] "0.0.0.9000"
+#> [1] "0.1.0"
 #> 
 #> $table_version
 #> [1] "2026-10-19"

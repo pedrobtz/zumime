@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">zumime</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,37 +34,25 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.0.9000" id="zumime-0009000">zumime 0.0.0.9000<a class="anchor" aria-label="anchor" href="#zumime-0009000"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.1.0" id="zumime-010">zumime 0.1.0<a class="anchor" aria-label="anchor" href="#zumime-010"></a></h2>
 <ul><li>Initial CRAN submission.</li>
+</ul><p>zumime tells what a file is from its bytes and from its name, with no dependency and no system library.</p>
+<ul><li>
+<code><a href="../reference/mime_sniff.html">mime_sniff()</a></code> runs the WHATWG MIME Sniffing Standard over a raw vector or paths, with a supplied type, the no-sniff flag and a sniffing context, and reports the charset the bytes declare and their line endings.</li>
+<li>Beyond the standard, in the default context, container readers tell Office Open XML (with its macro-enabled, template and slideshow variants), OpenDocument, EPUB, JAR and APK from plain ZIP; Word, Excel, PowerPoint, Outlook and installer files from OLE2; MP4, M4A, M4V, QuickTime, 3GP, HEIC, HEIF and AVIF by their brands; WebM from Matroska; and Ogg codecs. R’s own RDS and RData files are recognised through gzip, as are Parquet, Arrow, fst, qs2, SQLite, DuckDB, HDF5, NetCDF, Stata, SPSS and SAS files, executables and common archives.</li>
+<li>Structured text is typed at <code>"probable"</code>: XML dialects by root element and namespace, JSON and its dialects by top-level keys, NDJSON, line formats such as vCard, iCalendar, WebVTT and PEM, and scripts by their shebang.</li>
 <li>
-<code><a href="../reference/zumime_info.html">zumime_info()</a></code> reports the package version and the version of the type tables.</li>
-<li>A type registry generated from IANA’s media types registry and Apache httpd’s <code>mime.types</code>, with parents ending at <code>application/octet-stream</code> and aliases. <code><a href="../reference/mime_types.html">mime_types()</a></code> returns it; <code>zumime_info()$table_version</code> is the date of its sources.</li>
+<code><a href="../reference/mime_type.html">mime_type()</a></code> types paths from bytes and name in one C loop, says whether the two agree, and reports what a consumer needs before opening a file: the type inside a compression wrapper, encryption, completeness (with <code>complete = TRUE</code>), line endings and a script’s interpreter. Directories, FIFOs, devices and sockets are typed <code>inode/*</code> without being opened.</li>
 <li>
-<code><a href="../reference/mime_guess.html">mime_guess()</a></code> guesses a type from a file name, knowing compound suffixes such as <code>.tar.gz</code>; <code><a href="../reference/mime_extensions.html">mime_extensions()</a></code> is the reverse.</li>
+<code><a href="../reference/mime_check.html">mime_check()</a></code> answers whether files are one of a set of allowed types from their bytes alone, with the same answer as <code><a href="../reference/mime_type.html">mime_type()</a></code>.</li>
 <li>
-<code><a href="../reference/mime_parent.html">mime_parent()</a></code> gives a type’s lineage and <code><a href="../reference/mime_is.html">mime_is()</a></code> tests whether a type is, or descends from, a type, an alias or a top-level type.</li>
+<code><a href="../reference/mime_sniffer.html">mime_sniffer()</a></code>, <code><a href="../reference/mime_sniffer.html">mime_push()</a></code> and <code><a href="../reference/mime_sniffer.html">mime_finish()</a></code> sniff a stream chunk by chunk and answer as soon as the bytes decide the type.</li>
+<li>A type registry generated from IANA’s media types registry and Apache httpd’s <code>mime.types</code>: <code><a href="../reference/mime_types.html">mime_types()</a></code>, <code><a href="../reference/mime_guess.html">mime_guess()</a></code>, <code><a href="../reference/mime_extensions.html">mime_extensions()</a></code>, <code><a href="../reference/mime_parent.html">mime_parent()</a></code> and <code><a href="../reference/mime_is.html">mime_is()</a></code>. Every type has a parent, ending at <code>application/octet-stream</code>; <code>zumime_info()$table_version</code> dates the sources.</li>
 <li>
-<code><a href="../reference/mime_parse.html">mime_parse()</a></code> and <code><a href="../reference/mime_parse.html">mime_format()</a></code> parse and serialise a MIME type as the WHATWG MIME Sniffing Standard defines it.</li>
+<code><a href="../reference/mime_parse.html">mime_parse()</a></code> and <code><a href="../reference/mime_parse.html">mime_format()</a></code> parse and serialise a MIME type as the WHATWG standard defines it.</li>
 <li>
-<code><a href="../reference/mime_sniff.html">mime_sniff()</a></code> runs the WHATWG MIME Sniffing Standard’s algorithm over a raw vector, with a supplied type, the no-sniff flag and a sniffing context, and reports the charset the bytes declare and their line endings. Beyond the standard it knows the compression wrappers, tar, ISO 9660 images, RAR 5, 7z, fonts and WebAssembly.</li>
-<li>In the default <code>"none"</code> context <code><a href="../reference/mime_sniff.html">mime_sniff()</a></code> reads containers: ZIP entry names tell Office Open XML (with its macro-enabled, template and slideshow variants), OpenDocument, EPUB, JAR, APK and 3MF documents from plain ZIP; OLE2 directories tell Word, Excel, PowerPoint, Outlook and installer files; ISO base media brands tell MP4, M4A, M4V, QuickTime, 3GP, HEIC, HEIF, AVIF and CR3 apart; EBML and Ogg headers name their codecs.</li>
-<li>R’s own files are recognised through gzip: RDS and RData, as are Parquet, Arrow and Feather, fst, qs2, SQLite, DuckDB, HDF5, NetCDF, Stata, SPSS and SAS files.</li>
-<li>Structured text is typed at <code>"probable"</code>: XML dialects by root element and namespace, JSON and its dialects by top-level keys, NDJSON, and line-oriented formats such as vCard, iCalendar, WebVTT and PEM.</li>
-<li>
-<code>encrypted</code> reports ZIP entries encrypted with the classic flag or AES, and OLE2 files holding an <code>EncryptionInfo</code> stream; <code>interpreter</code> names a script’s shebang program.</li>
-<li>
-<code>text/xml</code> is now an alias of <code>application/xml</code>.</li>
-<li>
-<code><a href="../reference/mime_type.html">mime_type()</a></code> types files from their bytes and their names in one C loop, says whether the two agree, and reports what a consumer needs to open each file: the type inside a compression wrapper (<code>inner</code>), whether it is encrypted, whether it is complete (<code>complete = TRUE</code> reads the end of ZIP, PDF, gzip and Parquet files), its line endings and a script’s interpreter. Unreadable paths are <code>NA</code> rows unless <code>strict = TRUE</code>.</li>
-<li>
-<code><a href="../reference/mime_sniff.html">mime_sniff()</a></code> also takes paths.</li>
-<li>
-<code><a href="../reference/mime_check.html">mime_check()</a></code> answers whether files are one of a set of allowed types from their bytes alone, faster than <code><a href="../reference/mime_type.html">mime_type()</a></code> and always with the same answer.</li>
-<li>
-<code><a href="../reference/mime_register.html">mime_register()</a></code> and <code><a href="../reference/mime_register.html">mime_unregister()</a></code> add a type for the session, detected by a byte rule in C or by an R function.</li>
-<li>Optional help from the family, never consulted unless asked: <code>inner = "decompress"</code> (zukomp), <code>text = "family"</code> (zucsv, zujson, zutoml) and <code>charset = "detect"</code> (zuutf). <code>zumime_info()$family</code> lists the family sniffers available.</li>
-<li>
-<code><a href="../reference/mime_sniffer.html">mime_sniffer()</a></code>, <code><a href="../reference/mime_sniffer.html">mime_push()</a></code> and <code><a href="../reference/mime_sniffer.html">mime_finish()</a></code> sniff a stream chunk by chunk and answer as soon as the bytes seen decide the type.</li>
+<code><a href="../reference/mime_register.html">mime_register()</a></code> and <code><a href="../reference/mime_register.html">mime_unregister()</a></code> add a type for the session.</li>
+<li>Optional help from the family, used only when asked: <code>inner = "decompress"</code> (zukomp), <code>text = "family"</code> (zucsv, zujson, zutoml) and <code>charset = "detect"</code> (zuutf).</li>
 </ul></div>
   </main></div>
 
