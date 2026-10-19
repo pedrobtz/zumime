@@ -197,6 +197,30 @@ test_that("mime_sniff() reads paths through the same loop", {
   expect_identical(r$type, "text/csv")
 })
 
+test_that("a supplied charset reaches text rows on the path route", {
+  dir <- local_tree(list(a.txt = "hello world\n", b = "<html><body>x"))
+  r <- mime_sniff(file.path(dir, c("a.txt", "b")),
+    type = "text/plain; charset=Shift_JIS")
+  expect_identical(r$type, c("text/plain", "text/plain"))
+  expect_identical(r$charset, c("Shift_JIS", "Shift_JIS"))
+})
+
+test_that("an unregistered text/ type keeps a charset on every route", {
+  x <- charToRaw("hello world\n")
+  dir <- local_tree(list(a.txt = x))
+  type <- "text/x-zt-unknown"
+  raw_route <- mime_sniff(x, type = type, no_sniff = TRUE)
+  path_route <- mime_sniff(file.path(dir, "a.txt"), type = type,
+    no_sniff = TRUE)
+  s <- mime_sniffer(type = type, no_sniff = TRUE)
+  expect_null(mime_push(s, x))
+  stream_route <- mime_finish(s)
+  for (r in list(raw_route, path_route, stream_route)) {
+    expect_identical(r$type, type)
+    expect_identical(r$charset, "UTF-8")
+  }
+})
+
 test_that("mime_type() rejects malformed arguments", {
   expect_error(mime_type(1), class = "zumime_type_error")
   expect_error(mime_type("a", inner = "zip"), class = "zumime_type_error")
