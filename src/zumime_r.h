@@ -35,7 +35,15 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
 SEXP zumime_register_type(SEXP name, SEXP parent, SEXP offset, SEXP bytes,
                           SEXP mask);
 SEXP zumime_unregister_type(SEXP name);
-SEXP zumime_check(SEXP x, SEXP limit, SEXP related);
+SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
+                  SEXP min_confidence);
 SEXP zumime_probe_count(void);
+SEXP zumime_stream_new(SEXP limit);
+SEXP zumime_stream_state(SEXP s);
+SEXP zumime_stream_buffer(SEXP s);
+SEXP zumime_stream_push(SEXP s, SEXP chunk, SEXP final, SEXP limit,
+                        SEXP supplied, SEXP apache_bug, SEXP no_sniff,
+                        SEXP context, SEXP hold);
+SEXP zumime_stream_bytewise(SEXP x, SEXP limit);
 
 #endif

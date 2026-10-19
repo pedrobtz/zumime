@@ -175,9 +175,12 @@ static int completeness(FILE *f, int64_t size, const unsigned char *head,
 
 /* Sniff one path into *out. head is a buffer of head_cap bytes (limit > 0);
  * with limit 0 the whole file is read into a buffer of its own. */
+typedef int (*base_gate)(void *ctx, int base);
+
 static void sniff_path(const char *path, size_t limit, int want_complete,
                        const zumime_input *proto, unsigned char *head,
-                       path_result *out) {
+                       path_result *out, base_gate gate, void *gate_ctx,
+                       int *gated_out) {
   memset(out, 0, sizeof(*out));
   out->complete = -1;
   out->r.encrypted = -1;
@@ -229,6 +232,17 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
 
   zumime_input in = *proto;
   in.truncated = (int64_t) head_len < size;
+  if (gate != NULL) {
+    zumime_input b = in;
+    b.base_only = 1;
+    zumime_sniff(head, head_len, &b, &out->r);
+    if (!gate(gate_ctx, out->r.type)) {
+      *gated_out = 1;
+      free(own);
+      fclose(f);
+      return;
+    }
+  }
   unsigned char *tail = NULL;
   if (in.truncated && proto->context == ZUMIME_CTX_NONE && !proto->base_only &&
       head_len >= 4 && memcmp(head, "PK\x03\x04", 4) == 0) {
@@ -315,7 +329,7 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
 #else
       const char *p = Rf_translateChar(s); /* the native encoding */
 #endif
-      sniff_path(p, lim, want_complete, &proto, head, &pr);
+      sniff_path(p, lim, want_complete, &proto, head, &pr, NULL, NULL, NULL);
     }
     const zumime_result *r = &pr.r;
     if (pr.failed) {
@@ -353,48 +367,62 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
   return out;
 }
 
-/* --- mime_check()'s first pass (design D15) ------------------------------
- * For each input, the type the standard and the extra rows give, before any
+/* --- mime_check() (design D15) ---------------------------------------------
+ * For each input, the type the standard and the extra rows give before any
  * reader runs. A reader only ever refines that type into a descendant (or
- * gzip into R's formats), so an input whose base type is related to no
- * allowed type cannot end as one, and R skips the full answer for it.
- * `related` holds, per allowed type, the ids of the types related to it.
+ * gzip into R's formats), so an input whose first answer is related to no
+ * allowed type cannot end as one: it is FALSE without the readers, the tail
+ * reads or the frame. For the others the full answer is computed in the
+ * same pass and tested against the allowed types.
+ *
+ * `related` holds, per allowed type, the sorted ids of the types related to
+ * it; `within`, the sorted ids of the types that are it or descend from it.
  * One probe is counted per allowed type tested, in a static counter. */
 
 static double probes = 0;
 
 SEXP zumime_probe_count(void) { return Rf_ScalarReal(probes); }
 
-/* 1 when base is in the related set of some allowed type, 0 when in none;
- * counts the probes made. */
-static int related_to_any(int base, SEXP related) {
-  R_xlen_t na = XLENGTH(related);
-  for (R_xlen_t a = 0; a < na; a++) {
-    probes++;
-    SEXP ids = VECTOR_ELT(related, a);
-    const int *p = INTEGER(ids);
-    R_xlen_t n = XLENGTH(ids);
-    R_xlen_t lo = 0, hi = n - 1; /* sorted ascending */
-    while (lo <= hi) {
-      R_xlen_t mid = lo + (hi - lo) / 2;
-      if (p[mid] == base) return 1;
-      if (p[mid] < base)
-        lo = mid + 1;
-      else
-        hi = mid - 1;
-    }
+static int in_sorted(SEXP ids, int x) {
+  const int *p = INTEGER(ids);
+  R_xlen_t lo = 0, hi = XLENGTH(ids) - 1;
+  while (lo <= hi) {
+    R_xlen_t mid = lo + (hi - lo) / 2;
+    if (p[mid] == x) return 1;
+    if (p[mid] < x)
+      lo = mid + 1;
+    else
+      hi = mid - 1;
   }
   return 0;
 }
 
-/* x: character paths or one raw vector. Returns an integer per input: 1
- * related, 0 not, NA unreadable. */
-SEXP zumime_check(SEXP x, SEXP limit, SEXP related) {
+static int related_to_any(void *ctx, int base) {
+  SEXP related = (SEXP) ctx;
+  R_xlen_t na = XLENGTH(related);
+  for (R_xlen_t a = 0; a < na; a++) {
+    probes++;
+    if (in_sorted(VECTOR_ELT(related, a), base)) return 1;
+  }
+  return 0;
+}
+
+static int allowed(SEXP within, int type, int confidence, int min_conf) {
+  if (confidence < min_conf) return 0;
+  for (R_xlen_t a = 0; a < XLENGTH(within); a++)
+    if (in_sorted(VECTOR_ELT(within, a), type)) return 1;
+  return 0;
+}
+
+/* x: character paths or one raw vector. Returns a logical per input; NA
+ * for an unreadable path (R applies the confidence floor). */
+SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
+                  SEXP min_confidence) {
   size_t lim = (size_t) REAL(limit)[0];
+  int min_conf = INTEGER(min_confidence)[0];
   zumime_input proto;
   memset(&proto, 0, sizeof(proto));
   proto.context = ZUMIME_CTX_NONE;
-  proto.base_only = 1;
 
   if (TYPEOF(x) == RAWSXP) {
     size_t len = (size_t) XLENGTH(x);
@@ -403,19 +431,23 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related) {
       len = lim;
       in.truncated = 1;
     }
+    zumime_input b = in;
+    b.base_only = 1;
     zumime_result r;
+    zumime_sniff(RAW(x), len, &b, &r);
+    if (!related_to_any(related, r.type)) return Rf_ScalarLogical(0);
     zumime_sniff(RAW(x), len, &in, &r);
-    return Rf_ScalarInteger(related_to_any(r.type, related));
+    return Rf_ScalarLogical(allowed(within, r.type, r.confidence, min_conf));
   }
 
   R_xlen_t n = XLENGTH(x);
-  SEXP out = PROTECT(Rf_allocVector(INTSXP, n));
+  SEXP out = PROTECT(Rf_allocVector(LGLSXP, n));
   unsigned char *head = lim > 0 ? (unsigned char *) R_alloc(lim, 1) : NULL;
   for (R_xlen_t i = 0; i < n; i++) {
     if (i > 0 && i % 256 == 0) R_CheckUserInterrupt();
     SEXP s = STRING_ELT(x, i);
     if (s == NA_STRING) {
-      INTEGER(out)[i] = NA_INTEGER;
+      LOGICAL(out)[i] = NA_LOGICAL;
       continue;
     }
 #ifdef _WIN32
@@ -424,8 +456,15 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related) {
     const char *p = Rf_translateChar(s);
 #endif
     path_result pr;
-    sniff_path(p, lim, 0, &proto, head, &pr);
-    INTEGER(out)[i] = pr.failed ? NA_INTEGER : related_to_any(pr.r.type, related);
+    int gated = 0;
+    sniff_path(p, lim, 0, &proto, head, &pr, related_to_any, (void *) related,
+               &gated);
+    if (pr.failed)
+      LOGICAL(out)[i] = NA_LOGICAL;
+    else if (gated)
+      LOGICAL(out)[i] = 0;
+    else
+      LOGICAL(out)[i] = allowed(within, pr.r.type, pr.r.confidence, min_conf);
   }
   UNPROTECT(1);
   return out;

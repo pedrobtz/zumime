@@ -15,8 +15,13 @@ static const R_CallMethodDef call_methods[] = {
   {"zumime_sniff_paths", (DL_FUNC) &zumime_sniff_paths, 7},
   {"zumime_register_type", (DL_FUNC) &zumime_register_type, 5},
   {"zumime_unregister_type", (DL_FUNC) &zumime_unregister_type, 1},
-  {"zumime_check", (DL_FUNC) &zumime_check, 3},
+  {"zumime_check", (DL_FUNC) &zumime_check, 5},
   {"zumime_probe_count", (DL_FUNC) &zumime_probe_count, 0},
+  {"zumime_stream_new", (DL_FUNC) &zumime_stream_new, 1},
+  {"zumime_stream_state", (DL_FUNC) &zumime_stream_state, 1},
+  {"zumime_stream_buffer", (DL_FUNC) &zumime_stream_buffer, 1},
+  {"zumime_stream_push", (DL_FUNC) &zumime_stream_push, 9},
+  {"zumime_stream_bytewise", (DL_FUNC) &zumime_stream_bytewise, 2},
   {NULL, NULL, 0}
 };
 
