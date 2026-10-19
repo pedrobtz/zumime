@@ -68,7 +68,7 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
   sets <- related_sets(allowed)
   out <- .Call(
     zumime_check,
-    path.expand(x),
+    if (is.character(x)) path.expand(x) else x,
     limit,
     lapply(sets, `[[`, "related"),
     lapply(sets, `[[`, "within"),
