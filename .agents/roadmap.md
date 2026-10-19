@@ -20,7 +20,7 @@ lands in Stage 1 with the tables it covers.
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | [#13](https://github.com/pedrobtz/zumime/pull/13) | 2026-10-19 |
 | 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | [#14](https://github.com/pedrobtz/zumime/pull/14) | 2026-10-19 |
 | 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | [#15](https://github.com/pedrobtz/zumime/pull/15) | 2026-10-19 |
-| 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | | |
+| 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | [#16](https://github.com/pedrobtz/zumime/pull/16) | 2026-10-19 |
 | 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | | |
 | 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | | |
 | 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | | |
@@ -286,6 +286,39 @@ the bytes `mime_sniff()` already read.
 - Every reader has a from-bytes test; the suite passes with the fixture
   directory absent.
 - Quick profile green.
+
+**Decisions and deviations (2026-10-19).**
+
+- **The `text = "family"` hooks move to Stage 4.** `zucsv::sniff_csv()`
+  reads a file path, not bytes, and the `text` argument belongs to
+  `mime_type()`, which Stage 4 builds over paths.
+- **A refinement must descend from the type it refines**, so a prefix is
+  always typed as an ancestor of the whole (design §9). This fixes the
+  hierarchy: `text/xml` is an alias of `application/xml`; M4A, M4V and 3GP
+  sit under `video/mp4`; Ogg codecs under `application/ogg`; OOXML
+  variants under their document type; PostScript and script types under
+  `text/plain`. The one exception is gzip-wrapped RDS and RData, typed as
+  R's formats; Stage 5's prefix property allows that step.
+- **Small additions beyond the named readers**, because the corpus
+  showed them cheap and exact: the OOXML variants read from
+  `[Content_Types].xml` with a bounded inflater (written for zumime, as
+  D7 requires), APNG, JPEG-LS, QuickTime movies without an `ftyp` box, and
+  rows for executables (ELF, Mach-O, PE), TIFF, PSD, FLAC, AAC, AMR, SWF,
+  FLV, CAB, RPM, deb, ar, LZ4, lzip, compress, pcap, Avro, DICOM, JPEG XL,
+  Blender, ICNS, glTF binary, PST and EOT outside the font context.
+- **The MP3 frame size follows MPEG**: Layer III frames are 72 × bitrate /
+  rate for MPEG-2 and 2.5, where the standard and Mozilla use 144 for all.
+- **The `file-type` oracle compares through `mime_is()`**: a fixture
+  agrees when zumime's type equals file-type's or descends from it, as for
+  OLE2 documents file-type calls `application/x-cfb`. 182 of the 267
+  fixtures file-type answers agree; the 85 unclaimed ones are listed in
+  `helper-file-type.R` by reason, and the test fails if one starts to
+  agree. file-type's answers were dumped once with Node into that helper.
+- **A charset is reported only for text bytes**: a text type whose bytes
+  are binary (a DOS EPS header) has no charset unless a byte-order mark
+  explains them.
+- RIFF needs no reader: the standard's rows already decide WAVE, AVI and
+  WebP, and the AIFF-C row joins them.
 
 **Design.** §4 layer 3, §6.2 (containers), §6.4, §7.3, D6, D7.
 

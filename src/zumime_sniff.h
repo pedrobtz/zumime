@@ -76,6 +76,9 @@ enum zumime_confidence {
 /* The longest charset label kept; the Encoding Standard's longest is 23. */
 #define ZUMIME_LABEL_MAX 63
 
+/* The longest interpreter name kept from a shebang. */
+#define ZUMIME_INTERP_MAX 31
+
 /* Result type ids that are not registry ids. */
 #define ZUMIME_SUPPLIED (-2) /* the computed type is the supplied type */
 
@@ -106,6 +109,11 @@ typedef struct {
   int no_sniff;
   int context;    /* enum zumime_context */
   int truncated;  /* the buffer was cut by the read limit */
+  /* Optional: the end of the file, read separately (design section 6.2,
+   * the ZIP tail). tail_off is its offset in the file. NULL for none. */
+  const unsigned char *tail;
+  size_t tail_len;
+  uint64_t tail_off;
 } zumime_input;
 
 typedef struct {
@@ -114,6 +122,8 @@ typedef struct {
   int charset;    /* enum zumime_charset */
   char cs_label[ZUMIME_LABEL_MAX + 1]; /* for ZUMIME_CS_DECLARED */
   int newline;    /* enum zumime_newline */
+  int encrypted;  /* -1 unknown, 0 no, 1 yes */
+  char interpreter[ZUMIME_INTERP_MAX + 1]; /* a shebang's program, or "" */
 } zumime_result;
 
 void zumime_sniff(const unsigned char *buf, size_t len, const zumime_input *in,
@@ -130,7 +140,41 @@ int zumime_type_is(int type, int ancestor);
 /* Registry id of a canonical type name, or -1. */
 int zumime_type_lookup(const char *name);
 
-/* --- Charset and newlines (zumime_text.c) -------------------------------- */
+/* --- Container and text readers (design section 4, layer 3) -------------
+ * Each takes the bytes in hand and returns a registry id that refines the
+ * current type, or -1. zumime_refine() (zumime_refine.c) chooses the reader
+ * and accepts only an answer that descends from the current type. */
+
+void zumime_refine(const unsigned char *buf, size_t len, const zumime_input *in,
+                   zumime_result *out);
+
+int zumime_read_zip(const unsigned char *head, size_t hlen, int head_is_whole,
+                    const unsigned char *tail, size_t tail_len,
+                    uint64_t tail_off, int *encrypted);
+int zumime_read_ole2(const unsigned char *buf, size_t len, int *encrypted);
+int zumime_read_bmff(const unsigned char *buf, size_t len);
+int zumime_read_png(const unsigned char *buf, size_t len);
+int zumime_read_ebml(const unsigned char *buf, size_t len);
+int zumime_read_ogg(const unsigned char *buf, size_t len);
+int zumime_read_gzip_rdata(const unsigned char *buf, size_t len);
+int zumime_read_text(const unsigned char *buf, size_t len, int current,
+                     int truncated, char *interpreter);
+
+/* Inflate a raw DEFLATE stream into dst, stopping when dst is full, the
+ * stream ends, or the input runs out. Returns the bytes written. */
+size_t zumime_inflate(const unsigned char *src, size_t slen, unsigned char *dst,
+                      size_t dlen);
+
+/* Little helpers shared by the readers. */
+static inline uint16_t zumime_le16(const unsigned char *p) {
+  return (uint16_t) (p[0] | (p[1] << 8));
+}
+static inline uint32_t zumime_le32(const unsigned char *p) {
+  return (uint32_t) p[0] | ((uint32_t) p[1] << 8) | ((uint32_t) p[2] << 16) |
+         ((uint32_t) p[3] << 24);
+}
+
+/* --- Charset and newlines (zumime_charset.c) ----------------------------- */
 
 /* Fill out->charset (and cs_label) and may lower out->confidence to
  * probable for the C1 guess. is_xml/is_html select the declaration rules. */

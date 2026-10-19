@@ -9,6 +9,7 @@
 set -eu
 
 WPT_COMMIT=0f195499f06d0833e768b01a1a8ce942b8622fc8
+FILE_TYPE_COMMIT=11e0d6473a37972e4d39d8d6c1c9d1b85b9ace25 # v22.2.0
 WPT_BASE=https://raw.githubusercontent.com/web-platform-tests/wpt/$WPT_COMMIT/mimesniff/mime-types/resources
 
 dest=tests/testthat/fixtures
@@ -18,3 +19,14 @@ for f in mime-types.json generated-mime-types.json; do
 done
 echo "$WPT_COMMIT" > "$dest/wpt/COMMIT"
 echo "fetched web-platform-tests mimesniff fixtures at $WPT_COMMIT"
+
+# file-type's fixture/ directory, from the tarball at the pinned commit.
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+curl -sSfL -o "$tmp/ft.tar.gz" \
+  "https://codeload.github.com/sindresorhus/file-type/tar.gz/$FILE_TYPE_COMMIT"
+tar -xzf "$tmp/ft.tar.gz" -C "$tmp" "file-type-$FILE_TYPE_COMMIT/fixture"
+rm -rf "$dest/file-type"
+mv "$tmp/file-type-$FILE_TYPE_COMMIT/fixture" "$dest/file-type"
+echo "$FILE_TYPE_COMMIT" > "$dest/file-type/COMMIT"
+echo "fetched file-type fixtures at $FILE_TYPE_COMMIT"

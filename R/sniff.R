@@ -73,7 +73,9 @@ mime_sniff <- function(x, type = NULL, no_sniff = FALSE,
     type = out_type,
     confidence = res[[2]],
     charset = charset,
-    newline = res[[4]]
+    encrypted = res[[6]],
+    newline = res[[4]],
+    interpreter = res[[7]]
   )
 }
 

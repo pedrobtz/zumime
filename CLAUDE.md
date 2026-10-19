@@ -123,10 +123,17 @@ See `.agents/design.md` §4; this section records what has landed.
 - **Sniffer core (layer 2).** `src/zumime_sniff.h` declares it;
   `zumime_table.c` holds the signature rows (the standard's tables in its
   order, then zumime's `EXTRA` rows), `zumime_sniff.c` the algorithm,
-  `zumime_text.c` the charset chain and newline style. These files include
+  `zumime_charset.c` the charset chain and newline style. These files include
   no R header and must compile with `-std=c11 -Wall -Wextra -pedantic`
   (`test-standalone.R`). `src/zumime_r.c` is the R glue and the only place
   a type id becomes a `CHARSXP`.
+- **Readers (layer 3).** `zumime_refine.c` runs after the standard's
+  answer in the `"none"` context and hands the bytes to one reader:
+  `zumime_zip.c`, `zumime_ole2.c`, `zumime_bmff.c`, `zumime_ebml.c`,
+  `zumime_ogg.c`, `zumime_png.c`, `zumime_rdata.c` (gzip through
+  `zumime_inflate.c`), `zumime_text.c` (structured text). A reader's answer
+  is kept only when it descends from the current type; add a parent in
+  `tools/types.yaml` rather than an exception.
 - **Native layer.** `src/init.c` registers every `.Call` entry point,
   declared in `src/zumime_r.h`, which also has `zumime_scalar_string()`:
   never pass a fresh `CHARSXP` to `Rf_ScalarString()` unprotected. `src/mime_record.c` is the WHATWG MIME
@@ -174,12 +181,15 @@ stage establishes it.
   Use it as an oracle rather than inventing cases by hand. The design's
   section 7 names three: web-platform-tests' `mimesniff/` fixtures for
   parsing, Go's `net/http` sniff cases for the WHATWG table, and
-  `file-type`'s fixtures for containers. The WPT fixtures are wired in
-  through `tools/fetch-fixtures`; Go's cases live in `helper-go-sniff.R`.
+  `file-type`'s fixtures for containers. All three are wired in: WPT and
+  `file-type` fixtures through `tools/fetch-fixtures`, Go's cases in
+  `helper-go-sniff.R`.
 - **Helpers live in `tests/testthat/helper-*.R`.** `helper-abi.R` (symbol
   audit), `helper-tables.R` (`source_root()`), `helper-fixtures.R`
   (`fixture_dir()`, `wpt_mime_entries()`), `helper-bytes.R` (byte
-  builders), `helper-go-sniff.R` (Go's sniff cases).
+  builders), `helper-go-sniff.R` (Go's sniff cases), `helper-containers.R`
+  (ZIP, OLE2, ftyp, Ogg and EBML builders), `helper-file-type.R`
+  (file-type's answers and the unclaimed fixtures).
 - **Keep the suite inside the CRAN time budget.** Only the scaffold's
   placeholder test exists; no runtime to report.
 

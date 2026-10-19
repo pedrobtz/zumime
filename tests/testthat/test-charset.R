@@ -17,7 +17,7 @@ test_that("a byte-order mark decides", {
 test_that("an XML declaration names the encoding", {
   xml <- charToRaw("<?xml version=\"1.0\" encoding='ISO-8859-2'?><a/>")
   r <- mime_sniff(xml)
-  expect_identical(r$type, "text/xml")
+  expect_identical(r$type, "application/xml")
   expect_identical(r$charset, "ISO-8859-2")
   expect_identical(sniff_charset(charToRaw("<?xml version=\"1.0\"?><a/>")), "UTF-8")
 })

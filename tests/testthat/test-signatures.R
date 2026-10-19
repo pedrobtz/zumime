@@ -9,7 +9,8 @@ test_that("every signature row matches an input generated from it", {
     got <- sniff_row(rows, i, row_input(rows, i))
     expect_true(mime_is(got$type, rows$type[i]),
       info = paste(i, rows$type[i], got$type))
-    expect_identical(as.character(got$confidence), "definite", info = i)
+    expect_identical(as.character(got$confidence), "definite",
+      info = paste(i, rows$type[i]))
   }
 })
 
