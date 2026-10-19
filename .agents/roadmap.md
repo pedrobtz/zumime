@@ -25,7 +25,7 @@ lands in Stage 1 with the tables it covers.
 | 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | [#18](https://github.com/pedrobtz/zumime/pull/18) | 2026-10-19 |
 | 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | [#19](https://github.com/pedrobtz/zumime/pull/19) | 2026-10-19 |
 | 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | [#20](https://github.com/pedrobtz/zumime/pull/20) | 2026-10-19 |
-| 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | | |
+| 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | [#61](https://github.com/pedrobtz/zumime/pull/61) | 2026-10-19 |
 
 ## Stage 0 — Package identity
 
@@ -576,6 +576,21 @@ every leg.
 - A full-profile r-actions run green on the release commit.
 - Both review skills have run and left no open finding.
 - `urlchecker` and `spelling` clean.
+
+**Record (2026-10-19).**
+
+- `pkg-critical-review` ran on `f519de7` with Posit's
+  critical-code-reviewer, review-testing and r-tidyverse-style, and filed
+  #21–#59. The blocking and required findings (#21–#24, #33–#42) are fixed
+  in #60; the suggestions, questions and notes stay open for after 0.1.0.
+- `pkg-cran-review` found three items, all fixed here: the `Description`
+  expanded its acronyms (WHATWG, MIME, IANA) and dropped the format
+  acronyms; the README installs from CRAN first; `cran-comments.md` names
+  the `nosuggests` and `nold` legs.
+- Local `R CMD check --as-cran` on the tarball: 0 errors, 0 warnings, the
+  "New submission" note, and a "future file timestamps" note from a time
+  service the local machine could not reach. `urlchecker` and `spelling`
+  clean.
 
 **Design.** §12.
 

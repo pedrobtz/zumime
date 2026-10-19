@@ -5,6 +5,7 @@ CR
 DuckDB
 EBML
 EPUB
+FIFOs
 HDF
 HEIC
 HEIF
@@ -13,6 +14,7 @@ IANA's
 LZ
 Lifecycle
 MF
+Multipurpose
 NDJSON
 NetCDF
 PEM
@@ -23,6 +25,7 @@ SQLite
 Stata
 WHATWG
 WebAssembly
+WebM
 WebVTT
 allowlist
 allowlists
