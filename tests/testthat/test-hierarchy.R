@@ -19,15 +19,19 @@ test_that("mime_is() counts descendants", {
 
 test_that("mime_is() is vectorised over x and any-of over what", {
   expect_identical(
-    mime_is(c("image/png", "application/pdf", NA, "foo/bar"),
-      c("application/pdf", "image")),
+    mime_is(
+      c("image/png", "application/pdf", NA, "foo/bar"),
+      c("application/pdf", "image")
+    ),
     c(TRUE, TRUE, NA, FALSE)
   )
 })
 
 test_that("everything is application/octet-stream", {
-  expect_true(all(mime_is(c("image/png", "foo/bar", "text/plain"),
-    "application/octet-stream")))
+  expect_true(all(mime_is(
+    c("image/png", "foo/bar", "text/plain"),
+    "application/octet-stream"
+  )))
 })
 
 test_that("mime_parent() gives the lineage nearest first", {

@@ -32,9 +32,14 @@ mime_parse <- function(x, strict = FALSE) {
   if (strict) {
     bad <- which(vapply(out, is.null, logical(1)) & !is.na(x))
     if (length(bad)) {
-      zumime_abort("parse", sprintf(
-        "Input %d is not a valid MIME type: \"%s\".", bad[1], x[bad[1]]
-      ))
+      zumime_abort(
+        "parse",
+        sprintf(
+          "Input %d is not a valid MIME type: \"%s\".",
+          bad[1],
+          x[bad[1]]
+        )
+      )
     }
   }
   out
@@ -44,27 +49,40 @@ mime_parse <- function(x, strict = FALSE) {
 #' @rdname mime_parse
 #' @export
 mime_format <- function(record) {
-  if (is_record(record)) record <- list(record)
-  if (!is.list(record) ||
-    !all(vapply(record, function(r) is.null(r) || is_record(r), TRUE))) {
-    zumime_abort("type",
-      "`record` must be a record from `mime_parse()` or a list of them.")
+  if (is_record(record)) {
+    record <- list(record)
+  }
+  if (
+    !is.list(record) ||
+      !all(vapply(record, function(r) is.null(r) || is_record(r), TRUE))
+  ) {
+    zumime_abort(
+      "type",
+      "`record` must be a record from `mime_parse()` or a list of them."
+    )
   }
   record <- lapply(record, function(r) {
-    if (is.null(r)) return(NULL)
+    if (is.null(r)) {
+      return(NULL)
+    }
     p <- r$parameters
     list(
       enc2utf8(r$type),
       enc2utf8(r$subtype),
-      structure(lapply(p, enc2utf8), names = enc2utf8(names(p) %||% character()))
+      structure(
+        lapply(p, enc2utf8),
+        names = enc2utf8(names(p) %||% character())
+      )
     )
   })
   .Call(zumime_mime_format, record)
 }
 
 is_record <- function(r) {
-  is.list(r) && !is.null(r$type) &&
-    is_string(r$type) && is_string(r$subtype) &&
+  is.list(r) &&
+    !is.null(r$type) &&
+    is_string(r$type) &&
+    is_string(r$subtype) &&
     is.list(r$parameters) &&
     all(vapply(r$parameters, is_string, TRUE)) &&
     (length(r$parameters) == 0L || !is.null(names(r$parameters)))

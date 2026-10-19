@@ -13,8 +13,11 @@ test_that("mime_parse() unescapes quoted values and keeps the first duplicate", 
 })
 
 test_that("mime_format() quotes empty and non-token values", {
-  rec <- list(type = "a", subtype = "b",
-    parameters = list(e = "", s = "a b", t = "tok"))
+  rec <- list(
+    type = "a",
+    subtype = "b",
+    parameters = list(e = "", s = "a b", t = "tok")
+  )
   expect_identical(mime_format(rec), "a/b;e=\"\";s=\"a b\";t=tok")
 })
 

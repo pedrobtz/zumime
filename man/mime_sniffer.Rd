@@ -44,12 +44,16 @@ returns the result.
 \description{
 \code{mime_sniffer()} starts an incremental sniffer; \code{mime_push()} hands it
 the next chunk and returns \code{NULL} while the bytes seen cannot yet decide
-the type, or the result row once they can, after which further pushes
-are ignored. \code{mime_finish()} forces an answer from what has been seen,
-as the end of a short stream would. The answer is the one
-\code{\link[=mime_sniff]{mime_sniff()}} gives for the same first \code{limit} bytes.
+the type, or the result row once they can. \code{mime_finish()} forces an
+answer from what has been seen, as the end of a short stream would. The
+answer is the one \code{\link[=mime_sniff]{mime_sniff()}} gives for the same first \code{limit} bytes.
 }
 \details{
+Once the sniffer has decided, further pushes ignore their chunks and
+return the same row. Once it has finished, a push raises a
+\code{zumime_state_error}; \code{mime_finish()} can still be called and returns
+the same row.
+
 The bytes decide when no longer signature could still override the
 match, the container reader for the type has what it needs, or \code{limit}
 bytes have arrived. Text decides only at \code{limit} or at the finish, since

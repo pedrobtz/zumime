@@ -1,8 +1,10 @@
 test_that("mime_check() answers from the bytes, never the name", {
   dir <- local_tree(list(photo.pdf = png_bytes(), real.pdf = pdf_bytes()))
   paths <- file.path(dir, c("photo.pdf", "real.pdf"))
-  expect_identical(mime_check(paths, c("application/pdf", "image/jpeg")),
-    c(FALSE, TRUE))
+  expect_identical(
+    mime_check(paths, c("application/pdf", "image/jpeg")),
+    c(FALSE, TRUE)
+  )
   expect_identical(mime_check(paths, "image"), c(TRUE, FALSE))
   expect_true(mime_check(png_bytes(), "image/png"))
   expect_false(mime_check(png_bytes(), "application/pdf"))

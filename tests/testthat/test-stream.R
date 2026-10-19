@@ -19,6 +19,13 @@ test_that("text decides only at the limit or the finish", {
   expect_identical(r$complete, NA)
 })
 
+test_that("a decided sniffer ignores further chunks", {
+  s <- mime_sniffer()
+  first <- mime_push(s, charToRaw("GIF89a"))
+  expect_identical(mime_push(s, charToRaw("more bytes")), first)
+  expect_output(print(s), "6 of 4096 bytes, decided")
+})
+
 test_that("a finished sniffer refuses pushes", {
   s <- mime_sniffer()
   mime_push(s, charToRaw("abc"))
@@ -43,7 +50,9 @@ test_that("the supplied type, no-sniff flag and context apply", {
 
 test_that("limit = 0 reads without bound until the finish", {
   s <- mime_sniffer(limit = 0)
-  for (i in 1:20) expect_null(mime_push(s, charToRaw(strrep("ab ", 300))))
+  for (i in 1:20) {
+    expect_null(mime_push(s, charToRaw(strrep("ab ", 300))))
+  }
   expect_output(print(s), "18000 of unlimited bytes, undecided")
   expect_identical(mime_finish(s)$type, "text/plain")
 })
@@ -61,9 +70,11 @@ test_that("a saved sniffer comes back undecided with its bytes", {
 test_that("each input decides at the whole's type, never past the limit", {
   for (name in names(stream_inputs())) {
     x <- stream_inputs()[[name]]
-    got <- .Call(zumime_stream_bytewise, x, 4096)
-    expect_identical(got[[2]], mime_sniff(x, limit = 4096)$type, info = name)
-    expect_lte(got[[1]], 4096)
+    # Inputs longer than 4096 bytes are read whole.
+    limit <- max(4096, length(x))
+    got <- .Call(zumime_stream_bytewise, x, limit)
+    expect_identical(got[[2]], mime_sniff(x, limit = limit)$type, info = name)
+    expect_lte(got[[1]], limit)
   }
   # Through the R API too, one byte at a time.
   for (name in c("pdf", "gif", "text", "html")) {
@@ -74,7 +85,9 @@ test_that("each input decides at the whole's type, never past the limit", {
       r <- mime_push(s, b)
       if (!is.null(r)) break
     }
-    if (is.null(r)) r <- mime_finish(s)
+    if (is.null(r)) {
+      r <- mime_finish(s)
+    }
     expect_identical(r$type, mime_sniff(x)$type, info = name)
   }
 })
@@ -83,9 +96,13 @@ test_that("early decisions happen where the bytes allow them", {
   n <- function(x) .Call(zumime_stream_bytewise, x, 4096)[[1]]
   expect_identical(n(stream_inputs()$pdf), 5)
   expect_identical(n(stream_inputs()$gif), 6)
+  expect_identical(n(stream_inputs()$jpeg), 4)
   # "MZ" waits until the tar row at 257 can no longer match.
   expect_identical(n(c(charToRaw("MZ"), raw(400))), 258)
-  expect_identical(n(stream_inputs()$text), as.numeric(length(stream_inputs()$text)))
+  expect_identical(
+    n(stream_inputs()$text),
+    as.numeric(length(stream_inputs()$text))
+  )
 })
 
 test_that("every fixture decides at the whole's type", {
@@ -105,7 +122,9 @@ test_that("every fixture decides at the whole's type", {
       r <- mime_push(s, x[k:min(k + 511, length(x))])
       if (!is.null(r)) break
     }
-    if (is.null(r)) r <- mime_finish(s)
+    if (is.null(r)) {
+      r <- mime_finish(s)
+    }
     expect_identical(r$type, want, info = paste("chunks:", basename(f)))
   }
 })

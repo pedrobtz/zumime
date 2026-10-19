@@ -128,6 +128,11 @@ go_sniff_cases <- function() {
 }
 
 hex_raw <- function(hex) {
-  if (!nzchar(hex)) return(raw())
-  as.raw(strtoi(substring(hex, seq(1, nchar(hex), 2), seq(2, nchar(hex), 2)), 16L))
+  if (!nzchar(hex)) {
+    return(raw())
+  }
+  as.raw(strtoi(
+    substring(hex, seq(1, nchar(hex), 2), seq(2, nchar(hex), 2)),
+    16L
+  ))
 }

@@ -2,16 +2,23 @@
 # on the class, never on the message.
 zumime_abort <- function(kind, message, call = sys.call(-1L)) {
   stop(structure(
-    class = c(paste0("zumime_", kind, "_error"), "zumime_error", "error",
-      "condition"),
+    class = c(
+      paste0("zumime_", kind, "_error"),
+      "zumime_error",
+      "error",
+      "condition"
+    ),
     list(message = message, call = call)
   ))
 }
 
 check_character <- function(x, arg = deparse(substitute(x))) {
   if (!is.character(x) && !(is.atomic(x) && all(is.na(x)))) {
-    zumime_abort("type", sprintf("`%s` must be a character vector.", arg),
-      call = sys.call(-1L))
+    zumime_abort(
+      "type",
+      sprintf("`%s` must be a character vector.", arg),
+      call = sys.call(-1L)
+    )
   }
   as.character(x)
 }

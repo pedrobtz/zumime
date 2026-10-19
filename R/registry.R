@@ -31,7 +31,9 @@ canonical_type <- function(x) {
 #' types[types$type == "application/zip", ]
 mime_types <- function() {
   reg <- session$types
-  if (!nrow(reg)) return(types_registry)
+  if (!nrow(reg)) {
+    return(types_registry)
+  }
   extra <- data.frame(
     type = reg$type,
     parent = reg$parent,
@@ -59,7 +61,9 @@ mime_extensions <- function(type) {
   type <- canonical_type(check_character(type))
   hit <- match(type, types_registry$type)
   out <- lapply(seq_along(type), function(k) {
-    if (!is.na(hit[k])) return(types_registry$extensions[[hit[k]]])
+    if (!is.na(hit[k])) {
+      return(types_registry$extensions[[hit[k]]])
+    }
     session$extensions[[type[k]]] %||% character()
   })
   out
@@ -120,8 +124,12 @@ lineage_table <- function() {
   acc <- lapply(seq_along(types), function(i) character())
   for (depth in seq_len(64)) {
     live <- which(!is.na(cur))
-    if (!length(live)) break
-    for (i in live) acc[[i]] <- c(acc[[i]], types[cur[i]])
+    if (!length(live)) {
+      break
+    }
+    for (i in live) {
+      acc[[i]] <- c(acc[[i]], types[cur[i]])
+    }
     cur[live] <- idx[cur[live]]
   }
   out[] <- acc
@@ -174,11 +182,18 @@ mime_is <- function(x, what) {
   what <- canonical_type(check_character(what))
   what <- what[!is.na(what)]
   u <- unique(x)
-  hit <- vapply(u, function(t) {
-    if (is.na(t)) return(NA)
-    known <- t %in% all_types()
-    family <- c(t, if (known) lineage(t) else "application/octet-stream")
-    any(family %in% what) || sub("/.*$", "", t) %in% what
-  }, logical(1), USE.NAMES = FALSE)
+  hit <- vapply(
+    u,
+    function(t) {
+      if (is.na(t)) {
+        return(NA)
+      }
+      known <- t %in% all_types()
+      family <- c(t, if (known) lineage(t) else "application/octet-stream")
+      any(family %in% what) || sub("/.*$", "", t) %in% what
+    },
+    logical(1),
+    USE.NAMES = FALSE
+  )
   hit[match(x, u)]
 }

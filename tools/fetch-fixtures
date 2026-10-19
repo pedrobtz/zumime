@@ -9,6 +9,7 @@
 set -eu
 
 WPT_COMMIT=0f195499f06d0833e768b01a1a8ce942b8622fc8
+# Bumping FILE_TYPE_COMMIT means running tools/dump-file-type-answers too.
 FILE_TYPE_COMMIT=11e0d6473a37972e4d39d8d6c1c9d1b85b9ace25 # v22.2.0
 WPT_BASE=https://raw.githubusercontent.com/web-platform-tests/wpt/$WPT_COMMIT/mimesniff/mime-types/resources
 

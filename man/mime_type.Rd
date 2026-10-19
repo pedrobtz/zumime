@@ -22,9 +22,10 @@ files.}
 
 \item{complete}{If \code{TRUE}, also read each file's end and fill
 \code{complete}: a ZIP needs its end-of-central-directory record, a PDF
-\verb{\%\%EOF} in its last kilobyte (and its trailer's \verb{/Encrypt} sets
-\code{encrypted}), a gzip stream must inflate to its trailer, and Parquet
-must end in \code{PAR1}. Other formats give \code{NA}.}
+\verb{\%\%EOF} in its last kilobyte, a gzip stream must inflate to its
+trailer, and Parquet must end in \code{PAR1}. Other formats give \code{NA}. A
+PDF is \code{encrypted} when its trailer dictionary, found in the last 4 KB,
+names \verb{/Encrypt}.}
 
 \item{inner}{How to find the type inside a compression wrapper (gzip,
 bzip2, xz, zstd, LZ4, lzip, compress): \code{"name"} takes it from the rest

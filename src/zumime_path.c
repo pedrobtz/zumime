@@ -120,6 +120,32 @@ static int find(const unsigned char *b, size_t len, const char *lit) {
   return 0;
 }
 
+/* The offset of the last occurrence of lit in b, or len when it is absent. */
+static size_t rfind(const unsigned char *b, size_t len, const char *lit) {
+  size_t n = strlen(lit);
+  for (size_t i = len >= n ? len - n + 1 : 0; i-- > 0;)
+    if (memcmp(b + i, lit, n) == 0) return i;
+  return len;
+}
+
+/* Does the PDF's trailer dictionary hold /Encrypt? A classic file's
+ * dictionary follows the last "trailer" keyword; a PDF 1.5 cross-reference
+ * stream's dictionary runs from its "obj" keyword to its "stream" keyword.
+ * Searching only there keeps a literal /Encrypt in page content from
+ * counting. When neither is in the tail, the whole tail is searched. */
+static int pdf_encrypted(const unsigned char *tail, size_t got) {
+  size_t at = rfind(tail, got, "trailer");
+  if (at < got) return find(tail + at, got - at, "/Encrypt");
+  size_t x = rfind(tail, got, "/XRef");
+  if (x < got) {
+    size_t from = rfind(tail, x, "obj");
+    if (from == x) from = 0;
+    size_t to = x + rfind(tail + x, got - x, "stream");
+    return find(tail + from, to - from, "/Encrypt");
+  }
+  return find(tail, got, "/Encrypt");
+}
+
 /* --- One path ---------------------------------------------------------------- */
 
 typedef struct {
@@ -193,7 +219,7 @@ static int completeness(FILE *f, int64_t size, const unsigned char *head,
     size_t n = size < 4096 ? (size_t) size : 4096;
     size_t got = read_at(f, size - (int64_t) n, tail, n);
     size_t last = got < 1024 ? got : 1024;
-    r->encrypted = find(tail, got, "/Encrypt");
+    r->encrypted = pdf_encrypted(tail, got);
     return find(tail + got - last, last, "%%EOF");
   }
   if (t == ZUMIME_T_APPLICATION_VND_APACHE_PARQUET) {

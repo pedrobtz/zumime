@@ -49,8 +49,12 @@ row_input <- function(rows, i) {
     # Zeros before the pattern, letters after it and one NUL at the end: the
     # input is binary, and no row is matched by fill it never asked for.
     n <- max(1445L, off + length(pat) + 1L)
-    bytes <- c(raw(off), pat, rep(as.raw(0x41), n - off - length(pat) - 1L),
-      as.raw(0))
+    bytes <- c(
+      raw(off),
+      pat,
+      rep(as.raw(0x41), n - off - length(pat) - 1L),
+      as.raw(0)
+    )
   }
   bytes
 }

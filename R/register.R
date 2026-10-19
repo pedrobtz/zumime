@@ -3,8 +3,11 @@
 # extensions, function rules and the registration order.
 session <- new.env(parent = emptyenv())
 session$types <- data.frame(
-  type = character(), parent = character(), id = integer(),
-  kind = character(), stringsAsFactors = FALSE
+  type = character(),
+  parent = character(),
+  id = integer(),
+  kind = character(),
+  stringsAsFactors = FALSE
 )
 session$extensions <- list()
 session$rules <- list()
@@ -54,26 +57,41 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
   }
   parent <- canonical_type(parent)
   if (nchar(essence, type = "bytes") > 127L) {
-    zumime_abort("registry", sprintf(
-      "A registered type is at most 127 bytes long, not %d.",
-      nchar(essence, type = "bytes")
-    ))
+    zumime_abort(
+      "registry",
+      sprintf(
+        "A registered type is at most 127 bytes long, not %d.",
+        nchar(essence, type = "bytes")
+      )
+    )
   }
   if (essence %in% all_types() || essence %in% names(types_alias_map)) {
     zumime_abort("registry", sprintf("\"%s\" is already a type.", essence))
   }
   if (!(parent %in% all_types())) {
-    zumime_abort("registry", sprintf("The parent \"%s\" is not a type.",
-      parent))
+    zumime_abort(
+      "registry",
+      sprintf("The parent \"%s\" is not a type.", parent)
+    )
   }
   # A data rule runs in C before R's function rules, so it could never see
   # a type that only a function rule decides.
-  if (!is.function(rule) && !is.null(rule) &&
-    parent %in% session$types$type[session$types$kind == "function"]) {
-    zumime_abort("registry", sprintf(paste(
-      "\"%s\" is decided by a function rule; a data rule cannot sit",
-      "under it. Use a function rule for \"%s\"."
-    ), parent, essence))
+  if (
+    !is.function(rule) &&
+      !is.null(rule) &&
+      parent %in% session$types$type[session$types$kind == "function"]
+  ) {
+    zumime_abort(
+      "registry",
+      sprintf(
+        paste(
+          "\"%s\" is decided by a function rule; a data rule cannot sit",
+          "under it. Use a function rule for \"%s\"."
+        ),
+        parent,
+        essence
+      )
+    )
   }
   extensions <- check_extensions(extensions)
   data_rule <- NULL
@@ -83,15 +101,34 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
   } else if (!is.null(rule)) {
     data_rule <- check_rule(rule)
   }
-  id <- .Call(zumime_register_type, essence, parent,
-    as.double(data_rule$offset %||% 0), data_rule$bytes, data_rule$mask)
+  id <- .Call(
+    zumime_register_type,
+    essence,
+    parent,
+    as.double(data_rule$offset %||% 0),
+    data_rule$bytes,
+    data_rule$mask
+  )
   if (is.na(id)) {
     zumime_abort("registry", "No room for more registered types.")
   }
-  kind <- if (!is.null(fn)) "function" else if (!is.null(data_rule)) "data" else
+  kind <- if (!is.null(fn)) {
+    "function"
+  } else if (!is.null(data_rule)) {
+    "data"
+  } else {
     "name"
-  session$types <- rbind(session$types, data.frame(type = essence,
-    parent = parent, id = id, kind = kind, stringsAsFactors = FALSE))
+  }
+  session$types <- rbind(
+    session$types,
+    data.frame(
+      type = essence,
+      parent = parent,
+      id = id,
+      kind = kind,
+      stringsAsFactors = FALSE
+    )
+  )
   session$extensions[[essence]] <- extensions
   session$rules[[essence]] <- fn
   session$version <- session$version + 1L
@@ -109,8 +146,13 @@ mime_unregister <- function(type) {
     zumime_abort("registry", sprintf("\"%s\" is not a registered type.", type))
   }
   if (type %in% session$types$parent) {
-    zumime_abort("registry", sprintf(
-      "\"%s\" is the parent of another registered type.", type))
+    zumime_abort(
+      "registry",
+      sprintf(
+        "\"%s\" is the parent of another registered type.",
+        type
+      )
+    )
   }
   .Call(zumime_unregister_type, type)
   session$types <- session$types[session$types$type != type, , drop = FALSE]
@@ -121,37 +163,63 @@ mime_unregister <- function(type) {
 }
 
 check_extensions <- function(x) {
-  if (is.null(x)) return(character())
+  if (is.null(x)) {
+    return(character())
+  }
   if (!is.character(x) || anyNA(x)) {
-    zumime_abort("type", "`extensions` must be a character vector or NULL.",
-      call = sys.call(-1L))
+    zumime_abort(
+      "type",
+      "`extensions` must be a character vector or NULL.",
+      call = sys.call(-1L)
+    )
   }
   x <- tolower(sub("^\\.", "", x))
   if (any(!nzchar(x))) {
-    zumime_abort("type", "`extensions` must not be empty strings.",
-      call = sys.call(-1L))
+    zumime_abort(
+      "type",
+      "`extensions` must not be empty strings.",
+      call = sys.call(-1L)
+    )
   }
   x
 }
 
 check_rule <- function(rule) {
   bad <- function() {
-    zumime_abort("type", paste(
-      "`rule` must be NULL, a function, or a list of `offset`, `bytes`",
-      "(1 to 64 bytes) and an optional `mask` of the same length."
-    ), call = sys.call(-2L))
+    zumime_abort(
+      "type",
+      paste(
+        "`rule` must be NULL, a function, or a list of `offset`, `bytes`",
+        "(1 to 64 bytes) and an optional `mask` of the same length."
+      ),
+      call = sys.call(-2L)
+    )
   }
-  if (!is.list(rule) || is.null(rule$bytes)) bad()
+  if (!is.list(rule) || is.null(rule$bytes)) {
+    bad()
+  }
   offset <- rule$offset %||% 0
   bytes <- rule$bytes
-  if (is.character(bytes) && length(bytes) == 1L) bytes <- charToRaw(bytes)
-  if (!is.raw(bytes) || length(bytes) < 1L || length(bytes) > 64L) bad()
-  if (!is.numeric(offset) || length(offset) != 1L || is.na(offset) ||
-    offset < 0 || offset != floor(offset) || offset > .Machine$integer.max) {
+  if (is.character(bytes) && length(bytes) == 1L) {
+    bytes <- charToRaw(bytes)
+  }
+  if (!is.raw(bytes) || length(bytes) < 1L || length(bytes) > 64L) {
+    bad()
+  }
+  if (
+    !is.numeric(offset) ||
+      length(offset) != 1L ||
+      is.na(offset) ||
+      offset < 0 ||
+      offset != floor(offset) ||
+      offset > .Machine$integer.max
+  ) {
     bad()
   }
   mask <- rule$mask
-  if (!is.null(mask) && (!is.raw(mask) || length(mask) != length(bytes))) bad()
+  if (!is.null(mask) && (!is.raw(mask) || length(mask) != length(bytes))) {
+    bad()
+  }
   list(offset = offset, bytes = bytes, mask = mask)
 }
 
@@ -170,23 +238,35 @@ type_parent <- function(type) {
 # Function rules whose parent is a row's type, applied in registration
 # order until nothing changes. `x` is a raw vector or the rows' paths.
 apply_registered <- function(out, x, limit) {
-  if (!length(session$rules)) return(out)
+  if (!length(session$rules)) {
+    return(out)
+  }
   fns <- session$types[session$types$kind == "function", , drop = FALSE]
   for (i in seq_len(nrow(out))) {
     bytes <- NULL
     for (depth in 1:8) {
       hit <- which(fns$parent == out$type[i])
-      if (!length(hit) || is.na(out$type[i])) break
-      if (is.null(bytes)) bytes <- head_bytes(x, i, limit)
-      if (is.null(bytes)) break
+      if (!length(hit) || is.na(out$type[i])) {
+        break
+      }
+      if (is.null(bytes)) {
+        bytes <- head_bytes(x, i, limit)
+      }
+      if (is.null(bytes)) {
+        break
+      }
       changed <- FALSE
       for (h in hit) {
-        ok <- tryCatch(isTRUE(session$rules[[fns$type[h]]](bytes)),
-          error = function(e) FALSE)
+        ok <- tryCatch(
+          isTRUE(session$rules[[fns$type[h]]](bytes)),
+          error = function(e) FALSE
+        )
         if (ok) {
           out$type[i] <- fns$type[h]
-          out$confidence[i] <- min(out$confidence[i],
-            factor("probable", levels = confidence_levels, ordered = TRUE))
+          out$confidence[i] <- min(
+            out$confidence[i],
+            factor("probable", levels = confidence_levels, ordered = TRUE)
+          )
           changed <- TRUE
           break
         }
@@ -203,6 +283,8 @@ head_bytes <- function(x, i, limit) {
   }
   path <- x[i]
   size <- suppressWarnings(file.size(path))
-  if (is.na(size)) return(NULL)
+  if (is.na(size)) {
+    return(NULL)
+  }
   readBin(path, "raw", if (limit > 0) min(limit, size) else size)
 }

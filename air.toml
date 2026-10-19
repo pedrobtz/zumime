@@ -1,0 +1,8 @@
+# The formatter CLAUDE.md names: `air format .` (air 0.12.0). The settings
+# are pinned so local and CI runs agree.
+[format]
+line-width = 80
+indent-width = 2
+indent-style = "space"
+line-ending = "lf"
+persistent-line-breaks = true
