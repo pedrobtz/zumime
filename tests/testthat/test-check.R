@@ -35,6 +35,7 @@ test_that("an allowlist of three types costs three probes", {
 })
 
 test_that("mime_check() equals mime_type() for every subset of three types", {
+  skip_if_gctorture()
   dir <- check_tree()
   paths <- c(list.files(dir, full.names = TRUE), file.path(dir, "missing"))
   sets <- utils::combn(check_candidates(), 3, simplify = FALSE)
@@ -42,6 +43,7 @@ test_that("mime_check() equals mime_type() for every subset of three types", {
 })
 
 test_that("the equivalence holds over the file-type corpus", {
+  skip_if_gctorture()
   dir <- fixture_dir("file-type")
   paths <- list.files(dir, full.names = TRUE)
   sets <- utils::combn(check_candidates(), 3, simplify = FALSE)

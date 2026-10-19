@@ -89,6 +89,7 @@ test_that("early decisions happen where the bytes allow them", {
 })
 
 test_that("every fixture decides at the whole's type", {
+  skip_if_gctorture()
   dir <- fixture_dir("file-type")
   for (f in list.files(dir, full.names = TRUE)) {
     x <- readBin(f, "raw", min(file.size(f), 8192))

@@ -33,6 +33,7 @@ test_that("mime_guess() knows R and analytic data formats", {
 })
 
 test_that("every extension of every type maps back to it or a descendant", {
+  skip_if_gctorture()
   types <- mime_types()
   for (i in seq_len(nrow(types))) {
     exts <- types$extensions[[i]]

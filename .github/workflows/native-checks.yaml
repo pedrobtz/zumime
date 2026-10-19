@@ -31,9 +31,14 @@ jobs:
   lto:
     uses: pedrobtz/r-actions/.github/workflows/lto.yml@v1
 
+  # Property tests that loop in R over many inputs skip under gctorture
+  # (tests/testthat/helper-skip.R): at step 20 they ran past the job's
+  # 120-minute limit on PR #15 while testing no memory path.
   gctorture:
     uses: pedrobtz/r-actions/.github/workflows/gctorture.yml@v1
     with:
+      env: |
+        ZUMIME_GCTORTURE=true
       profile: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-ci') && 'quick' || 'full' }}
 
   rchk:
