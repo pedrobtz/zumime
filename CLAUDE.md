@@ -101,6 +101,7 @@ Rscript tools/generate-tables.R            # regenerate R/sysdata.rda, src/zumim
 Rscript tools/generate-tables.R --check    # exit 1 if they differ from their sources
 Rscript tools/generate-tables.R --fetch    # download the sources again, record sha256
 tools/fetch-fixtures                       # oracle fixtures into tests/testthat/fixtures/
+tools/dump-file-type-answers               # file-type's answers into helper-file-type.R
 tools/fuzz/run-local 60                    # the fuzz harness under ASan+UBSan, 60 s
 Rscript tools/fuzz/make-seeds.R            # rewrite tools/fuzz/seeds/
 Rscript -e 'devtools::build_readme()'      # README.Rmd -> README.md
