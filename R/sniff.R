@@ -50,12 +50,18 @@
 #'
 #' # The supplied type wins under nosniff
 #' mime_sniff(png, type = "text/csv", no_sniff = TRUE)
-mime_sniff <- function(x, type = NULL, no_sniff = FALSE,
-                       context = c("none", "browsing", "image", "audio_video",
-                         "font"),
-                       limit = 4096L) {
+mime_sniff <- function(
+  x,
+  type = NULL,
+  no_sniff = FALSE,
+  context = c("none", "browsing", "image", "audio_video", "font"),
+  limit = 4096L
+) {
   if (!is.raw(x) && !is.character(x)) {
-    zumime_abort("type", "`x` must be a raw vector or a character vector of paths.")
+    zumime_abort(
+      "type",
+      "`x` must be a raw vector or a character vector of paths."
+    )
   }
   supplied <- supplied_type(type)
   check_flag(no_sniff)
@@ -67,10 +73,19 @@ mime_sniff <- function(x, type = NULL, no_sniff = FALSE,
     return(apply_registered(out, x, limit))
   }
 
-  res <- .Call(zumime_sniff_raw, x, limit, supplied$essence,
-    supplied$apache_bug, no_sniff, context)
+  res <- .Call(
+    zumime_sniff_raw,
+    x,
+    limit,
+    supplied$essence,
+    supplied$apache_bug,
+    no_sniff,
+    context
+  )
   out_type <- res[[1]]
-  if (is.na(out_type)) out_type <- supplied$essence
+  if (is.na(out_type)) {
+    out_type <- supplied$essence
+  }
   charset <- res[[3]]
   if (isTRUE(res[[5]]) && !is.null(supplied$charset)) {
     charset <- supplied$charset
@@ -95,13 +110,19 @@ supplied_type <- function(type) {
     return(list(essence = NULL, charset = NULL, apache_bug = FALSE))
   }
   if (!is.character(type) || length(type) != 1L) {
-    zumime_abort("type", "`type` must be a single string or NULL.",
-      call = sys.call(-1L))
+    zumime_abort(
+      "type",
+      "`type` must be a single string or NULL.",
+      call = sys.call(-1L)
+    )
   }
-  apache_bug <- type %in% c(
-    "text/plain", "text/plain; charset=ISO-8859-1",
-    "text/plain; charset=iso-8859-1", "text/plain; charset=UTF-8"
-  )
+  apache_bug <- type %in%
+    c(
+      "text/plain",
+      "text/plain; charset=ISO-8859-1",
+      "text/plain; charset=iso-8859-1",
+      "text/plain; charset=UTF-8"
+    )
   rec <- mime_parse(type)[[1]]
   if (is.null(rec)) {
     return(list(essence = NULL, charset = NULL, apache_bug = FALSE))
@@ -116,28 +137,48 @@ supplied_type <- function(type) {
 contexts <- c("none", "browsing", "image", "audio_video", "font")
 
 check_context <- function(context) {
-  if (identical(context, contexts)) context <- "none"
-  if (!is.character(context) || length(context) != 1L ||
-    !(context %in% contexts)) {
-    zumime_abort("type", sprintf("`context` must be one of %s.",
-      paste0("\"", contexts, "\"", collapse = ", ")), call = sys.call(-1L))
+  if (identical(context, contexts)) {
+    context <- "none"
+  }
+  if (
+    !is.character(context) || length(context) != 1L || !(context %in% contexts)
+  ) {
+    zumime_abort(
+      "type",
+      sprintf(
+        "`context` must be one of %s.",
+        paste0("\"", contexts, "\"", collapse = ", ")
+      ),
+      call = sys.call(-1L)
+    )
   }
   match(context, contexts) - 1L
 }
 
 check_flag <- function(x, arg = deparse(substitute(x))) {
   if (!isTRUE(x) && !isFALSE(x)) {
-    zumime_abort("type", sprintf("`%s` must be TRUE or FALSE.", arg),
-      call = sys.call(-1L))
+    zumime_abort(
+      "type",
+      sprintf("`%s` must be TRUE or FALSE.", arg),
+      call = sys.call(-1L)
+    )
   }
 }
 
 check_limit <- function(limit) {
-  if (!is.numeric(limit) || length(limit) != 1L || is.na(limit) ||
-    limit < 0 || limit > .Machine$integer.max || limit != floor(limit)) {
-    zumime_abort("type",
+  if (
+    !is.numeric(limit) ||
+      length(limit) != 1L ||
+      is.na(limit) ||
+      limit < 0 ||
+      limit > .Machine$integer.max ||
+      limit != floor(limit)
+  ) {
+    zumime_abort(
+      "type",
       "`limit` must be a whole number from 0 to .Machine$integer.max.",
-      call = sys.call(-1L))
+      call = sys.call(-1L)
+    )
   }
   as.double(limit)
 }

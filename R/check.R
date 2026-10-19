@@ -36,13 +36,24 @@
 #' unlink(dir, recursive = TRUE)
 mime_check <- function(x, allowed, min_confidence = "probable") {
   if (!is.character(x) && !is.raw(x)) {
-    zumime_abort("type", "`x` must be a character vector of paths or a raw vector.")
+    zumime_abort(
+      "type",
+      "`x` must be a character vector of paths or a raw vector."
+    )
   }
   allowed <- check_character(allowed)
-  if (!is.character(min_confidence) || length(min_confidence) != 1L ||
-    !(min_confidence %in% confidence_levels)) {
-    zumime_abort("type", sprintf("`min_confidence` must be one of %s.",
-      paste0("\"", confidence_levels, "\"", collapse = ", ")))
+  if (
+    !is.character(min_confidence) ||
+      length(min_confidence) != 1L ||
+      !(min_confidence %in% confidence_levels)
+  ) {
+    zumime_abort(
+      "type",
+      sprintf(
+        "`min_confidence` must be one of %s.",
+        paste0("\"", confidence_levels, "\"", collapse = ", ")
+      )
+    )
   }
   m <- factor(min_confidence, levels = confidence_levels, ordered = TRUE)
   limit <- 4096
@@ -55,8 +66,14 @@ mime_check <- function(x, allowed, min_confidence = "probable") {
   }
 
   sets <- related_sets(allowed)
-  out <- .Call(zumime_check, x, limit, lapply(sets, `[[`, "related"),
-    lapply(sets, `[[`, "within"), match(min_confidence, confidence_levels) - 1L)
+  out <- .Call(
+    zumime_check,
+    x,
+    limit,
+    lapply(sets, `[[`, "related"),
+    lapply(sets, `[[`, "within"),
+    match(min_confidence, confidence_levels) - 1L
+  )
   # An unreadable path is type NA at confidence "none".
   unreadable <- factor("none", levels = confidence_levels, ordered = TRUE)
   out[is.na(out)] <- NA & (unreadable >= m)
@@ -75,7 +92,9 @@ related_sets <- function(allowed) {
   lapply(allowed, function(a) {
     key <- if (is.na(a)) "\rNA" else a
     hit <- session$related[[key]]
-    if (!is.null(hit)) return(hit)
+    if (!is.null(hit)) {
+      return(hit)
+    }
     types <- all_types()
     ids <- c(seq_len(nrow(types_registry)) - 1L, session$types$id)
     within <- types[mime_is(types, a) %in% TRUE]

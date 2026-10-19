@@ -34,11 +34,16 @@ skip_if_not_oracle_package <- function(pkg) {
 # counted in attr(, "dropped").
 wpt_mime_entries <- function(file) {
   skip_if_not_oracle_package("jsonlite")
-  text <- paste(readLines(file, warn = FALSE, encoding = "UTF-8"),
-    collapse = "\n")
+  text <- paste(
+    readLines(file, warn = FALSE, encoding = "UTF-8"),
+    collapse = "\n"
+  )
   text <- gsub("\\u0000", "<<NUL>>", text, fixed = TRUE)
   entries <- Filter(is.list, jsonlite::fromJSON(text, simplifyVector = FALSE))
-  nul <- vapply(entries, function(e) grepl("<<NUL>>", e$input, fixed = TRUE),
-    logical(1))
+  nul <- vapply(
+    entries,
+    function(e) grepl("<<NUL>>", e$input, fixed = TRUE),
+    logical(1)
+  )
   structure(entries[!nul], dropped = sum(nul))
 }

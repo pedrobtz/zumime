@@ -84,7 +84,7 @@ Rscript -e 'devtools::test()'                    # full testthat suite
 Rscript -e 'devtools::test(filter = "<name>")'   # one test file
 Rscript -e 'devtools::test(shuffle = TRUE)'      # order independence
 Rscript -e 'devtools::check()'                   # R CMD check
-air format .                                     # format R sources
+air format .                                     # format R sources (air.toml)
 ```
 
 Package-specific commands:

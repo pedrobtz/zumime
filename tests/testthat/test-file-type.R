@@ -19,8 +19,10 @@ test_that("every claimed file-type fixture is typed as file-type types it", {
     if (answers$file[i] %in% unclaimed) {
       expect_false(agrees, info = paste(answers$file[i], "now agrees:", got))
     } else {
-      expect_true(agrees,
-        info = paste(answers$file[i], answers$mime[i], "got", got))
+      expect_true(
+        agrees,
+        info = paste(answers$file[i], answers$mime[i], "got", got)
+      )
     }
   }
 })

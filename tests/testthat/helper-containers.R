@@ -2,8 +2,14 @@
 # bytes in the test, so the suite runs without the fixture corpus.
 
 u16 <- function(x) as.raw(c(x %% 256, (x %/% 256) %% 256))
-u32 <- function(x) as.raw(c(x %% 256, (x %/% 256) %% 256,
-  (x %/% 65536) %% 256, (x %/% 16777216) %% 256))
+u32 <- function(x) {
+  as.raw(c(
+    x %% 256,
+    (x %/% 256) %% 256,
+    (x %/% 65536) %% 256,
+    (x %/% 16777216) %% 256
+  ))
+}
 u32be <- function(x) rev(u32(x))
 bytes <- function(s) if (is.raw(s)) s else charToRaw(s)
 
@@ -24,9 +30,17 @@ deflate_raw <- function(x) {
 # the descriptor has no signature unless `signature`. `zip64` writes the
 # Zip64 marker 0xFFFFFFFF as the directory's offset, and `comment` is the
 # archive comment.
-build_zip <- function(entries, method = 0L, flags = 0L, extra = raw(),
-                      descriptor = FALSE, sizes = !descriptor,
-                      signature = TRUE, zip64 = FALSE, comment = raw()) {
+build_zip <- function(
+  entries,
+  method = 0L,
+  flags = 0L,
+  extra = raw(),
+  descriptor = FALSE,
+  sizes = !descriptor,
+  signature = TRUE,
+  zip64 = FALSE,
+  comment = raw()
+) {
   local <- raw()
   central <- raw()
   for (name in names(entries)) {
@@ -36,33 +50,84 @@ build_zip <- function(entries, method = 0L, flags = 0L, extra = raw(),
     csize <- if (sizes) length(stored) else 0L
     nm <- charToRaw(name)
     offset <- length(local)
-    local <- c(local, charToRaw("PK"), as.raw(c(3, 4)), u16(20), u16(f),
-      u16(method), u16(0), u16(0), u32(0), u32(csize),
-      u32(if (sizes) length(data) else 0L), u16(length(nm)),
-      u16(length(extra)), nm, extra, stored)
+    local <- c(
+      local,
+      charToRaw("PK"),
+      as.raw(c(3, 4)),
+      u16(20),
+      u16(f),
+      u16(method),
+      u16(0),
+      u16(0),
+      u32(0),
+      u32(csize),
+      u32(if (sizes) length(data) else 0L),
+      u16(length(nm)),
+      u16(length(extra)),
+      nm,
+      extra,
+      stored
+    )
     if (descriptor) {
-      local <- c(local, if (signature) c(charToRaw("PK"), as.raw(c(7, 8))),
-        u32(0), u32(length(stored)), u32(length(data)))
+      local <- c(
+        local,
+        if (signature) c(charToRaw("PK"), as.raw(c(7, 8))),
+        u32(0),
+        u32(length(stored)),
+        u32(length(data))
+      )
     }
-    central <- c(central, charToRaw("PK"), as.raw(c(1, 2)), u16(20), u16(20),
-      u16(f), u16(method), u16(0), u16(0), u32(0), u32(length(stored)),
-      u32(length(data)), u16(length(nm)), u16(length(extra)), u16(0), u16(0),
-      u16(0), u32(0), u32(offset), nm, extra)
+    central <- c(
+      central,
+      charToRaw("PK"),
+      as.raw(c(1, 2)),
+      u16(20),
+      u16(20),
+      u16(f),
+      u16(method),
+      u16(0),
+      u16(0),
+      u32(0),
+      u32(length(stored)),
+      u32(length(data)),
+      u16(length(nm)),
+      u16(length(extra)),
+      u16(0),
+      u16(0),
+      u16(0),
+      u32(0),
+      u32(offset),
+      nm,
+      extra
+    )
   }
-  eocd <- c(charToRaw("PK"), as.raw(c(5, 6)), u16(0), u16(0),
-    u16(length(entries)), u16(length(entries)), u32(length(central)),
-    u32(if (zip64) 2^32 - 1 else length(local)), u16(length(comment)),
-    comment)
+  eocd <- c(
+    charToRaw("PK"),
+    as.raw(c(5, 6)),
+    u16(0),
+    u16(0),
+    u16(length(entries)),
+    u16(length(entries)),
+    u32(length(central)),
+    u32(if (zip64) 2^32 - 1 else length(local)),
+    u16(length(comment)),
+    comment
+  )
   c(local, central, eocd)
 }
 
 ooxml_entries <- function(folder, main_ct = NULL, vba = FALSE) {
-  ct <- paste0("<?xml version=\"1.0\"?><Types><Override PartName=\"/x\" ",
-    "ContentType=\"", if (is.null(main_ct)) "application/xml" else main_ct,
-    "\"/></Types>")
+  ct <- paste0(
+    "<?xml version=\"1.0\"?><Types><Override PartName=\"/x\" ",
+    "ContentType=\"",
+    if (is.null(main_ct)) "application/xml" else main_ct,
+    "\"/></Types>"
+  )
   e <- list("[Content_Types].xml" = ct, "_rels/.rels" = "<Relationships/>")
   e[[paste0(folder, "/document.xml")]] <- "<x/>"
-  if (vba) e[[paste0(folder, "/vbaProject.bin")]] <- as.raw(1:8)
+  if (vba) {
+    e[[paste0(folder, "/vbaProject.bin")]] <- as.raw(1:8)
+  }
   e
 }
 
@@ -81,8 +146,10 @@ build_ole2 <- function(streams, clsid = raw(16), pad = 0L) {
     e[81:96] <- clsid
     e
   }
-  dir <- c(entry("Root Entry", 5, clsid),
-    unlist(lapply(streams, entry, type = 2)))
+  dir <- c(
+    entry("Root Entry", 5, clsid),
+    unlist(lapply(streams, entry, type = 2))
+  )
   ndir <- ceiling(length(dir) / 512)
   dir <- c(dir, raw(ndir * 512 - length(dir)))
   header <- raw(512)
@@ -114,24 +181,46 @@ msi_clsid <- function() {
 
 build_ftyp <- function(major, compat = character()) {
   body <- c(charToRaw(major), u32be(0), unlist(lapply(compat, charToRaw)))
-  c(u32be(8 + length(body)), charToRaw("ftyp"), body, u32be(8),
-    charToRaw("free"))
+  c(
+    u32be(8 + length(body)),
+    charToRaw("ftyp"),
+    body,
+    u32be(8),
+    charToRaw("free")
+  )
 }
 
 # One Ogg page holding one packet.
 build_ogg <- function(packet) {
   packet <- bytes(packet)
-  c(charToRaw("OggS"), as.raw(c(0, 2)), raw(8), u32(1), u32(0), u32(0),
-    as.raw(1), as.raw(length(packet)), packet)
+  c(
+    charToRaw("OggS"),
+    as.raw(c(0, 2)),
+    raw(8),
+    u32(1),
+    u32(0),
+    u32(0),
+    as.raw(1),
+    as.raw(length(packet)),
+    packet
+  )
 }
 
 # An EBML header whose DocType comes after `pad` filler bytes.
 build_ebml <- function(doctype, pad = 0L) {
   dt <- charToRaw(doctype)
-  body <- c(rep(as.raw(c(0xec, 0x80)), pad), as.raw(c(0x42, 0x82)),
-    as.raw(0x80 + length(dt)), dt)
-  c(as.raw(c(0x1a, 0x45, 0xdf, 0xa3)), as.raw(0x80 + length(body)), body,
-    raw(16))
+  body <- c(
+    rep(as.raw(c(0xec, 0x80)), pad),
+    as.raw(c(0x42, 0x82)),
+    as.raw(0x80 + length(dt)),
+    dt
+  )
+  c(
+    as.raw(c(0x1a, 0x45, 0xdf, 0xa3)),
+    as.raw(0x80 + length(body)),
+    body,
+    raw(16)
+  )
 }
 
 sniff_type <- function(x, ...) mime_sniff(bytes(x), ...)$type
@@ -162,31 +251,53 @@ gzip_bytes <- function(x) {
 }
 
 pdf_bytes <- function(encrypt = FALSE, eof = TRUE) {
-  body <- paste0("%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n",
-    "trailer << /Root 1 0 R", if (encrypt) " /Encrypt 2 0 R" else "",
-    " >>\nstartxref\n0\n", if (eof) "%%EOF\n" else "")
+  body <- paste0(
+    "%PDF-1.7\n1 0 obj << /Type /Catalog >> endobj\n",
+    "trailer << /Root 1 0 R",
+    if (encrypt) " /Encrypt 2 0 R" else "",
+    " >>\nstartxref\n0\n",
+    if (eof) "%%EOF\n" else ""
+  )
   charToRaw(body)
 }
 
 # A tree with one file per kind of answer, for the D15 equivalence.
 check_tree <- function(env = parent.frame()) {
-  local_tree(list(
-    "a.pdf" = pdf_bytes(), "b.png" = png_bytes(),
-    "c.docx" = build_zip(ooxml_entries("word")),
-    "d.zip" = build_zip(list(a = "x")), "e.json" = "{\"a\": 1}",
-    "f.txt" = "plain words\n", "g.svg" = "<?xml version=\"1.0\"?><svg/>",
-    "h.bin" = as.raw(c(0, 1, 2, 3)), "i.html" = "<html><body>",
-    "j.ogg" = build_ogg("OpusHead"), "k.doc" = build_ole2("WordDocument"),
-    "l.c1" = c(charToRaw("caf"), as.raw(0xe9)),
-    "m.rds" = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20)))
-  ), env = env)
+  local_tree(
+    list(
+      "a.pdf" = pdf_bytes(),
+      "b.png" = png_bytes(),
+      "c.docx" = build_zip(ooxml_entries("word")),
+      "d.zip" = build_zip(list(a = "x")),
+      "e.json" = "{\"a\": 1}",
+      "f.txt" = "plain words\n",
+      "g.svg" = "<?xml version=\"1.0\"?><svg/>",
+      "h.bin" = as.raw(c(0, 1, 2, 3)),
+      "i.html" = "<html><body>",
+      "j.ogg" = build_ogg("OpusHead"),
+      "k.doc" = build_ole2("WordDocument"),
+      "l.c1" = c(charToRaw("caf"), as.raw(0xe9)),
+      "m.rds" = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20)))
+    ),
+    env = env
+  )
 }
 
 check_candidates <- function() {
-  c("application/pdf", "image/png", "image", "application/zip", docx_type(),
-    "application/json", "text/plain", "application/xml", "audio/ogg",
-    "application/x-ole-storage", "application/x-rds",
-    "application/octet-stream")
+  c(
+    "application/pdf",
+    "image/png",
+    "image",
+    "application/zip",
+    docx_type(),
+    "application/json",
+    "text/plain",
+    "application/xml",
+    "audio/ogg",
+    "application/x-ole-storage",
+    "application/x-rds",
+    "application/octet-stream"
+  )
 }
 
 # design D15: mime_check(x, a, m) == mime_is(t$type, a) & t$confidence >= m.
@@ -196,8 +307,11 @@ expect_check_equivalence <- function(paths, allowed_sets, levels) {
     for (m in levels) {
       want <- mime_is(t$type, a) &
         t$confidence >= factor(m, levels = levels(t$confidence), ordered = TRUE)
-      expect_identical(mime_check(paths, a, m), want,
-        info = paste(paste(a, collapse = ", "), m))
+      expect_identical(
+        mime_check(paths, a, m),
+        want,
+        info = paste(paste(a, collapse = ", "), m)
+      )
     }
   }
 }
@@ -205,22 +319,46 @@ expect_check_equivalence <- function(paths, allowed_sets, levels) {
 # Inputs for the byte-at-a-time property: one per kind of answer.
 stream_inputs <- function() {
   c(list(
-    pdf = pdf_bytes(), png = c(png_bytes()[1:8], u32be(13),
-      charToRaw("IHDR"), raw(17), u32be(0), charToRaw("IDAT"), raw(4)),
-    gif = c(charToRaw("GIF89a"), raw(20)), tar = c(tar_header(), raw(1024)),
-    docx = build_zip(ooxml_entries("word")), ole = build_ole2("Workbook"),
-    m4a = build_ftyp("M4A ", c("mp42")), mkv = build_ebml("webm", pad = 30),
-    ogg = build_ogg("OpusHead"), mp3 = c(mp3_frame(), raw(413), mp3_frame(),
-      raw(8)), html = charToRaw("  <html><body>x"),
+    pdf = pdf_bytes(),
+    png = c(
+      png_bytes()[1:8],
+      u32be(13),
+      charToRaw("IHDR"),
+      raw(17),
+      u32be(0),
+      charToRaw("IDAT"),
+      raw(4)
+    ),
+    gif = c(charToRaw("GIF89a"), raw(20)),
+    tar = c(tar_header(), raw(1024)),
+    docx = build_zip(ooxml_entries("word")),
+    ole = build_ole2("Workbook"),
+    m4a = build_ftyp("M4A ", c("mp42")),
+    mkv = build_ebml("webm", pad = 30),
+    ogg = build_ogg("OpusHead"),
+    mp3 = c(mp3_frame(), raw(413), mp3_frame(), raw(8)),
+    html = charToRaw("  <html><body>x"),
     json = charToRaw("{\"type\": \"Feature\", \"geometry\": {}}"),
-    text = charToRaw("plain words\n"), bin = as.raw(c(1:20, 0)),
-    exe = c(charToRaw("MZ"), raw(100)), elf = c(charToRaw("\x7fELF"), raw(60)),
+    text = charToRaw("plain words\n"),
+    bin = as.raw(c(1:20, 0)),
+    exe = c(charToRaw("MZ"), raw(100)),
+    elf = c(charToRaw("\x7fELF"), raw(60)),
     rds = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20))),
-    ws = charToRaw("      "), short = as.raw(0xff),
+    ws = charToRaw("      "),
+    short = as.raw(0xff),
     jpeg = as.raw(c(0xff, 0xd8, 0xff, 0xe0, 0, 0)),
-    apng = c(png_bytes()[1:8], u32be(13), charToRaw("IHDR"), raw(17),
-      u32be(8), charToRaw("acTL"), raw(12), u32be(1), charToRaw("IDAT"),
-      raw(5)),
+    apng = c(
+      png_bytes()[1:8],
+      u32be(13),
+      charToRaw("IHDR"),
+      raw(17),
+      u32be(8),
+      charToRaw("acTL"),
+      raw(12),
+      u32be(1),
+      charToRaw("IDAT"),
+      raw(5)
+    ),
     # The directory past 4 KiB.
     ole_padded = build_ole2(c("WordDocument", "1Table"), pad = 20L),
     # An offset row past 32 KiB.
@@ -235,8 +373,14 @@ stream_inputs <- function() {
 # A gzip member over raw DEFLATE `deflate`, with optional header fields
 # (FEXTRA, FNAME, FCOMMENT, FHCRC) and a trailer whose size is `isize`. The
 # CRC is zero: zumime does not check it.
-gzip_member <- function(deflate, isize, extra = NULL, name = NULL,
-                        comment = NULL, hcrc = FALSE) {
+gzip_member <- function(
+  deflate,
+  isize,
+  extra = NULL,
+  name = NULL,
+  comment = NULL,
+  hcrc = FALSE
+) {
   flg <- 0L
   fields <- raw()
   if (!is.null(extra)) {
@@ -255,8 +399,15 @@ gzip_member <- function(deflate, isize, extra = NULL, name = NULL,
     flg <- flg + 2L
     fields <- c(fields, raw(2))
   }
-  c(as.raw(c(0x1f, 0x8b, 8, flg)), raw(4), as.raw(c(0, 3)), fields, deflate,
-    raw(4), u32(isize))
+  c(
+    as.raw(c(0x1f, 0x8b, 8, flg)),
+    raw(4),
+    as.raw(c(0, 3)),
+    fields,
+    deflate,
+    raw(4),
+    u32(isize)
+  )
 }
 
 # Bits, least significant first, packed into bytes.

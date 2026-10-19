@@ -3,10 +3,17 @@
 
 confidence_levels <- c("none", "extension", "probable", "definite")
 
-new_result <- function(path, type, confidence, charset = NA_character_,
-                       inner = NA_character_, encrypted = NA,
-                       complete = NA, newline = NA_character_,
-                       interpreter = NA_character_) {
+new_result <- function(
+  path,
+  type,
+  confidence,
+  charset = NA_character_,
+  inner = NA_character_,
+  encrypted = NA,
+  complete = NA,
+  newline = NA_character_,
+  interpreter = NA_character_
+) {
   n <- length(path)
   fill <- function(x) if (length(x) == n) x else rep_len(x, n)
   inner <- fill(inner)
@@ -19,8 +26,7 @@ new_result <- function(path, type, confidence, charset = NA_character_,
   out <- list(
     path = as.character(path),
     type = as.character(type),
-    confidence = factor(confidence, levels = confidence_levels,
-      ordered = TRUE),
+    confidence = factor(confidence, levels = confidence_levels, ordered = TRUE),
     charset = as.character(charset),
     inner = as.character(inner),
     encrypted = as.logical(encrypted),
@@ -35,8 +41,11 @@ new_result <- function(path, type, confidence, charset = NA_character_,
 
 #' @export
 print.zumime_result <- function(x, ...) {
-  cat(sprintf("<zumime_result: %d row%s>\n", nrow(x),
-    if (nrow(x) == 1L) "" else "s"))
+  cat(sprintf(
+    "<zumime_result: %d row%s>\n",
+    nrow(x),
+    if (nrow(x) == 1L) "" else "s"
+  ))
   print(structure(x, class = "data.frame"), ...)
   invisible(x)
 }

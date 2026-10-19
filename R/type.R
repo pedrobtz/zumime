@@ -58,10 +58,15 @@
 #'   file.path(dir, "logo.txt"))
 #' mime_type(list.files(dir, full.names = TRUE))
 #' unlink(dir, recursive = TRUE)
-mime_type <- function(path, limit = 4096L, complete = FALSE,
-                      inner = c("name", "decompress"),
-                      text = c("whatwg", "family"),
-                      charset = c("declared", "detect"), strict = FALSE) {
+mime_type <- function(
+  path,
+  limit = 4096L,
+  complete = FALSE,
+  inner = c("name", "decompress"),
+  text = c("whatwg", "family"),
+  charset = c("declared", "detect"),
+  strict = FALSE
+) {
   path <- check_paths(path)
   limit <- check_limit(limit)
   check_flag(complete)
@@ -69,44 +74,89 @@ mime_type <- function(path, limit = 4096L, complete = FALSE,
   inner <- check_choice(inner, c("name", "decompress"))
   text <- check_choice(text, c("whatwg", "family"))
   charset <- check_choice(charset, c("declared", "detect"))
-  if (inner == "decompress") need_package("zukomp", "inner = \"decompress\"")
-  if (charset == "detect") need_package("zuutf", "charset = \"detect\"")
+  if (inner == "decompress") {
+    need_package("zukomp", "inner = \"decompress\"")
+  }
+  if (charset == "detect") {
+    need_package("zuutf", "charset = \"detect\"")
+  }
 
   res <- sniff_paths(path, limit, complete)
   check_strict(path, res, strict)
   out <- path_result(path, res)
   out <- apply_registered(out, path, limit)
 
-  if (text == "family") out <- family_refine(out)
-  if (charset == "detect") out <- detect_charset(out, limit)
+  if (text == "family") {
+    out <- family_refine(out)
+  }
+  if (charset == "detect") {
+    out <- detect_charset(out, limit)
+  }
   out$inner <- inner_type(out, inner, limit)
   out$by_name <- mime_guess(path)
   out$agree <- agree(out$type, out$confidence, out$by_name)
-  out[c("path", "type", "confidence", "charset", "by_name", "agree", "inner",
-    "encrypted", "complete", "newline", "interpreter")]
+  out[c(
+    "path",
+    "type",
+    "confidence",
+    "charset",
+    "by_name",
+    "agree",
+    "inner",
+    "encrypted",
+    "complete",
+    "newline",
+    "interpreter"
+  )]
 }
 
 # The C loop, with the context and supplied type of mime_sniff() when
 # given. Paths are expanded here; the loop opens them as given.
-sniff_paths <- function(path, limit, complete, supplied = NULL,
-                        no_sniff = FALSE, context = 0L) {
-  .Call(zumime_sniff_paths, enc2native(path.expand(path)), limit, complete,
-    supplied$essence, isTRUE(supplied$apache_bug), no_sniff, context)
+sniff_paths <- function(
+  path,
+  limit,
+  complete,
+  supplied = NULL,
+  no_sniff = FALSE,
+  context = 0L
+) {
+  .Call(
+    zumime_sniff_paths,
+    enc2native(path.expand(path)),
+    limit,
+    complete,
+    supplied$essence,
+    isTRUE(supplied$apache_bug),
+    no_sniff,
+    context
+  )
 }
 
 check_paths <- function(path) {
   if (!is.character(path)) {
-    zumime_abort("type", "`path` must be a character vector of paths.",
-      call = sys.call(-1L))
+    zumime_abort(
+      "type",
+      "`path` must be a character vector of paths.",
+      call = sys.call(-1L)
+    )
   }
   path
 }
 
 check_choice <- function(x, choices, arg = deparse(substitute(x))) {
-  if (identical(x, choices)) return(choices[1])
+  if (identical(x, choices)) {
+    return(choices[1])
+  }
   if (!is.character(x) || length(x) != 1L || !(x %in% choices)) {
-    zumime_abort("type", sprintf("`%s` must be one of %s.", arg,
-      paste0("\"", choices, "\"", collapse = ", ")), call = sys.call(-1L))
+    zumime_abort(
+      "type",
+      sprintf(
+        "`%s` must be one of %s.",
+        arg,
+        paste0("\"", choices, "\"", collapse = ", ")
+      ),
+      call = sys.call(-1L)
+    )
   }
   x
 }
@@ -115,23 +165,34 @@ check_strict <- function(path, res, strict) {
   bad <- which(!is.na(res[[8]]))
   if (strict && length(bad)) {
     i <- bad[1]
-    zumime_abort("io", sprintf("Cannot read \"%s\": %s.", path[i],
-      res[[8]][i]), call = sys.call(-1L))
+    zumime_abort(
+      "io",
+      sprintf("Cannot read \"%s\": %s.", path[i], res[[8]][i]),
+      call = sys.call(-1L)
+    )
   }
 }
 
 need_package <- function(pkg, what) {
   if (!has_package(pkg)) {
-    zumime_abort("dependency", sprintf(
-      "%s needs the %s package, which is not installed.", what, pkg
-    ), call = sys.call(-1L))
+    zumime_abort(
+      "dependency",
+      sprintf(
+        "%s needs the %s package, which is not installed.",
+        what,
+        pkg
+      ),
+      call = sys.call(-1L)
+    )
   }
 }
 
 path_result <- function(path, res, supplied = NULL) {
   type <- res[[1]]
   supplied_rows <- is.na(type) & is.na(res[[8]])
-  if (any(supplied_rows)) type[supplied_rows] <- supplied$essence
+  if (any(supplied_rows)) {
+    type[supplied_rows] <- supplied$essence
+  }
   charset <- res[[3]]
   if (!is.null(supplied$charset)) {
     text_rows <- supplied_rows | mime_is(type, "text/plain") %in% TRUE
@@ -152,25 +213,38 @@ path_result <- function(path, res, supplied = NULL) {
 # Bytes and name lie on one lineage. Unknown bytes (the floor, or an
 # unreadable path) and unknown names give NA.
 agree <- function(type, confidence, by_name) {
-  known <- !is.na(type) & !is.na(by_name) &
+  known <- !is.na(type) &
+    !is.na(by_name) &
     !(type == "application/octet-stream" & confidence == "none")
   out <- rep(NA, length(type))
-  if (!any(known)) return(out)
+  if (!any(known)) {
+    return(out)
+  }
   # Once per distinct pair: a tree has few.
   key <- paste(type, by_name, sep = "\r")
   pairs <- unique(data.frame(key, type, by_name)[known, , drop = FALSE])
-  one <- vapply(seq_len(nrow(pairs)), function(k) {
-    isTRUE(mime_is(pairs$type[k], pairs$by_name[k])) ||
-      isTRUE(mime_is(pairs$by_name[k], pairs$type[k]))
-  }, logical(1))
+  one <- vapply(
+    seq_len(nrow(pairs)),
+    function(k) {
+      isTRUE(mime_is(pairs$type[k], pairs$by_name[k])) ||
+        isTRUE(mime_is(pairs$by_name[k], pairs$type[k]))
+    },
+    logical(1)
+  )
   out[known] <- one[match(key[known], pairs$key)]
   out
 }
 
 wrapper_types <- function() {
-  c("application/gzip", "application/x-bzip2", "application/x-xz",
-    "application/zstd", "application/x-lz4", "application/lzip",
-    "application/x-compress")
+  c(
+    "application/gzip",
+    "application/x-bzip2",
+    "application/x-xz",
+    "application/zstd",
+    "application/x-lz4",
+    "application/lzip",
+    "application/x-compress"
+  )
 }
 
 # The type inside a compression wrapper, from the rest of the name or, with
@@ -178,7 +252,9 @@ wrapper_types <- function() {
 inner_type <- function(out, inner, limit) {
   res <- rep(NA_character_, nrow(out))
   wrapped <- which(out$type %in% wrapper_types())
-  if (!length(wrapped)) return(res)
+  if (!length(wrapped)) {
+    return(res)
+  }
   res[wrapped] <- inner_by_name(out$path[wrapped])
   if (inner == "decompress") {
     for (i in wrapped[out$type[wrapped] == "application/gzip"]) {
@@ -201,12 +277,18 @@ inner_by_name <- function(path) {
 decompress_type <- function(path, limit) {
   cap <- 16 * 1024^2
   size <- file.size(path)
-  if (is.na(size) || size > cap) return(NA_character_)
+  if (is.na(size) || size > cap) {
+    return(NA_character_)
+  }
   bytes <- readBin(path, "raw", size)
   decompress <- suggested_fun("zukomp", "komp_decompress")
-  out <- tryCatch(decompress(bytes, "gzip", max_output = cap),
-    error = function(e) NULL)
-  if (is.null(out)) return(NA_character_)
+  out <- tryCatch(
+    decompress(bytes, "gzip", max_output = cap),
+    error = function(e) NULL
+  )
+  if (is.null(out)) {
+    return(NA_character_)
+  }
   mime_sniff(out, limit = limit)$type
 }
 
@@ -223,8 +305,10 @@ family_refine <- function(out) {
     }
     if (!is.na(t)) {
       out$type[i] <- t
-      out$confidence[i] <- min(out$confidence[i],
-        factor("probable", levels = confidence_levels, ordered = TRUE))
+      out$confidence[i] <- min(
+        out$confidence[i],
+        factor("probable", levels = confidence_levels, ordered = TRUE)
+      )
     }
   }
   out
@@ -263,11 +347,21 @@ family_sniffers <- function() {
 # no charset or only the C1 guess.
 detect_charset <- function(out, limit) {
   detect <- suggested_fun("zuutf", "utf_detect")
-  rows <- which(mime_is(out$type, "text/plain") %in% TRUE &
-    (is.na(out$charset) | out$charset %in% c("windows-1252", "ISO-8859-1")))
+  rows <- which(
+    mime_is(out$type, "text/plain") %in%
+      TRUE &
+      (is.na(out$charset) | out$charset %in% c("windows-1252", "ISO-8859-1"))
+  )
   for (i in rows) {
-    bytes <- readBin(out$path[i], "raw", if (limit > 0) limit else
-      file.size(out$path[i]))
+    bytes <- readBin(
+      out$path[i],
+      "raw",
+      if (limit > 0) {
+        limit
+      } else {
+        file.size(out$path[i])
+      }
+    )
     cand <- tryCatch(detect(bytes), error = function(e) character())
     if (length(cand)) out$charset[i] <- cand[1]
   }

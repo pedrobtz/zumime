@@ -38,17 +38,23 @@
 #' t <- mime_sniffer(limit = 64)
 #' mime_push(t, charToRaw("hello, "))
 #' mime_finish(t)
-mime_sniffer <- function(type = NULL, no_sniff = FALSE,
-                         context = c("none", "browsing", "image",
-                           "audio_video", "font"),
-                         limit = 4096L) {
+mime_sniffer <- function(
+  type = NULL,
+  no_sniff = FALSE,
+  context = c("none", "browsing", "image", "audio_video", "font"),
+  limit = 4096L
+) {
   supplied <- supplied_type(type)
   check_flag(no_sniff)
   context <- check_context(context)
   limit <- check_limit(limit)
   s <- .Call(zumime_stream_new, limit)
-  attr(s, "params") <- list(supplied = supplied, no_sniff = no_sniff,
-    context = context, limit = limit)
+  attr(s, "params") <- list(
+    supplied = supplied,
+    no_sniff = no_sniff,
+    context = context,
+    limit = limit
+  )
   class(s) <- "zumime_sniffer"
   s
 }
@@ -77,27 +83,47 @@ mime_finish <- function(s) {
 print.zumime_sniffer <- function(x, ...) {
   st <- stream_state(x)
   p <- attr(x, "params")
-  cat(sprintf("<zumime_sniffer: %s of %s bytes, %s>\n", format(st$n),
-    if (p$limit > 0) format(p$limit) else "unlimited", st$state))
+  cat(sprintf(
+    "<zumime_sniffer: %s of %s bytes, %s>\n",
+    format(st$n),
+    if (p$limit > 0) format(p$limit) else "unlimited",
+    st$state
+  ))
   invisible(x)
 }
 
 check_sniffer <- function(s) {
   if (!inherits(s, "zumime_sniffer") || typeof(s) != "externalptr") {
-    zumime_abort("type", "`s` must be a sniffer from `mime_sniffer()`.",
-      call = sys.call(-1L))
+    zumime_abort(
+      "type",
+      "`s` must be a sniffer from `mime_sniffer()`.",
+      call = sys.call(-1L)
+    )
   }
 }
 
 stream_result <- function(s, chunk, final) {
   p <- attr(s, "params")
   fns <- session$types$parent[session$types$kind == "function"]
-  res <- .Call(zumime_stream_push, s, chunk, final, p$limit,
-    p$supplied$essence, p$supplied$apache_bug, p$no_sniff, p$context,
-    as.character(fns))
-  if (is.null(res)) return(NULL)
+  res <- .Call(
+    zumime_stream_push,
+    s,
+    chunk,
+    final,
+    p$limit,
+    p$supplied$essence,
+    p$supplied$apache_bug,
+    p$no_sniff,
+    p$context,
+    as.character(fns)
+  )
+  if (is.null(res)) {
+    return(NULL)
+  }
   out_type <- res[[1]]
-  if (is.na(out_type)) out_type <- p$supplied$essence
+  if (is.na(out_type)) {
+    out_type <- p$supplied$essence
+  }
   charset <- res[[3]]
   if (isTRUE(res[[5]]) && !is.null(p$supplied$charset)) {
     charset <- p$supplied$charset
@@ -111,7 +137,9 @@ stream_result <- function(s, chunk, final) {
     newline = res[[4]],
     interpreter = res[[7]]
   )
-  if (length(fns)) out <- apply_registered(out, stream_bytes(s), p$limit)
+  if (length(fns)) {
+    out <- apply_registered(out, stream_bytes(s), p$limit)
+  }
   out
 }
 

@@ -16,7 +16,10 @@ test_that("mime_extensions() resolves aliases, parameters and case", {
 })
 
 test_that("mime_extensions() gives character(0) for an unknown type", {
-  expect_identical(mime_extensions(c("foo/bar", NA)), list(character(), character()))
+  expect_identical(
+    mime_extensions(c("foo/bar", NA)),
+    list(character(), character())
+  )
 })
 
 test_that("registry functions reject a non-character argument", {

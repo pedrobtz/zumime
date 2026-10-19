@@ -1,22 +1,34 @@
 test_that("the supplied charset parameter comes first", {
-  expect_identical(sniff_charset(charToRaw("hi"), type = "text/plain; charset=Shift_JIS"),
-    "Shift_JIS")
-  expect_identical(sniff_charset(charToRaw("hi"), type = "text/plain; charset=UTF-8"),
-    "UTF-8")
+  expect_identical(
+    sniff_charset(charToRaw("hi"), type = "text/plain; charset=Shift_JIS"),
+    "Shift_JIS"
+  )
+  expect_identical(
+    sniff_charset(charToRaw("hi"), type = "text/plain; charset=UTF-8"),
+    "UTF-8"
+  )
   # Not for a binary result.
-  expect_identical(sniff_charset(png_bytes(), type = "text/plain; charset=UTF-8"),
-    NA_character_)
+  expect_identical(
+    sniff_charset(png_bytes(), type = "text/plain; charset=UTF-8"),
+    NA_character_
+  )
 })
 
 test_that("only a parameter named exactly charset is the supplied charset", {
   type <- "text/plain; charsetx=foo"
-  expect_identical(sniff_charset(charToRaw("hello world"), type = type), "UTF-8")
+  expect_identical(
+    sniff_charset(charToRaw("hello world"), type = type),
+    "UTF-8"
+  )
   r <- mime_sniff(charToRaw("hello world"), type = type, no_sniff = TRUE)
   expect_false(identical(r$charset, "foo"))
 })
 
 test_that("a byte-order mark decides", {
-  expect_identical(sniff_charset(as.raw(c(0xef, 0xbb, 0xbf, 0x68, 0x69))), "UTF-8")
+  expect_identical(
+    sniff_charset(as.raw(c(0xef, 0xbb, 0xbf, 0x68, 0x69))),
+    "UTF-8"
+  )
   expect_identical(sniff_charset(as.raw(c(0xff, 0xfe, 0x68, 0x00))), "UTF-16LE")
   expect_identical(sniff_charset(as.raw(c(0xfe, 0xff, 0x00, 0x68))), "UTF-16BE")
 })
@@ -26,7 +38,10 @@ test_that("an XML declaration names the encoding", {
   r <- mime_sniff(xml)
   expect_identical(r$type, "application/xml")
   expect_identical(r$charset, "ISO-8859-2")
-  expect_identical(sniff_charset(charToRaw("<?xml version=\"1.0\"?><a/>")), "UTF-8")
+  expect_identical(
+    sniff_charset(charToRaw("<?xml version=\"1.0\"?><a/>")),
+    "UTF-8"
+  )
 })
 
 test_that("a declared label with a non-printable byte gives an NA charset", {
@@ -42,23 +57,34 @@ test_that("a declared label with a non-printable byte gives an NA charset", {
 
 test_that("the HTML meta prescan finds charset and http-equiv", {
   expect_identical(
-    sniff_charset(charToRaw("<html><head><meta charset=\"Windows-1251\"><title>")),
+    sniff_charset(charToRaw(
+      "<html><head><meta charset=\"Windows-1251\"><title>"
+    )),
     "windows-1251"
   )
   expect_identical(
-    sniff_charset(charToRaw(paste0("<html><meta http-equiv=\"Content-Type\" ",
-      "content=\"text/html; charset=koi8-r\">"))),
+    sniff_charset(charToRaw(paste0(
+      "<html><meta http-equiv=\"Content-Type\" ",
+      "content=\"text/html; charset=koi8-r\">"
+    ))),
     "koi8-r"
   )
   # content= without the pragma does not count.
   expect_identical(
-    sniff_charset(charToRaw("<html><meta content=\"text/html; charset=koi8-r\">")),
+    sniff_charset(charToRaw(
+      "<html><meta content=\"text/html; charset=koi8-r\">"
+    )),
     "UTF-8"
   )
   # A UTF-16 label means UTF-8 to the prescan; x-user-defined, windows-1252.
-  expect_identical(sniff_charset(charToRaw("<html><meta charset=utf-16le>")), "UTF-8")
-  expect_identical(sniff_charset(charToRaw("<html><meta charset=x-user-defined>")),
-    "windows-1252")
+  expect_identical(
+    sniff_charset(charToRaw("<html><meta charset=utf-16le>")),
+    "UTF-8"
+  )
+  expect_identical(
+    sniff_charset(charToRaw("<html><meta charset=x-user-defined>")),
+    "windows-1252"
+  )
   # A meta inside a comment is skipped.
   expect_identical(
     sniff_charset(charToRaw("<html><!-- <meta charset=koi8-r> --><p>")),
@@ -107,8 +133,12 @@ test_that("the charset rules apply in their order", {
   )
   # A BOM beats an XML declaration.
   expect_identical(
-    sniff_charset(c(bom, charToRaw(
-      "<?xml version=\"1.0\" encoding=\"ISO-8859-2\"?><a/>"))),
+    sniff_charset(c(
+      bom,
+      charToRaw(
+        "<?xml version=\"1.0\" encoding=\"ISO-8859-2\"?><a/>"
+      )
+    )),
     "UTF-8"
   )
   # The meta prescan reads only the first 1024 bytes.
@@ -121,19 +151,31 @@ test_that("four-byte UTF-8 is valid and an F5 lead byte is not", {
     sniff_charset(c(charToRaw("smile "), as.raw(c(0xf0, 0x9f, 0x98, 0x80)))),
     "UTF-8"
   )
-  expect_identical(sniff_charset(c(charToRaw("x"), as.raw(c(0xf5, 0x41)))),
-    "ISO-8859-1")
+  expect_identical(
+    sniff_charset(c(charToRaw("x"), as.raw(c(0xf5, 0x41)))),
+    "ISO-8859-1"
+  )
 })
 
 test_that("the meta prescan trims labels, skips markup and keeps the first", {
   html <- function(s) charToRaw(paste0("<html>", s))
   expect_identical(sniff_charset(html("<meta charset=\" koi8-r \">")), "koi8-r")
   expect_identical(sniff_charset(html("<meta foo charset=koi8-r>")), "koi8-r")
-  expect_identical(sniff_charset(html(paste0(
-    "<meta http-equiv=content-type ",
-    "content=\"text/html; charset='koi8-r'\">"))), "koi8-r")
-  expect_identical(sniff_charset(html("<meta charset=koi8-r charset=big5>")),
-    "koi8-r")
-  expect_identical(sniff_charset(html(
-    "<!x><?pi?></p><meta charset=koi8-r>")), "koi8-r")
+  expect_identical(
+    sniff_charset(html(paste0(
+      "<meta http-equiv=content-type ",
+      "content=\"text/html; charset='koi8-r'\">"
+    ))),
+    "koi8-r"
+  )
+  expect_identical(
+    sniff_charset(html("<meta charset=koi8-r charset=big5>")),
+    "koi8-r"
+  )
+  expect_identical(
+    sniff_charset(html(
+      "<!x><?pi?></p><meta charset=koi8-r>"
+    )),
+    "koi8-r"
+  )
 })

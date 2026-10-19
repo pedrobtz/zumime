@@ -1,19 +1,29 @@
 test_that("ftyp brands decide the ISO base media type", {
-  expect_identical(sniff_type(build_ftyp("M4A ", c("M4A ", "mp42", "isom"))),
-    "audio/mp4")
+  expect_identical(
+    sniff_type(build_ftyp("M4A ", c("M4A ", "mp42", "isom"))),
+    "audio/mp4"
+  )
   expect_identical(sniff_type(build_ftyp("M4V ", c("mp42"))), "video/x-m4v")
   expect_identical(sniff_type(build_ftyp("qt  ")), "video/quicktime")
   expect_identical(sniff_type(build_ftyp("3gp5", c("isom"))), "video/3gpp")
   expect_identical(sniff_type(build_ftyp("3g2a")), "video/3gpp2")
-  expect_identical(sniff_type(build_ftyp("heic", c("mif1", "heic"))),
-    "image/heic")
+  expect_identical(
+    sniff_type(build_ftyp("heic", c("mif1", "heic"))),
+    "image/heic"
+  )
   expect_identical(sniff_type(build_ftyp("mif1", c("heic"))), "image/heif")
-  expect_identical(sniff_type(build_ftyp("avif", c("mif1", "avif"))),
-    "image/avif")
-  expect_identical(sniff_type(build_ftyp("crx ", c("isom"))),
-    "image/x-canon-cr3")
-  expect_identical(sniff_type(build_ftyp("isom", c("isom", "avc1"))),
-    "video/mp4")
+  expect_identical(
+    sniff_type(build_ftyp("avif", c("mif1", "avif"))),
+    "image/avif"
+  )
+  expect_identical(
+    sniff_type(build_ftyp("crx ", c("isom"))),
+    "image/x-canon-cr3"
+  )
+  expect_identical(
+    sniff_type(build_ftyp("isom", c("isom", "avc1"))),
+    "video/mp4"
+  )
   # A generic major brand defers to a specific compatible brand.
   expect_identical(sniff_type(build_ftyp("isom", c("M4A "))), "audio/mp4")
 })
@@ -36,23 +46,33 @@ test_that("the EBML DocType decides WebM against Matroska", {
   expect_identical(sniff_type(build_ebml("webm")), "video/webm")
   # Past the 38 bytes the standard's WebM signature reads.
   late <- build_ebml("webm", pad = 30)
-  expect_identical(sniff_type(late, context = "browsing"),
-    "application/octet-stream")
+  expect_identical(
+    sniff_type(late, context = "browsing"),
+    "application/octet-stream"
+  )
   expect_identical(sniff_type(late), "video/webm")
 })
 
 test_that("the first Ogg packet decides the codec", {
-  expect_identical(sniff_type(build_ogg(c(as.raw(1), charToRaw("vorbis")))),
-    "audio/ogg")
+  expect_identical(
+    sniff_type(build_ogg(c(as.raw(1), charToRaw("vorbis")))),
+    "audio/ogg"
+  )
   expect_identical(sniff_type(build_ogg("OpusHead")), "audio/opus")
-  expect_identical(sniff_type(build_ogg(c(as.raw(0x7f), charToRaw("FLAC")))),
-    "audio/ogg")
+  expect_identical(
+    sniff_type(build_ogg(c(as.raw(0x7f), charToRaw("FLAC")))),
+    "audio/ogg"
+  )
   expect_identical(sniff_type(build_ogg("Speex   ")), "audio/ogg")
-  expect_identical(sniff_type(build_ogg(c(as.raw(0x80), charToRaw("theora")))),
-    "video/ogg")
+  expect_identical(
+    sniff_type(build_ogg(c(as.raw(0x80), charToRaw("theora")))),
+    "video/ogg"
+  )
   expect_identical(sniff_type(build_ogg("unknown codec")), "application/ogg")
-  skeleton <- c(build_ogg(c(charToRaw("fishead"), as.raw(0))),
-    build_ogg("OpusHead"))
+  skeleton <- c(
+    build_ogg(c(charToRaw("fishead"), as.raw(0))),
+    build_ogg("OpusHead")
+  )
   expect_identical(sniff_type(skeleton), "audio/opus")
 })
 
@@ -63,10 +83,14 @@ test_that("PNG and JPEG refine to APNG and JPEG-LS", {
   sig <- png_bytes()[1:8]
   expect_identical(sniff_type(c(sig, ihdr, actl, idat)), "image/apng")
   expect_identical(sniff_type(c(sig, ihdr, idat, actl)), "image/png")
-  expect_identical(sniff_type(as.raw(c(0xff, 0xd8, 0xff, 0xf7, 0, 0))),
-    "image/jls")
-  expect_identical(sniff_type(as.raw(c(0xff, 0xd8, 0xff, 0xe0, 0, 0))),
-    "image/jpeg")
+  expect_identical(
+    sniff_type(as.raw(c(0xff, 0xd8, 0xff, 0xf7, 0, 0))),
+    "image/jls"
+  )
+  expect_identical(
+    sniff_type(as.raw(c(0xff, 0xd8, 0xff, 0xe0, 0, 0))),
+    "image/jpeg"
+  )
 })
 
 test_that("MPEG-2 Layer III frames are 72 * bitrate / rate long", {

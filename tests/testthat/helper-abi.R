@@ -17,8 +17,11 @@ exported_symbols <- function() {
   skip_on_os("windows")
   nm <- Sys.which("nm")
   skip_if(!nzchar(nm), "nm is not available")
-  args <- if (Sys.info()[["sysname"]] == "Darwin") "-gU" else
+  args <- if (Sys.info()[["sysname"]] == "Darwin") {
+    "-gU"
+  } else {
     c("-D", "--defined-only")
+  }
   syms <- suppressWarnings(system2(
     nm,
     c(args, shQuote(zumime_dll_path())),

@@ -50,7 +50,9 @@ test_that("the supplied type, no-sniff flag and context apply", {
 
 test_that("limit = 0 reads without bound until the finish", {
   s <- mime_sniffer(limit = 0)
-  for (i in 1:20) expect_null(mime_push(s, charToRaw(strrep("ab ", 300))))
+  for (i in 1:20) {
+    expect_null(mime_push(s, charToRaw(strrep("ab ", 300))))
+  }
   expect_output(print(s), "18000 of unlimited bytes, undecided")
   expect_identical(mime_finish(s)$type, "text/plain")
 })
@@ -83,7 +85,9 @@ test_that("each input decides at the whole's type, never past the limit", {
       r <- mime_push(s, b)
       if (!is.null(r)) break
     }
-    if (is.null(r)) r <- mime_finish(s)
+    if (is.null(r)) {
+      r <- mime_finish(s)
+    }
     expect_identical(r$type, mime_sniff(x)$type, info = name)
   }
 })
@@ -95,7 +99,10 @@ test_that("early decisions happen where the bytes allow them", {
   expect_identical(n(stream_inputs()$jpeg), 4)
   # "MZ" waits until the tar row at 257 can no longer match.
   expect_identical(n(c(charToRaw("MZ"), raw(400))), 258)
-  expect_identical(n(stream_inputs()$text), as.numeric(length(stream_inputs()$text)))
+  expect_identical(
+    n(stream_inputs()$text),
+    as.numeric(length(stream_inputs()$text))
+  )
 })
 
 test_that("every fixture decides at the whole's type", {
@@ -115,7 +122,9 @@ test_that("every fixture decides at the whole's type", {
       r <- mime_push(s, x[k:min(k + 511, length(x))])
       if (!is.null(r)) break
     }
-    if (is.null(r)) r <- mime_finish(s)
+    if (is.null(r)) {
+      r <- mime_finish(s)
+    }
     expect_identical(r$type, want, info = paste("chunks:", basename(f)))
   }
 })

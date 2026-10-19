@@ -6,11 +6,16 @@ test_that("every Go net/http sniff case agrees with the no-context path", {
     want_type <- paste0(want$type, "/", want$subtype)
     # Both ways: equal up to aliases. One way alone, every negative case
     # would pass, since every type descends from application/octet-stream.
-    expect_true(mime_is(got$type, want_type) && mime_is(want_type, got$type),
-      info = paste(cases$desc[i], got$type))
+    expect_true(
+      mime_is(got$type, want_type) && mime_is(want_type, got$type),
+      info = paste(cases$desc[i], got$type)
+    )
     if (!is.null(want$parameters$charset)) {
-      expect_identical(tolower(got$charset), tolower(want$parameters$charset),
-        info = cases$desc[i])
+      expect_identical(
+        tolower(got$charset),
+        tolower(want$parameters$charset),
+        info = cases$desc[i]
+      )
     }
   }
 })

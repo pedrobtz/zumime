@@ -6,15 +6,41 @@ test_that("mime_type() answers from bytes and name, with agree", {
     "README" = "read me\n",
     "blob.bin" = as.raw(c(1, 2, 3, 0, 255))
   ))
-  t <- mime_type(file.path(dir, c("data.csv", "logo.txt", "report.docx",
-    "README", "blob.bin")))
+  t <- mime_type(file.path(
+    dir,
+    c("data.csv", "logo.txt", "report.docx", "README", "blob.bin")
+  ))
   expect_s3_class(t, "zumime_result")
-  expect_named(t, c("path", "type", "confidence", "charset", "by_name",
-    "agree", "inner", "encrypted", "complete", "newline", "interpreter"))
-  expect_identical(t$type, c("text/plain", "image/png", docx_type(),
-    "text/plain", "application/octet-stream"))
-  expect_identical(t$by_name, c("text/csv", "text/plain", docx_type(), NA,
-    "application/octet-stream"))
+  expect_named(
+    t,
+    c(
+      "path",
+      "type",
+      "confidence",
+      "charset",
+      "by_name",
+      "agree",
+      "inner",
+      "encrypted",
+      "complete",
+      "newline",
+      "interpreter"
+    )
+  )
+  expect_identical(
+    t$type,
+    c(
+      "text/plain",
+      "image/png",
+      docx_type(),
+      "text/plain",
+      "application/octet-stream"
+    )
+  )
+  expect_identical(
+    t$by_name,
+    c("text/csv", "text/plain", docx_type(), NA, "application/octet-stream")
+  )
   # text/plain bytes and a .csv name lie on one lineage; a PNG named .txt
   # does not; unknown name or unknown bytes give NA.
   expect_identical(t$agree, c(TRUE, FALSE, TRUE, NA, NA))
@@ -52,13 +78,22 @@ test_that("a directory is inode/directory and nothing is read", {
 
 test_that("inner comes from the rest of the name by default", {
   csv <- gzip_bytes("a,b\n1,2\n")
-  dir <- local_tree(list("data.csv.gz" = csv, "x.tgz" = csv,
-    "y.tar.gz" = csv, "plain.gz" = csv, "z.csv" = "a,b\n"))
-  t <- mime_type(file.path(dir, c("data.csv.gz", "x.tgz", "y.tar.gz",
-    "plain.gz", "z.csv")))
+  dir <- local_tree(list(
+    "data.csv.gz" = csv,
+    "x.tgz" = csv,
+    "y.tar.gz" = csv,
+    "plain.gz" = csv,
+    "z.csv" = "a,b\n"
+  ))
+  t <- mime_type(file.path(
+    dir,
+    c("data.csv.gz", "x.tgz", "y.tar.gz", "plain.gz", "z.csv")
+  ))
   expect_identical(t$type[1:4], rep("application/gzip", 4))
-  expect_identical(t$inner, c("text/csv", "application/x-tar",
-    "application/x-tar", NA, NA))
+  expect_identical(
+    t$inner,
+    c("text/csv", "application/x-tar", "application/x-tar", NA, NA)
+  )
   expect_identical(t$agree[1:4], rep(TRUE, 4))
 })
 
@@ -67,15 +102,19 @@ test_that("inner = \"decompress\" sniffs what zukomp inflates", {
   dir <- local_tree(list("blob.gz" = gzip_bytes("{\"a\": [1, 2]}")))
   path <- file.path(dir, "blob.gz")
   expect_identical(mime_type(path)$inner, NA_character_)
-  expect_identical(mime_type(path, inner = "decompress")$inner,
-    "application/json")
+  expect_identical(
+    mime_type(path, inner = "decompress")$inner,
+    "application/json"
+  )
 })
 
 test_that("asking for an absent suggested package is a dependency error", {
   skip_if(requireNamespace("zuutf", quietly = TRUE), "zuutf is installed")
   dir <- local_tree(list(a.txt = "caf\xe9"))
-  expect_error(mime_type(file.path(dir, "a.txt"), charset = "detect"),
-    class = "zumime_dependency_error")
+  expect_error(
+    mime_type(file.path(dir, "a.txt"), charset = "detect"),
+    class = "zumime_dependency_error"
+  )
 })
 
 test_that("encrypted is read from ZIP, OLE2 and, with complete, PDF", {
@@ -86,25 +125,34 @@ test_that("encrypted is read from ZIP, OLE2 and, with complete, PDF", {
     "locked.pdf" = pdf_bytes(encrypt = TRUE),
     "open.pdf" = pdf_bytes()
   ))
-  paths <- file.path(dir, c("locked.zip", "open.zip", "locked.doc",
-    "locked.pdf", "open.pdf"))
+  paths <- file.path(
+    dir,
+    c("locked.zip", "open.zip", "locked.doc", "locked.pdf", "open.pdf")
+  )
   expect_identical(mime_type(paths)$encrypted, c(TRUE, FALSE, TRUE, NA, NA))
-  expect_identical(mime_type(paths, complete = TRUE)$encrypted,
-    c(TRUE, FALSE, TRUE, TRUE, FALSE))
+  expect_identical(
+    mime_type(paths, complete = TRUE)$encrypted,
+    c(TRUE, FALSE, TRUE, TRUE, FALSE)
+  )
 })
 
 test_that("only the trailer dictionary decides whether a PDF is encrypted", {
-  in_text <- charToRaw(paste0("%PDF-1.7\n",
+  in_text <- charToRaw(paste0(
+    "%PDF-1.7\n",
     "1 0 obj << /Type /Catalog >> endobj\n",
     "2 0 obj (/Encrypt is a word) endobj\n",
-    "trailer << /Root 1 0 R >>\nstartxref\n0\n%%EOF\n"))
+    "trailer << /Root 1 0 R >>\nstartxref\n0\n%%EOF\n"
+  ))
   xref <- function(dict) {
-    charToRaw(paste0("%PDF-1.7\n",
+    charToRaw(paste0(
+      "%PDF-1.7\n",
       "1 0 obj << /Type /Catalog >> endobj\n",
       "2 0 obj (/Encrypt is a word) endobj\n",
-      "3 0 obj << /Type /XRef /Size 4 /Root 1 0 R", dict,
+      "3 0 obj << /Type /XRef /Size 4 /Root 1 0 R",
+      dict,
       " /Length 0 >>\nstream\n\nendstream\nendobj\n",
-      "startxref\n0\n%%EOF\n"))
+      "startxref\n0\n%%EOF\n"
+    ))
   }
   dir <- local_tree(list(
     "text.pdf" = in_text,
@@ -125,21 +173,40 @@ test_that("complete = TRUE reads the end of ZIP, PDF, gzip and Parquet", {
   rds_bytes <- readBin(rds, "raw", file.size(rds))
   parquet <- c(charToRaw("PAR1"), raw(40), charToRaw("PAR1"))
   dir <- local_tree(list(
-    "whole.docx" = zip, "cut.docx" = zip[seq_len(length(zip) - 30)],
-    "whole.pdf" = pdf_bytes(), "cut.pdf" = pdf_bytes(eof = FALSE),
-    "whole.csv.gz" = gz, "cut.csv.gz" = gz[seq_len(length(gz) - 6)],
-    "whole.rds" = rds_bytes, "cut.rds" = rds_bytes[1:20],
-    "whole.parquet" = parquet, "cut.parquet" = parquet[1:30],
+    "whole.docx" = zip,
+    "cut.docx" = zip[seq_len(length(zip) - 30)],
+    "whole.pdf" = pdf_bytes(),
+    "cut.pdf" = pdf_bytes(eof = FALSE),
+    "whole.csv.gz" = gz,
+    "cut.csv.gz" = gz[seq_len(length(gz) - 6)],
+    "whole.rds" = rds_bytes,
+    "cut.rds" = rds_bytes[1:20],
+    "whole.parquet" = parquet,
+    "cut.parquet" = parquet[1:30],
     "note.txt" = "no end marker"
   ))
-  names <- c("whole.docx", "cut.docx", "whole.pdf", "cut.pdf",
-    "whole.csv.gz", "cut.csv.gz", "whole.rds", "cut.rds", "whole.parquet",
-    "cut.parquet", "note.txt")
+  names <- c(
+    "whole.docx",
+    "cut.docx",
+    "whole.pdf",
+    "cut.pdf",
+    "whole.csv.gz",
+    "cut.csv.gz",
+    "whole.rds",
+    "cut.rds",
+    "whole.parquet",
+    "cut.parquet",
+    "note.txt"
+  )
   t <- mime_type(file.path(dir, names), complete = TRUE)
-  expect_identical(t$complete,
-    c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, NA))
-  expect_identical(mime_type(file.path(dir, names))$complete,
-    rep(NA, length(names)))
+  expect_identical(
+    t$complete,
+    c(TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, NA)
+  )
+  expect_identical(
+    mime_type(file.path(dir, names))$complete,
+    rep(NA, length(names))
+  )
 })
 
 test_that("the ZIP tail is read when the central directory is past the head", {
@@ -151,22 +218,31 @@ test_that("the ZIP tail is read when the central directory is past the head", {
 })
 
 test_that("a central directory larger than the tail is read from its start", {
-  many <- stats::setNames(rep(list("x"), 2500),
-    sprintf("assets/padding-entry-%05d.txt", 1:2500))
-  e <- c(list("big.bin" = as.raw(rep(1:255, 40))), many,
-    list("AndroidManifest.xml" = "m", "classes.dex" = "d"))
+  many <- stats::setNames(
+    rep(list("x"), 2500),
+    sprintf("assets/padding-entry-%05d.txt", 1:2500)
+  )
+  e <- c(
+    list("big.bin" = as.raw(rep(1:255, 40))),
+    many,
+    list("AndroidManifest.xml" = "m", "classes.dex" = "d")
+  )
   zip <- build_zip(e)
   dir <- local_tree(list("app.apk" = zip))
-  expect_identical(mime_type(file.path(dir, "app.apk"))$type,
-    "application/vnd.android.package-archive")
+  expect_identical(
+    mime_type(file.path(dir, "app.apk"))$type,
+    "application/vnd.android.package-archive"
+  )
 })
 
 test_that("signature rows past the head are read by seeking", {
   iso <- raw(40000)
   iso[32770:32774] <- charToRaw("CD001")
   dir <- local_tree(list("disc.iso" = iso))
-  expect_identical(mime_type(file.path(dir, "disc.iso"))$type,
-    "application/x-iso9660-image")
+  expect_identical(
+    mime_type(file.path(dir, "disc.iso"))$type,
+    "application/x-iso9660-image"
+  )
 })
 
 test_that("newline and interpreter come from the bytes", {
@@ -199,8 +275,10 @@ test_that("mime_sniff() reads paths through the same loop", {
 
 test_that("a supplied charset reaches text rows on the path route", {
   dir <- local_tree(list(a.txt = "hello world\n", b = "<html><body>x"))
-  r <- mime_sniff(file.path(dir, c("a.txt", "b")),
-    type = "text/plain; charset=Shift_JIS")
+  r <- mime_sniff(
+    file.path(dir, c("a.txt", "b")),
+    type = "text/plain; charset=Shift_JIS"
+  )
   expect_identical(r$type, c("text/plain", "text/plain"))
   expect_identical(r$charset, c("Shift_JIS", "Shift_JIS"))
 })
@@ -210,8 +288,11 @@ test_that("an unregistered text/ type keeps a charset on every route", {
   dir <- local_tree(list(a.txt = x))
   type <- "text/x-zt-unknown"
   raw_route <- mime_sniff(x, type = type, no_sniff = TRUE)
-  path_route <- mime_sniff(file.path(dir, "a.txt"), type = type,
-    no_sniff = TRUE)
+  path_route <- mime_sniff(
+    file.path(dir, "a.txt"),
+    type = type,
+    no_sniff = TRUE
+  )
   s <- mime_sniffer(type = type, no_sniff = TRUE)
   expect_null(mime_push(s, x))
   stream_route <- mime_finish(s)
@@ -265,8 +346,10 @@ test_that("a file that cannot be opened is an NA row", {
 
 test_that("a non-ASCII path is read", {
   name <- "café 中.png"
-  skip_if(.Platform$OS.type != "windows" && !l10n_info()[["UTF-8"]],
-    "the native encoding cannot represent the name")
+  skip_if(
+    .Platform$OS.type != "windows" && !l10n_info()[["UTF-8"]],
+    "the native encoding cannot represent the name"
+  )
   dir <- withr::local_tempdir()
   path <- file.path(dir, name)
   writeBin(png_bytes(), path)
@@ -282,17 +365,22 @@ test_that("suggested packages are reached only when asked, through one door", {
   ))
   p <- file.path(dir, c("a.txt", "b", "c.gz"))
   local_mocked_bindings(has_package = function(pkg) FALSE)
-  expect_error(mime_type(p, charset = "detect"),
-    class = "zumime_dependency_error")
-  expect_error(mime_type(p, inner = "decompress"),
-    class = "zumime_dependency_error")
+  expect_error(
+    mime_type(p, charset = "detect"),
+    class = "zumime_dependency_error"
+  )
+  expect_error(
+    mime_type(p, inner = "decompress"),
+    class = "zumime_dependency_error"
+  )
   expect_identical(zumime_info()$family, character())
   expect_identical(mime_type(p, text = "family")$type[2], "text/plain")
 
   local_mocked_bindings(
     has_package = function(pkg) TRUE,
     suggested_fun = function(pkg, name) {
-      switch(name,
+      switch(
+        name,
         utf_detect = function(x) "Shift_JIS",
         sniff_csv = function(path, delimiter) list(ncol = 1L, nrow = 0L),
         json_validate = function(x) TRUE,

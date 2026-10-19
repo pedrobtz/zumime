@@ -19,3 +19,4 @@
 ^tests/testthat/fixtures$
 ^src/.*\.a$
 ^README\.Rmd$
+^air\.toml$
