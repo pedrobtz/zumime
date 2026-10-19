@@ -25,7 +25,7 @@ lands in Stage 1 with the tables it covers.
 | 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | [#18](https://github.com/pedrobtz/zumime/pull/18) | 2026-10-19 |
 | 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | [#19](https://github.com/pedrobtz/zumime/pull/19) | 2026-10-19 |
 | 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | [#20](https://github.com/pedrobtz/zumime/pull/20) | 2026-10-19 |
-| 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | | |
+| 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | [#61](https://github.com/pedrobtz/zumime/pull/61) | 2026-10-19 |
 
 ## Stage 0 — Package identity
 
