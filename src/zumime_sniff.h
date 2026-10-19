@@ -185,6 +185,11 @@ int zumime_read_zip(const unsigned char *head, size_t hlen, int head_is_whole,
 int zumime_zip_cd_offset(const unsigned char *buf, size_t len, uint64_t buf_off,
                          uint64_t *cd_off);
 int zumime_read_ole2(const unsigned char *buf, size_t len, int *encrypted);
+/* The OLE2 reader over any byte source: get() returns n bytes at off, in
+ * scratch (at least n bytes) or in place, or NULL when not available. */
+typedef const unsigned char *(*zumime_ole2_get)(void *ctx, uint64_t off,
+                                                 size_t n, unsigned char *scratch);
+int zumime_read_ole2_at(zumime_ole2_get get, void *ctx, int *encrypted);
 int zumime_read_bmff(const unsigned char *buf, size_t len);
 int zumime_read_png(const unsigned char *buf, size_t len);
 int zumime_read_ebml(const unsigned char *buf, size_t len);

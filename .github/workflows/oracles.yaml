@@ -22,6 +22,8 @@ jobs:
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       NOT_CRAN: "true"
+      # A missing fixture directory or source tree fails here, not skips.
+      ZUMIME_REQUIRE_ORACLES: "true"
     steps:
       - uses: actions/checkout@v6
 

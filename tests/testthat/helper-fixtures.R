@@ -2,10 +2,21 @@
 # calling test when it is absent.
 fixture_dir <- function(name) {
   dir <- test_path("fixtures", name)
-  skip_if_not(dir.exists(dir), paste0(
-    "fixtures/", name, " not fetched; run tools/fetch-fixtures"
-  ))
+  if (!dir.exists(dir)) {
+    msg <- paste0("fixtures/", name, " not fetched; run tools/fetch-fixtures")
+    require_oracles(msg)
+    skip(msg)
+  }
   dir
+}
+
+# The oracles job (oracles.yaml) sets ZUMIME_REQUIRE_ORACLES=true: there a
+# missing fixture directory or source tree is a failure, not a skip, so a
+# broken fetch cannot turn the job into skips that stay green.
+require_oracles <- function(msg) {
+  if (identical(Sys.getenv("ZUMIME_REQUIRE_ORACLES"), "true")) {
+    stop(msg, call. = FALSE)
+  }
 }
 
 # The WPT mime-types entries as a list of list(input, output). An input

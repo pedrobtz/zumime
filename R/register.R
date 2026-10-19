@@ -21,7 +21,8 @@ session$version <- 0L
 #' have been typed as the parent, costs what a built-in signature costs,
 #' and is reported at `"definite"`. A function rule is called from R with
 #' the bytes read and must return `TRUE` or `FALSE`; it runs last, only when
-#' the parent matched, and is reported at `"probable"`.
+#' the parent matched, and is reported at `"probable"`. A data rule cannot sit
+#' under a type that a function rule decides, since data rules run first.
 #'
 #' @param type The new type, such as `"application/x-myformat"`.
 #' @param parent An existing type the new one descends from.
@@ -52,12 +53,27 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
     zumime_abort("type", "`parent` must be a single type string.")
   }
   parent <- canonical_type(parent)
+  if (nchar(essence, type = "bytes") > 127L) {
+    zumime_abort("registry", sprintf(
+      "A registered type is at most 127 bytes long, not %d.",
+      nchar(essence, type = "bytes")
+    ))
+  }
   if (essence %in% all_types() || essence %in% names(types_alias_map)) {
     zumime_abort("registry", sprintf("\"%s\" is already a type.", essence))
   }
   if (!(parent %in% all_types())) {
     zumime_abort("registry", sprintf("The parent \"%s\" is not a type.",
       parent))
+  }
+  # A data rule runs in C before R's function rules, so it could never see
+  # a type that only a function rule decides.
+  if (!is.function(rule) && !is.null(rule) &&
+    parent %in% session$types$type[session$types$kind == "function"]) {
+    zumime_abort("registry", sprintf(paste(
+      "\"%s\" is decided by a function rule; a data rule cannot sit",
+      "under it. Use a function rule for \"%s\"."
+    ), parent, essence))
   }
   extensions <- check_extensions(extensions)
   data_rule <- NULL

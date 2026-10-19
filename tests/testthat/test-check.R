@@ -55,3 +55,15 @@ test_that("mime_check() rejects malformed arguments", {
   expect_error(mime_check("a", 1), class = "zumime_type_error")
   expect_error(mime_check("a", "image", "certain"), class = "zumime_type_error")
 })
+
+test_that("mime_check() reads only the head of a long raw vector", {
+  x <- c(pdf_bytes(), raw(5000))
+  expect_true(mime_check(x, "application/pdf"))
+  late <- c(raw(5000), pdf_bytes())
+  expect_false(mime_check(late, "application/pdf"))
+})
+
+test_that("an NA path is not allowed", {
+  expect_identical(mime_check(NA_character_, "image"), FALSE)
+  expect_identical(mime_check(NA_character_, "image", "none"), NA)
+})

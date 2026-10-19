@@ -39,10 +39,14 @@ typedef off_t foff;
 #define ftell64 ftello
 #endif
 
-/* Open `path` (UTF-8 on Windows, native elsewhere) for binary reading. *is_dir is set for a directory.
- * Returns NULL with errno set on failure. */
-static FILE *open_path(const char *path, int *is_dir) {
-  *is_dir = 0;
+/* Open `path` (UTF-8 on Windows, native elsewhere) for binary reading.
+ * Anything that is not a regular file is not opened: *special is set to its
+ * inode type (a directory, a FIFO, a device, a socket), as libmagic reports
+ * them, because opening a FIFO blocks until a writer comes and a device can
+ * be read forever. Otherwise *special is -1. Returns NULL with errno set on
+ * failure. */
+static FILE *open_path(const char *path, int *special) {
+  *special = -1;
 #ifdef _WIN32
   int n = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
   if (n <= 0) {
@@ -56,18 +60,36 @@ static FILE *open_path(const char *path, int *is_dir) {
   }
   MultiByteToWideChar(CP_UTF8, 0, path, -1, w, n);
   struct _stat64 st;
-  if (_wstat64(w, &st) == 0 && (st.st_mode & _S_IFDIR)) {
-    free(w);
-    *is_dir = 1;
-    return NULL;
+  if (_wstat64(w, &st) == 0) {
+    if (st.st_mode & _S_IFDIR)
+      *special = ZUMIME_T_INODE_DIRECTORY;
+    else if (st.st_mode & _S_IFCHR)
+      *special = ZUMIME_T_INODE_CHARDEVICE;
+    else if (st.st_mode & _S_IFIFO)
+      *special = ZUMIME_T_INODE_FIFO;
+    if (*special >= 0) {
+      free(w);
+      return NULL;
+    }
   }
   FILE *f = _wfopen(w, L"rb");
   free(w);
   return f;
 #else
   struct stat st;
-  if (stat(path, &st) == 0 && S_ISDIR(st.st_mode)) {
-    *is_dir = 1;
+  if (stat(path, &st) == 0 && !S_ISREG(st.st_mode)) {
+    if (S_ISDIR(st.st_mode))
+      *special = ZUMIME_T_INODE_DIRECTORY;
+    else if (S_ISFIFO(st.st_mode))
+      *special = ZUMIME_T_INODE_FIFO;
+    else if (S_ISCHR(st.st_mode))
+      *special = ZUMIME_T_INODE_CHARDEVICE;
+    else if (S_ISBLK(st.st_mode))
+      *special = ZUMIME_T_INODE_BLOCKDEVICE;
+    else if (S_ISSOCK(st.st_mode))
+      *special = ZUMIME_T_INODE_SOCKET;
+    else
+      *special = ZUMIME_T_APPLICATION_OCTET_STREAM;
     return NULL;
   }
   return fopen(path, "rb");
@@ -134,6 +156,20 @@ static void offset_rows(FILE *f, int64_t size, size_t head_len,
   }
 }
 
+/* The OLE2 directory sits near the end of an Office file, past the head:
+ * read the header, FAT and directory sectors by seeking. */
+typedef struct {
+  FILE *f;
+  int64_t size;
+} ole_file;
+
+static const unsigned char *file_get(void *ctx, uint64_t off, size_t n,
+                                     unsigned char *scratch) {
+  const ole_file *of = (const ole_file *) ctx;
+  if ((int64_t) off > of->size || (uint64_t) of->size - off < n) return NULL;
+  return read_at(of->f, (int64_t) off, scratch, n) == n ? scratch : NULL;
+}
+
 /* complete = TRUE: does the file end as its format says it must? */
 static int completeness(FILE *f, int64_t size, const unsigned char *head,
                         size_t head_len, zumime_result *r) {
@@ -184,12 +220,12 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
   memset(out, 0, sizeof(*out));
   out->complete = -1;
   out->r.encrypted = -1;
-  int is_dir = 0;
+  int special = -1;
   errno = 0;
-  FILE *f = open_path(path, &is_dir);
-  if (is_dir) {
+  FILE *f = open_path(path, &special);
+  if (special >= 0) {
     out->is_dir = 1;
-    out->r.type = ZUMIME_T_INODE_DIRECTORY;
+    out->r.type = special;
     out->r.confidence = ZUMIME_CONF_DEFINITE;
     return;
   }
@@ -199,6 +235,8 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
              errno ? strerror(errno) : "cannot open");
     return;
   }
+  /* Not reachable from the tests: seeking a regular file that opened fails
+   * only on an I/O error or a file over the platform's off_t. */
   int64_t size = file_size(f);
   if (size < 0) {
     out->failed = 1;
@@ -211,6 +249,8 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
   size_t cap = limit;
   if (limit == 0) {
     cap = (size_t) size;
+    /* Allocation failure is not provoked by the tests; the alloc-failure
+     * workflow of r-actions is where it would be exercised. */
     own = (unsigned char *) malloc(cap ? cap : 1);
     if (own == NULL) {
       out->failed = 1;
@@ -222,6 +262,8 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
     head = own;
   }
   size_t head_len = fread(head, 1, cap, f);
+  /* Not reachable from the tests: a read error on an open regular file
+   * needs failing hardware or a vanished network share. */
   if (ferror(f)) {
     out->failed = 1;
     snprintf(out->error, sizeof(out->error), "read error");
@@ -273,6 +315,14 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
   if (proto->context == ZUMIME_CTX_NONE && out->r.type != ZUMIME_SUPPLIED &&
       in.truncated && !proto->base_only)
     offset_rows(f, size, head_len, &out->r);
+  if (proto->context == ZUMIME_CTX_NONE && in.truncated && !proto->base_only &&
+      out->r.type == ZUMIME_T_APPLICATION_X_OLE_STORAGE) {
+    ole_file of = {f, size};
+    int enc = -1;
+    int t = zumime_read_ole2_at(file_get, &of, &enc);
+    if (t >= 0) out->r.type = t;
+    out->r.encrypted = enc;
+  }
   if (want_complete && out->r.type != ZUMIME_SUPPLIED)
     out->complete = completeness(f, size, head, head_len, &out->r);
 
@@ -314,6 +364,8 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
   unsigned char *head = lim > 0 ? (unsigned char *) R_alloc(lim, 1) : NULL;
 
   for (R_xlen_t i = 0; i < n; i++) {
+    /* testthat cannot send an interrupt; the check runs between files with
+     * nothing open, which is what makes it safe. */
     if (i > 0 && i % 256 == 0) R_CheckUserInterrupt();
     SEXP s = STRING_ELT(paths, i);
     path_result pr;

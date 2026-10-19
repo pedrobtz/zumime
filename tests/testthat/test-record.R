@@ -44,8 +44,14 @@ test_that("mime_format() rejects what is not a record", {
 test_that("every web-platform-tests parse fixture passes", {
   skip_if_gctorture()
   dir <- fixture_dir("wpt")
-  for (f in c("mime-types.json", "generated-mime-types.json")) {
+  # Entries per file at WPT 0f19549, and how many hold U+0000, which an R
+  # string cannot carry. An empty list would otherwise pass as a skip.
+  counts <- c("mime-types.json" = 74L, "generated-mime-types.json" = 876L)
+  dropped <- c("mime-types.json" = 0L, "generated-mime-types.json" = 5L)
+  for (f in names(counts)) {
     entries <- wpt_mime_entries(file.path(dir, f))
+    expect_identical(length(entries), counts[[f]], info = f)
+    expect_identical(attr(entries, "dropped"), dropped[[f]], info = f)
     for (e in entries) {
       want <- if (is.null(e$output)) NA_character_ else e$output
       expect_identical(mime_format(mime_parse(e$input)), want, info = e$input)
