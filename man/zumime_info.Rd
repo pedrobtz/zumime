@@ -8,8 +8,8 @@ zumime_info()
 }
 \value{
 A list with \code{version}, the package version as a string, and
-\code{table_version}, the date of the table sources as a string, or \code{NA}
-before the tables exist.
+\code{table_version}, the date of the table sources as a string
+(\code{"YYYY-MM-DD"}).
 }
 \description{
 Reports what this build of zumime contains: the package version and the

@@ -5,14 +5,14 @@
 #' sources they were built from.
 #'
 #' @return A list with `version`, the package version as a string, and
-#'   `table_version`, the date of the table sources as a string, or `NA`
-#'   before the tables exist.
+#'   `table_version`, the date of the table sources as a string
+#'   (`"YYYY-MM-DD"`).
 #' @export
 #' @examples
 #' zumime_info()
 zumime_info <- function() {
   list(
     version = unname(getNamespaceVersion("zumime")),
-    table_version = NA_character_
+    table_version = types_table_version
   )
 }

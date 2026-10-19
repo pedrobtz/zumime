@@ -1,0 +1,52 @@
+# Is the type registry stale? Weekly, download IANA's registry and Apache's
+# mime.types again and compare their checksums with tools/table-sources.yaml.
+# When one changed, open an issue (or update the open one) asking for a
+# regeneration pull request. r-actions' vendor-upstream.yml watches a
+# vendored library's GitHub releases, which these files do not have, and
+# this repository does not let workflows open pull requests.
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+name: tables-upstream
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  upstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install the generator's packages
+        run: Rscript -e 'install.packages(c("yaml", "digest"))'
+
+      - name: Download the sources again
+        run: Rscript tools/generate-tables.R --fetch
+
+      - name: Open or update the issue when a source changed
+        run: |
+          changed=$(git status --porcelain tools/sources tools/table-sources.yaml)
+          if [ -z "$changed" ]; then
+            echo "table sources unchanged"
+            exit 0
+          fi
+          title="Type table sources changed upstream"
+          body=$(printf 'A weekly download of the table sources differs from tools/table-sources.yaml:\n\n```\n%s\n```\n\nRun `Rscript tools/generate-tables.R --fetch`, review the diff of R/sysdata.rda and src/zumime_types.h, add a NEWS entry for any canonical name that changed, and open a pull request.\n\nRun: %s' \
+            "$changed" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
+          n=$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[0].number')
+          if [ -n "$n" ]; then
+            gh issue edit "$n" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

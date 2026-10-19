@@ -1,0 +1,48 @@
+# Upstream files behind the type registry, written by
+# tools/generate-tables.R --fetch. Copies live in tools/sources/.
+sources:
+- file: application.csv
+  url: https://www.iana.org/assignments/media-types/application.csv
+  retrieved: '2026-10-19'
+  sha256: 15e2989e3948846d0897f564c5ec997bfd375ee75c0e10023d11ebed234e5012
+- file: audio.csv
+  url: https://www.iana.org/assignments/media-types/audio.csv
+  retrieved: '2026-10-19'
+  sha256: ed2b649d541110a38563cfe41074ef4f88ff4084cfee562cd03ed09f0cb2d7cf
+- file: font.csv
+  url: https://www.iana.org/assignments/media-types/font.csv
+  retrieved: '2026-10-19'
+  sha256: 9557443bb16ce9bd0b4c85a704162677daef51b8be815cb0ae50e40e0eacc092
+- file: haptics.csv
+  url: https://www.iana.org/assignments/media-types/haptics.csv
+  retrieved: '2026-10-19'
+  sha256: 637a536c3739410f24b8d014f81a1d368f114581eedeca0156383378dc62367b
+- file: image.csv
+  url: https://www.iana.org/assignments/media-types/image.csv
+  retrieved: '2026-10-19'
+  sha256: e4e74a3c35d37cbaf4d37fa7538e8d8c1ef83ec551a3ab5e61aba31ab238eb9f
+- file: message.csv
+  url: https://www.iana.org/assignments/media-types/message.csv
+  retrieved: '2026-10-19'
+  sha256: cb98306a3cb2f30b9df0680a3c4aadb73185583916c81d045ec76dfb31e1f143
+- file: model.csv
+  url: https://www.iana.org/assignments/media-types/model.csv
+  retrieved: '2026-10-19'
+  sha256: 7e7d42c4ea8743b950409313d43dff7a23d13ded05ddde41a523d8e7fea62306
+- file: multipart.csv
+  url: https://www.iana.org/assignments/media-types/multipart.csv
+  retrieved: '2026-10-19'
+  sha256: f8eacc0e3683ee647cd43e740f356c034bb2754b30d70fce5824416ec6ab6173
+- file: text.csv
+  url: https://www.iana.org/assignments/media-types/text.csv
+  retrieved: '2026-10-19'
+  sha256: 8873804114de76118bfdecc79afb6546e1a1d9e2a9f936b0d7b260f3a1e08ba6
+- file: video.csv
+  url: https://www.iana.org/assignments/media-types/video.csv
+  retrieved: '2026-10-19'
+  sha256: bcb4e49f2c98db2d8229ace964c5167a7b870e795028d6a7fe5fd568e4571131
+- file: mime.types
+  url: https://raw.githubusercontent.com/apache/httpd/trunk/docs/conf/mime.types
+  retrieved: '2026-10-19'
+  sha256: f0aca42aa6ae1ea0c856e363d45a6abd67b3afe1bd59e64f256c5610fc84505b
+

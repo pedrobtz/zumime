@@ -4,7 +4,12 @@
 #include <R_ext/Rdynload.h>
 #include <R_ext/Visibility.h>
 
+#include "zumime_r.h"
+
 static const R_CallMethodDef call_methods[] = {
+  {"zumime_mime_parse", (DL_FUNC) &zumime_mime_parse, 1},
+  {"zumime_mime_format", (DL_FUNC) &zumime_mime_format, 1},
+  {"zumime_suffixes", (DL_FUNC) &zumime_suffixes, 1},
   {NULL, NULL, 0}
 };
 

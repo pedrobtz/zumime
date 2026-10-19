@@ -1,0 +1,181 @@
+# Hand-maintained additions to the type registry (design section 4, layer 1, D8).
+#
+# IANA's registry and Apache httpd's mime.types are the sources; this file
+# adds what neither has. A key is a canonical type, lower-case. Fields, all
+# optional:
+#
+#   parent       the parent type; default by rule in tools/generate-tables.R
+#                (text/* -> text/plain, +xml -> application/xml,
+#                +json -> application/json, +zip -> application/zip,
+#                otherwise application/octet-stream)
+#   aliases      names other tools emit for the same format; an alias that
+#                is also a source type is folded into this one, extensions
+#                and all
+#   extensions   added extensions, without the dot, lower-case
+#   canonical    the canonical extension, when Apache's first is not it
+#   detected_by  signature, container, text or registered; default extension
+#
+# A type that is in neither source is created by appearing here.
+
+types:
+  application/octet-stream:
+    parent: ~
+  text/plain:
+    parent: application/octet-stream
+  inode/directory: {}
+
+  # The structured-text roots.
+  application/xml:
+    parent: text/plain
+    aliases: [application/x-xml]
+  text/xml:
+    parent: application/xml
+  application/json:
+    parent: text/plain
+    aliases: [text/json, application/x-json]
+  application/x-ndjson:
+    parent: text/plain
+    aliases: [application/jsonl, application/x-jsonlines]
+    extensions: [ndjson, jsonl]
+  application/yaml:
+    parent: text/plain
+    aliases: [application/x-yaml, text/yaml, text/x-yaml]
+    extensions: [yaml, yml]
+  application/toml:
+    parent: text/plain
+    extensions: [toml]
+  text/javascript:
+    aliases: [application/x-javascript]
+  text/markdown:
+    aliases: [text/x-markdown]
+    extensions: [md, markdown]
+  text/x-r:
+    aliases: [text/x-r-source, application/x-r]
+    extensions: [r]
+  text/x-rmarkdown:
+    extensions: [rmd]
+
+  # Compression wrappers. The compounds are known as such, so .tar.gz is
+  # one suffix; the bytes say gzip, and `inner` names the tar.
+  application/gzip:
+    aliases: [application/x-gzip, application/gzip-compressed]
+    extensions: [gz, tgz, tar.gz]
+  application/x-bzip2:
+    aliases: [application/bzip2, application/x-bzip2-compressed]
+    extensions: [tbz2, tar.bz2]
+  application/x-xz:
+    extensions: [txz, tar.xz]
+  application/zstd:
+    aliases: [application/x-zstd]
+    extensions: [zst, tzst, tar.zst]
+  application/x-tar:
+    aliases: [application/tar]
+  application/zip:
+    aliases: [application/x-zip-compressed, application/x-zip]
+  application/vnd.rar:
+    aliases: [application/x-rar-compressed, application/x-rar]
+  application/x-7z-compressed: {}
+
+  # ZIP-based formats.
+  application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+    parent: application/zip
+  application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+    parent: application/zip
+  application/vnd.openxmlformats-officedocument.presentationml.presentation:
+    parent: application/zip
+  application/vnd.oasis.opendocument.text:
+    parent: application/zip
+  application/vnd.oasis.opendocument.spreadsheet:
+    parent: application/zip
+  application/vnd.oasis.opendocument.presentation:
+    parent: application/zip
+  application/vnd.oasis.opendocument.graphics:
+    parent: application/zip
+  application/java-archive:
+    parent: application/zip
+    aliases: [application/x-java-archive, application/jar]
+  application/vnd.android.package-archive:
+    parent: application/java-archive
+
+  # OLE2 compound files.
+  application/x-ole-storage:
+    aliases: [application/x-cfb]
+  application/msword:
+    parent: application/x-ole-storage
+  application/vnd.ms-excel:
+    parent: application/x-ole-storage
+  application/vnd.ms-powerpoint:
+    parent: application/x-ole-storage
+  application/vnd.ms-outlook:
+    parent: application/x-ole-storage
+    extensions: [msg]
+  application/x-ms-installer:
+    parent: application/x-ole-storage
+    aliases: [application/x-msi]
+    extensions: [msi]
+
+  # Media whose browser names differ from the registries'.
+  audio/wav:
+    aliases: [audio/x-wav, audio/wave, audio/vnd.wave]
+  video/x-msvideo:
+    aliases: [video/avi, video/msvideo]
+  image/vnd.microsoft.icon:
+    aliases: [image/x-icon]
+  audio/aiff:
+    aliases: [audio/x-aiff]
+  image/bmp:
+    aliases: [image/x-bmp, image/x-ms-bmp]
+  font/ttf:
+    aliases: [application/x-font-ttf, application/font-sfnt]
+  font/otf:
+    aliases: [application/x-font-otf]
+  font/woff:
+    aliases: [application/font-woff, application/x-font-woff]
+  image/jpeg:
+    canonical: jpg
+  video/x-matroska:
+    aliases: [video/matroska]
+  audio/x-matroska:
+    parent: video/x-matroska
+  video/webm:
+    parent: video/x-matroska
+  audio/webm:
+    parent: video/webm
+
+  # R and analytic data formats (design section 6.2).
+  application/x-rds:
+    extensions: [rds]
+  application/x-rdata:
+    extensions: [rdata, rda]
+  application/vnd.sqlite3:
+    aliases: [application/x-sqlite3]
+  application/vnd.apache.parquet:
+    aliases: [application/x-parquet]
+    extensions: [parquet]
+  application/vnd.apache.arrow.file:
+    aliases: [application/x-arrow, application/x-feather]
+    extensions: [arrow, feather]
+  application/vnd.apache.arrow.stream:
+    extensions: [arrows]
+  application/x-fst:
+    extensions: [fst]
+  application/x-qs2:
+    extensions: [qs2]
+  application/x-duckdb:
+    extensions: [duckdb, ddb]
+  application/x-hdf5:
+    aliases: [application/x-hdf]
+    extensions: [h5, hdf5, he5, hdf]
+  application/x-netcdf:
+    aliases: [application/netcdf]
+  application/x-stata-dta:
+    extensions: [dta]
+  application/x-spss-sav:
+    aliases: [application/x-spss]
+    extensions: [sav, zsav]
+  application/x-spss-por:
+    extensions: [por]
+  application/x-sas-data:
+    extensions: [sas7bdat]
+  application/x-sas-xport:
+    extensions: [xpt]

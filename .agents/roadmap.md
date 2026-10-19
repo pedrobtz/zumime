@@ -18,7 +18,7 @@ lands in Stage 1 with the tables it covers.
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | [#13](https://github.com/pedrobtz/zumime/pull/13) | 2026-10-19 |
-| 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | | |
+| 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | [#14](https://github.com/pedrobtz/zumime/pull/14) | 2026-10-19 |
 | 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | | |
 | 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | | |
 | 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | | |
@@ -142,6 +142,31 @@ lineage, categories, and the WHATWG MIME type record.
 - The regeneration test passes; `zumime_info()$table_version` is the
   sources' date.
 - Quick profile green.
+
+**Decisions and deviations (2026-10-19).**
+
+- `mime_parent()` returns a list of character vectors, one per input, as
+  `mime_extensions()` does: design §6.3 describes one type's lineage as a
+  character vector, and the roadmap asks for the function vectorised. An
+  unknown type gives `NA`, the root `character(0)`.
+- `mime_parse()` returns a list of records, one per input, and takes
+  `strict = FALSE`; `strict = TRUE` is how §8's `zumime_parse_error` is
+  asked for. `mime_format()` takes one record or a list of them.
+- The regeneration test compares `src/zumime_types.h` byte for byte and
+  the objects in `R/sysdata.rda` with `identical()`: an `.rda` file carries
+  the writing R's version in its header, so its bytes differ between R
+  versions for the same data.
+- `vendor-upstream.yml` does not fit: it compares a vendored library's
+  GitHub releases, and IANA's and Apache's files have none. A small
+  `tables-upstream.yaml` downloads the sources weekly and opens or updates
+  an issue when a checksum changes. It cannot open a pull request, because
+  the repository does not let workflows create them.
+- `oracles.yaml` runs what R CMD check cannot: the regeneration check
+  (`tools/` is not in the tarball) and the suite with the fixtures fetched,
+  in shuffled order.
+- `jsonlite` joins `Suggests`, for reading the WPT fixtures in a test
+  helper; `R CMD check` warns about a `::` call to an undeclared package.
+- The `sanitizers` job deferred from Stage 0 is added here.
 
 **Design.** §4 layer 1, §6.3, §6.6, §6.8, §7.1, D8, D10, D11.
 
