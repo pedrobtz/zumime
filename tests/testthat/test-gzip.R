@@ -27,6 +27,23 @@ test_that("complete = TRUE follows header fields and concatenated members", {
   expect_identical(t$complete, c(TRUE, TRUE, TRUE, FALSE, FALSE))
 })
 
+test_that("complete = TRUE skips FEXTRA, FCOMMENT and FHCRC", {
+  text <- charToRaw("a,b\n1,2\n")
+  d <- deflate_raw(text)
+  members <- list(
+    extra = gzip_member(d, length(text), extra = as.raw(1:6)),
+    comment = gzip_member(d, length(text), comment = "saved by pigz"),
+    hcrc = gzip_member(d, length(text), hcrc = TRUE),
+    all = gzip_member(d, length(text), extra = as.raw(1:2), name = "x",
+      comment = "c", hcrc = TRUE)
+  )
+  files <- stats::setNames(members, paste0(names(members), ".csv.gz"))
+  dir <- local_tree(files)
+  t <- mime_type(file.path(dir, names(files)), complete = TRUE)
+  expect_identical(t$type, rep("application/gzip", 4))
+  expect_identical(t$complete, rep(TRUE, 4))
+})
+
 test_that("malformed DEFLATE is incomplete and not an R file", {
   rds_size <- 26
   # A stored block whose NLEN is not the complement of LEN.
