@@ -4,15 +4,17 @@
 #' version of the generated type tables, which is the date of the upstream
 #' sources they were built from.
 #'
-#' @return A list with `version`, the package version as a string, and
+#' @return A list with `version`, the package version as a string;
 #'   `table_version`, the date of the table sources as a string
-#'   (`"YYYY-MM-DD"`).
+#'   (`"YYYY-MM-DD"`); and `family`, the family sniffers this session can
+#'   offer text to with `mime_type(text = "family")`.
 #' @export
 #' @examples
 #' zumime_info()
 zumime_info <- function() {
   list(
     version = unname(getNamespaceVersion("zumime")),
-    table_version = types_table_version
+    table_version = types_table_version,
+    family = names(family_sniffers())
   )
 }

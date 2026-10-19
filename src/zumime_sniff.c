@@ -31,9 +31,9 @@ static int has_binary_bytes(const unsigned char *buf, size_t len) {
 
 int zumime_type_is(int type, int ancestor) {
   int guard = 0;
-  while (type >= 0 && guard++ < ZUMIME_N_TYPES) {
+  while (type >= 0 && guard++ < ZUMIME_N_TYPES + ZUMIME_MAX_REGISTERED) {
     if (type == ancestor) return 1;
-    type = zumime_type_parents[type];
+    type = zumime_type_parent(type);
   }
   return 0;
 }
@@ -49,6 +49,9 @@ int zumime_type_lookup(const char *name) {
     else
       lo = mid + 1;
   }
+  for (int k = 0; k < ZUMIME_MAX_REGISTERED; k++)
+    if (zumime_reg[k].active && strcmp(zumime_reg[k].name, name) == 0)
+      return ZUMIME_N_TYPES + k;
   return -1;
 }
 
@@ -395,7 +398,9 @@ void zumime_sniff(const unsigned char *buf, size_t len, const zumime_input *in,
   out->encrypted = -1;
   if (in->context == ZUMIME_CTX_NONE && out->type != ZUMIME_SUPPLIED) {
     extend(buf, len, out);
+    if (in->base_only) return;
     zumime_refine(buf, len, in, out);
+    zumime_apply_registered(buf, len, out);
   }
 
   /* Charset and line endings, for a text result. */

@@ -34,3 +34,19 @@
   and OLE2 files holding an `EncryptionInfo` stream; `interpreter` names a
   script's shebang program.
 * `text/xml` is now an alias of `application/xml`.
+* `mime_type()` types files from their bytes and their names in one C
+  loop, says whether the two agree, and reports what a consumer needs to
+  open each file: the type inside a compression wrapper (`inner`), whether
+  it is encrypted, whether it is complete (`complete = TRUE` reads the end
+  of ZIP, PDF, gzip and Parquet files), its line endings and a script's
+  interpreter. Unreadable paths are `NA` rows unless `strict = TRUE`.
+* `mime_sniff()` also takes paths.
+* `mime_check()` answers whether files are one of a set of allowed types
+  from their bytes alone, faster than `mime_type()` and always with the
+  same answer.
+* `mime_register()` and `mime_unregister()` add a type for the session,
+  detected by a byte rule in C or by an R function.
+* Optional help from the family, never consulted unless asked:
+  `inner = "decompress"` (zukomp), `text = "family"` (zucsv, zujson,
+  zutoml) and `charset = "detect"` (zuutf). `zumime_info()$family` lists
+  the family sniffers available.

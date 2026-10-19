@@ -7,9 +7,10 @@
 zumime_info()
 }
 \value{
-A list with \code{version}, the package version as a string, and
+A list with \code{version}, the package version as a string;
 \code{table_version}, the date of the table sources as a string
-(\code{"YYYY-MM-DD"}).
+(\code{"YYYY-MM-DD"}); and \code{family}, the family sniffers this session can
+offer text to with \code{mime_type(text = "family")}.
 }
 \description{
 Reports what this build of zumime contains: the package version and the

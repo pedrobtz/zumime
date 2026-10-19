@@ -139,7 +139,8 @@ test_that("only the first limit bytes are read", {
 })
 
 test_that("mime_sniff() rejects malformed arguments", {
-  expect_error(mime_sniff("a.png"), class = "zumime_type_error")
+  expect_error(mime_sniff(1), class = "zumime_type_error")
+  expect_error(mime_sniff(list(raw(1))), class = "zumime_type_error")
   expect_error(mime_sniff(png_bytes(), type = c("a/b", "c/d")),
     class = "zumime_type_error")
   expect_error(mime_sniff(png_bytes(), type = 1), class = "zumime_type_error")

@@ -1,0 +1,55 @@
+test_that("mime_check() answers from the bytes, never the name", {
+  dir <- local_tree(list(photo.pdf = png_bytes(), real.pdf = pdf_bytes()))
+  paths <- file.path(dir, c("photo.pdf", "real.pdf"))
+  expect_identical(mime_check(paths, c("application/pdf", "image/jpeg")),
+    c(FALSE, TRUE))
+  expect_identical(mime_check(paths, "image"), c(TRUE, FALSE))
+  expect_true(mime_check(png_bytes(), "image/png"))
+  expect_false(mime_check(png_bytes(), "application/pdf"))
+})
+
+test_that("min_confidence decides whether text heuristics count", {
+  dir <- local_tree(list(a.json = "{\"a\": 1}"))
+  p <- file.path(dir, "a.json")
+  expect_true(mime_check(p, "application/json"))
+  expect_false(mime_check(p, "application/json", min_confidence = "definite"))
+})
+
+test_that("descendants count and unreadable paths are not allowed", {
+  dir <- local_tree(list(r.docx = build_zip(ooxml_entries("word"))))
+  p <- file.path(dir, c("r.docx", "missing.pdf"))
+  expect_identical(mime_check(p, "application/zip"), c(TRUE, FALSE))
+  expect_identical(mime_check(p, "application/zip", "none"), c(TRUE, NA))
+})
+
+test_that("an allowlist of three types costs three probes", {
+  # A GIF is related to none of the three, so each is probed once.
+  dir <- local_tree(list(anim = c(charToRaw("GIF89a"), raw(10))))
+  allowed <- c("application/pdf", "image/png", "image/jpeg")
+  before <- probe_count()
+  expect_false(mime_check(file.path(dir, "anim"), allowed))
+  expect_identical(probe_count() - before, 3)
+  before <- probe_count()
+  mime_check(rep(file.path(dir, "anim"), 4), allowed)
+  expect_identical(probe_count() - before, 12)
+})
+
+test_that("mime_check() equals mime_type() for every subset of three types", {
+  dir <- check_tree()
+  paths <- c(list.files(dir, full.names = TRUE), file.path(dir, "missing"))
+  sets <- utils::combn(check_candidates(), 3, simplify = FALSE)
+  expect_check_equivalence(paths, sets, c("probable", "definite", "none"))
+})
+
+test_that("the equivalence holds over the file-type corpus", {
+  dir <- fixture_dir("file-type")
+  paths <- list.files(dir, full.names = TRUE)
+  sets <- utils::combn(check_candidates(), 3, simplify = FALSE)
+  expect_check_equivalence(paths, sets, c("probable", "definite"))
+})
+
+test_that("mime_check() rejects malformed arguments", {
+  expect_error(mime_check(1, "image"), class = "zumime_type_error")
+  expect_error(mime_check("a", 1), class = "zumime_type_error")
+  expect_error(mime_check("a", "image", "certain"), class = "zumime_type_error")
+})
