@@ -1,4 +1,421 @@
-# zumime roadmap
+# zumime: roadmap
 
-The stages to v0.1.0, each with its exit criteria. Each stage is tracked
-as a sub-issue of the repository's v0.1.0 issue.
+Status: draft 2026-10-18. Implements [design.md](design.md).
+Target: v0.1.0, the first CRAN release.
+Tracking: [v0.1.0 (#1)](https://github.com/pedrobtz/zumime/issues/1), with one
+sub-issue per stage;
+[CRAN-submission (#10)](https://github.com/pedrobtz/zumime/issues/10).
+
+The design's §11 has seven stages. This roadmap keeps its stages 0 to 5
+and splits its stage 6 into the three the portfolio template requires:
+documentation, `Full CI`, and `v0.1.0 readiness`. The acceptance criterion
+"seven stages" in design §12 is read as "nine stages, each one pull
+request". Design §11 put the Apache copyright line in stage 6; here it
+lands in Stage 1 with the tables it covers.
+
+## Stages
+
+| Stage | Title | CI | Issue | Pull request | Done |
+| --- | --- | --- | --- | --- | --- |
+| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zumime/issues/2) | | |
+| 1 | [Registry and tables](#stage-1--registry-and-tables) | quick | [#3](https://github.com/pedrobtz/zumime/issues/3) | | |
+| 2 | [WHATWG sniffer](#stage-2--whatwg-sniffer) | full | [#4](https://github.com/pedrobtz/zumime/issues/4) | | |
+| 3 | [Containers and formats](#stage-3--containers-and-formats) | quick | [#5](https://github.com/pedrobtz/zumime/issues/5) | | |
+| 4 | [Paths and how to open them](#stage-4--paths-and-how-to-open-them) | quick | [#6](https://github.com/pedrobtz/zumime/issues/6) | | |
+| 5 | [Incremental sniffer, fuzz, benchmarks](#stage-5--incremental-sniffer-fuzz-benchmarks) | full | [#7](https://github.com/pedrobtz/zumime/issues/7) | | |
+| 6 | [README and article](#stage-6--readme-and-article) | quick | [#8](https://github.com/pedrobtz/zumime/issues/8) | | |
+| 7 | [Full CI](#stage-7--full-ci) | full | [#9](https://github.com/pedrobtz/zumime/issues/9) | | |
+| 8 | [v0.1.0 readiness](#stage-8--v010-readiness) | full | [#11](https://github.com/pedrobtz/zumime/issues/11) | | |
+
+## Stage 0 — Package identity
+
+**Issue.** [#2](https://github.com/pedrobtz/zumime/issues/2), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `quick`. See the CI policy in `CLAUDE.md`.
+
+**Goal.** The scaffold becomes a package someone can read: a real
+`DESCRIPTION`, the family's conventions in place, CI that finishes fast,
+and the benchmark harness with the incumbents' numbers on record before
+any `zumime` code exists.
+
+**Work.**
+
+- `DESCRIPTION`: Title "Media Type Detection from Bytes and File Names",
+  a Description paragraph from design §1, `Authors@R` with the maintainer
+  as `aut`, `cre` and `cph`, `Depends: R (>= 4.1)`, `Language: en-GB`,
+  `Config/roxygen2/version: 8.1.0` (alignment R2), `Suggests: testthat,
+  zukomp, zuutf, zucsv, zujson, zutoml`, `BugReports`.
+- `src/Makevars` with `PKG_CFLAGS = $(C_VISIBILITY)` and
+  `tests/testthat/test-abi.R` asserting the shared object exports
+  `R_init_zumime` only (alignment R3).
+- `R-CMD-check.yaml`: add `{"os": "windows-latest", "r": "devel"}` to
+  `runners` so the Windows R-devel combination CRAN checks is covered; the
+  row runs in the full profile only.
+- `coverage.yaml` pinned to a commit of `pedrobtz/r-actions` with the tag
+  in a comment, as the template requires for workflows holding a write
+  token.
+- `tools/run-benchmarks` and `.agents/benchmarks.md`: time
+  `file --mime-type` and `mime::guess_type()` on the design §10 inputs
+  where the tools are installed, and record the numbers; `mimetype`'s Go
+  CLI only if it is already available on the runner.
+- `inst/WORDLIST` for `spelling`; `zumime_info()` returning the package
+  version and the table version (`NA` until Stage 1).
+- `.Rbuildignore` checked against the template's "Working with skills"
+  list; `.gitignore` for `tests/testthat/fixtures/`.
+
+**Exit criteria.**
+
+- `R CMD check` passes on the quick r-actions profile with 0 errors, 0
+  warnings, 0 notes other than "New submission".
+- Every check in the quick-profile pull request run finished in under
+  five minutes; anything tuned (`quick-step`, `quick-containers`) is
+  recorded here.
+- `test-abi.R` passes.
+- `.agents/benchmarks.md` holds a number for the incumbents on each §10
+  row that an installed tool can answer.
+
+**Design.** §3, §10 (baseline), §11 stage 0.
+
+## Stage 1 — Registry and tables
+
+**Issue.** [#3](https://github.com/pedrobtz/zumime/issues/3), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `quick`. `mime_parse()` is the first C in the package but it is a
+few hundred lines over a short header string; Stage 2, which follows at
+once, runs the full profile over it.
+
+**Goal.** The type registry exists as generated data shared by R and C,
+and every function that needs only the registry works: names, extensions,
+lineage, categories, and the WHATWG MIME type record.
+
+**Work.**
+
+- `tools/generate-tables.R` reading IANA's media types registry and
+  Apache httpd's `mime.types`, plus `tools/types.yaml` (parents, aliases,
+  the R and analytic data formats, canonical-extension overrides);
+  `tools/table-sources.yaml` with URL, retrieval date and SHA-256 per
+  upstream file.
+- Generated `R/sysdata.rda` and `src/zumime_types.h`; a test that
+  regenerating from the recorded sources reproduces both byte for byte.
+- `mime_guess()`, `mime_extensions()`, `mime_parent()`, `mime_is()`,
+  `mime_types()` (design §6.3, §6.6), vectorised, with the round-trip
+  property test and the no-cycle test of §9.
+- `mime_parse()` and `mime_format()` in C (design §6.8) against the
+  web-platform-tests `mimesniff/` fixtures, fetched by
+  `tools/fetch-fixtures` at a pinned commit.
+- `Authors@R` gains the Apache Software Foundation as `cph`;
+  `inst/COPYRIGHTS` states the table sources and their terms.
+- Decide whether `r-actions`' `vendor-upstream.yml` can drive the
+  regeneration workflow; if not, a small scheduled workflow that opens a
+  pull request when a checksum changes.
+
+**Exit criteria.**
+
+- Every WPT parse and serialize fixture passes.
+- For every type, every extension in `mime_extensions(type)` maps back by
+  `mime_guess()` to that type or a descendant; `mime_parent()` reaches
+  the root from every type.
+- `mime_is("application/x-sqlite3", "application/vnd.sqlite3")` and
+  `mime_is("image/png", "image")` are `TRUE`.
+- The regeneration test passes; `zumime_info()$table_version` is the
+  sources' date.
+- Quick profile green.
+
+**Design.** §4 layer 1, §6.3, §6.6, §6.8, §7.1, D8, D10, D11.
+
+## Stage 2 — WHATWG sniffer
+
+**Issue.** [#4](https://github.com/pedrobtz/zumime/issues/4), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `full — first compiled code of substance and a decoder of untrusted
+bytes: gctorture at step 20, valgrind, ASan over the sniffer before
+Stages 3 to 5 build on it.`
+
+**Goal.** `mime_sniff()` over a raw vector computes the type the WHATWG
+MIME Sniffing Standard defines, for every combination of supplied type,
+no-sniff flag and context, and carries the charset where the bytes
+declare one.
+
+**Work.**
+
+- `src/zumime_sniff.c`: the sniffing algorithm with its three inputs, the
+  1445-byte resource header, the pattern matcher with masks and ignored
+  leading bytes, the image, audio-or-video, font and archive tables, the
+  text-or-binary rule, the Apache bug check (design §6.1).
+- `src/zumime_table.c`: the signature table as data rows, WHATWG rows
+  first in the standard's order, then the offset signatures (tar at 257,
+  ISO 9660 at 32769, skipped for a short raw vector) and the compression
+  wrappers.
+- `src/zumime_text.c` charset chain of §6.5: supplied parameter, BOM, XML
+  declaration, HTML `<meta>` prescan, UTF-8 validity ignoring a cut code
+  point, the C1 rule.
+- `mime_sniff(x, type, no_sniff, context, limit)` on raw vectors; the
+  result frame of §5 with `confidence` per D3.
+- The `ZUMIME_STANDALONE` build of the sniffer as C11 without R.
+- Tests: one generated input per table row; Go's `sniff_test.go` cases as
+  the oracle for the no-context path; a charset table per rule.
+
+**Exit criteria.**
+
+- Every Go `net/http` sniff case agrees.
+- Every signature row is exercised by a test built from the row.
+- Each design §6.5 rule has a passing test, including the cut code point.
+- The sniffer compiles standalone with `-std=c11 -Wall -Wextra -pedantic`
+  and no warnings.
+- Full profile green on the pull request: gctorture, valgrind, ASan and
+  every platform leg.
+
+**Design.** §4 layer 2, §6.1, §6.2 (signatures), §6.5, §7.2, D2, D3, D4.
+
+## Stage 3 — Containers and formats
+
+**Issue.** [#5](https://github.com/pedrobtz/zumime/issues/5), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `quick`. The readers extend the sniffer Stage 2 checked in full
+and read only bytes already in hand; `Full CI` covers them with the whole
+set.
+
+**Goal.** A ZIP is a docx, an MP4 is not an M4A, an OLE2 file is a legacy
+Word document, an XML file is SVG, and R's own files are known, all from
+the bytes `mime_sniff()` already read.
+
+**Work.**
+
+- Container readers of design §6.2, one file each: ZIP central directory
+  (entry names, encryption flag and AES extra field), OLE2 directory
+  (class id, stream names, `EncryptionInfo`), ISO base media brands,
+  RIFF, EBML, Ogg, tar checksum.
+- R and analytic data formats: RDS and RData through their compression
+  wrapper to the serialisation header and version; Parquet, Arrow IPC,
+  Feather, fst, qs2, SQLite, DuckDB, HDF5 at its offsets, NetCDF, Stata,
+  SPSS, SAS.
+- Structured text of §6.4: XML root and namespace, JSON top-level keys,
+  line-oriented formats, shebang interpreters, at `probable`.
+- `text = "family"`: the `zucsv`, `zujson` and `zutoml` hooks behind
+  `requireNamespace()`, off by default (D6).
+- `tools/fetch-fixtures` extended to `file-type`'s `fixture/` directory at
+  a pinned commit; the test lists the fixtures whose formats are not
+  claimed.
+- Tests that build each container from bytes in the test body, so the
+  suite runs without the corpus.
+
+**Exit criteria.**
+
+- Every `file-type` fixture whose format the package claims is named as
+  `file-type` names it, through the alias list; the unclaimed list is in
+  the test and matches design §6.2.
+- Every reader has a from-bytes test; the suite passes with the fixture
+  directory absent.
+- Quick profile green.
+
+**Design.** §4 layer 3, §6.2 (containers), §6.4, §7.3, D6, D7.
+
+## Stage 4 — Paths and how to open them
+
+**Issue.** [#6](https://github.com/pedrobtz/zumime/issues/6), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `quick`. The path loop and the `Suggests` guards for `zukomp` and
+`zuutf` are what the `nosuggests` leg and the platform legs check, and
+`Full CI` runs them before anything depends on the answer.
+
+**Goal.** `mime_type(paths)` answers from both signals over a tree of
+files in one C loop, says whether they agree, and reports what a consumer
+needs to open each file.
+
+**Work.**
+
+- `src/zumime_path.c`: the vectorised loop of design §6.7 (open, read
+  `limit` bytes, sniff, deep probes, close), interrupt check every 256
+  files, `NA` rows for unreadable paths, `zumime_io_error` under
+  `strict = TRUE`, directories as `inode/directory`.
+- Deep probes: the ISO 9660 seek, the ZIP tail for the central directory,
+  the tail read behind `complete = TRUE`.
+- The how-to-open columns: `inner` from the remaining extension by default
+  and through `zukomp` with `inner = "decompress"`; `encrypted`;
+  `complete`; `newline`; `interpreter`; `by_name` and `agree`.
+- `charset = "detect"` through `zuutf`; `zumime_dependency_error` when a
+  suggested package is asked for and absent.
+- `mime_check(x, allowed, min_confidence)` as D15 fixes it: a bare logical,
+  byte evidence only, running only the allowed types' detectors and their
+  ancestors; an unexported `probe_count()` reading a static counter;
+  `mime_register()` and `mime_unregister()` with data rules in C and function
+  rules in R (design §6.9).
+- `mime_sniff()` accepts paths through the same loop.
+
+**Exit criteria.**
+
+- `mime_type()` over a tree built under `tempdir()` gives the snapshot
+  frame, with `agree` `TRUE`, `FALSE` and `NA` cases.
+- Each how-to-open column has a test per format it applies to, including
+  an encrypted ZIP, a truncated PDF and a `.csv.gz`.
+- `mime_check(x, a, m)` equals `mime_is(t$type, a) & t$confidence >= m` with
+  `t <- mime_type(x)` over every fixture and every subset of three allowed
+  types (D15), and the probe counter shows three probes for three allowed
+  types.
+- A registered data rule is detected at `definite`, a function rule at
+  `probable`; an unknown parent is `zumime_registry_error`.
+- A missing path is an `NA` row by default and `zumime_io_error` with
+  `strict = TRUE`.
+- Quick profile green.
+
+**Design.** §4 layer 4, §5 Results, §6.7, §6.9, D5, D6, D12, D13, D15.
+
+## Stage 5 — Incremental sniffer, fuzz, benchmarks
+
+**Issue.** [#7](https://github.com/pedrobtz/zumime/issues/7), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `full — an external pointer with a finalizer and an R-owned buffer
+(D9): gctorture at step 20, valgrind and ASan on the push path, and the
+fuzz target under sanitizers.`
+
+**Goal.** A stream can be sniffed chunk by chunk and stops as soon as the
+type is certain; random bytes never crash the sniffer; every performance
+target has a measured number.
+
+**Work.**
+
+- `mime_sniffer()`, `mime_push()`, `mime_finish()` (design §6.10): an
+  external pointer whose protected field is a raw vector of `limit`
+  bytes; the "can decide" rule; `zumime_state_error` after finish.
+- The fuzz target under `ZUMIME_STANDALONE` (design §9): random and
+  mutated-fixture bytes, checking no crash, no over-read, every type id in
+  the registry, and that a prefix's type is the whole's or an ancestor's.
+- `tools/run-benchmarks` extended to `zumime`; `.agents/benchmarks.md`
+  filled for every row of design §10, met or not.
+- A test that feeds every fixture one byte at a time and checks the
+  sniffer decides at the whole's type and never later than `limit`.
+
+**Exit criteria.**
+
+- The byte-at-a-time test passes over every fixture.
+- The fuzz target runs one hour clean under ASan and UBSan, recorded with
+  the commit and date.
+- `.agents/benchmarks.md` holds a number for every §10 row.
+- Full profile green on the pull request.
+
+**Design.** §6.10, §9 (fuzz), §10, D9, D14.
+
+## Stage 6 — README and article
+
+**Issue.** [#8](https://github.com/pedrobtz/zumime/issues/8), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `quick`. Documentation and the pkgdown site.
+
+**Goal.** A newcomer can tell in two minutes what the package does and
+when to reach for it, and a consumer can follow one worked example.
+
+**Work.**
+
+- `README.Rmd` written with the `pkg-readme` skill, with a rendered
+  `README.md`; the examples run against a small tree in `tempdir()`.
+- `vignettes/checking-an-upload.Rmd`, "Checking an upload before you open
+  it": `mime_check()` against an allowlist, `agree`, `encrypted`,
+  `complete`, and the incremental sniffer on a connection's first chunk.
+- `_pkgdown.yml` reference grouped by design §5's headings; every exported
+  function documented with an example.
+- `NEWS.md` entries for everything user-facing so far.
+
+**Exit criteria.**
+
+- `pkgdown::build_site()` succeeds in CI and the article renders.
+- Every exported function has a roxygen example that runs.
+- `README.md` is regenerated from `README.Rmd` with no diff.
+- Quick profile green.
+
+**Design.** §2 (README and article), §5.
+
+## Stage 7 — Full CI
+
+**Issue.** [#9](https://github.com/pedrobtz/zumime/issues/9), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `full`. Always.
+
+**Goal.** No new features. The full r-actions profile runs on the default
+branch's code and everything it finds is fixed.
+
+**Work.**
+
+- Open a pull request with the `full-ci` label from the default branch's
+  head; collect every failure from gctorture at the sensitive step,
+  valgrind, ASan and UBSan, every platform leg including Windows R-devel,
+  `nosuggests`, `nold` and cran-special.
+- Fix each in this pull request, with a test where a fix changes
+  behaviour; also fold in any failure comments earlier stages left on this
+  issue from the full runs their merges started.
+- Confirm `mime_type()` over the test tree gives byte-identical frames on
+  the Linux, macOS and Windows legs (design §12).
+
+**Exit criteria.**
+
+- A full-profile run green on the pull request and on its merge commit.
+- The determinism check of design §12 passes on all three platforms.
+
+**Design.** §12.
+
+## Stage 8 — v0.1.0 readiness
+
+**Issue.** [#11](https://github.com/pedrobtz/zumime/issues/11), sub-issue of
+[v0.1.0](https://github.com/pedrobtz/zumime/issues/1).
+
+**CI.** `full`. Always.
+
+**Goal.** Only the submission itself is left.
+
+**Work.**
+
+- `Version: 0.1.0` and the matching `NEWS.md` heading.
+- `cran-comments.md` listing the r-actions CI legs as the test
+  environments.
+- `pkg-critical-review` run, blocking and required findings fixed; then
+  `pkg-cran-review` run, every finding resolved.
+- `urlchecker::url_check()` and `spelling::spell_check_package()` clean.
+- `DESCRIPTION` names the Apache Software Foundation as a copyright holder
+  and `inst/COPYRIGHTS` states the table sources (design §12).
+
+**Exit criteria.**
+
+- `devtools::check()` clean with the only note "New submission".
+- A full-profile r-actions run green on the release commit.
+- Both review skills have run and left no open finding.
+- `urlchecker` and `spelling` clean.
+
+**Design.** §12.
+
+## After 0.1.0
+
+From design §14, in the order expected:
+
+- **A C API** (`inst/include/zumime.h`) for `zuhttp` and `zusocks`, with a
+  consumer fixture per alignment R10. Waits until the R surface has
+  settled the result shape.
+- **Connections** as input, with the incremental sniffer underneath.
+- **A persistent user registry**, only if asked for.
+- **More formats**: fonts beyond the WHATWG four, geospatial, scientific,
+  and what `anydoc` meets.
+- **Statistical charset detection**, only if `zuutf` does not take it.
+- **Performance targets** missed in Stage 5 are recorded, not fixed, for
+  0.1.0 (D14); they are the next version's measured work.
+
+## Open questions
+
+From design §15:
+
+- **Q1** (completeness check on by default for paths): decided after Stage
+  4 measures the cost on a cold cache; D5 holds until then. Blocks nothing.
+- **Q2** (IANA alone for extensions): revisited at each regeneration;
+  blocks nothing before 0.1.0.
+- **Q3** (whether `mime_check()`'s partial detection is observable): settled
+  2026-10-19 by design D15; Stage 4 implements it.
+- **Q4** (CRAN submission or GitHub release): the board's `CRAN intent`
+  field; this roadmap assumes `Planned`. Decides whether Stage 8 and the
+  `CRAN-submission` issue apply as written.
+- **Not in the design**: whether `r-actions`' `vendor-upstream.yml` fits
+  table regeneration (Stage 1 finds out).
