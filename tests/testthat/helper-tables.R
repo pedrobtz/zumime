@@ -3,5 +3,7 @@
 # not shipped.
 source_root <- function() {
   root <- normalizePath(test_path("..", ".."), mustWork = FALSE)
-  if (file.exists(file.path(root, "tools", "generate-tables.R"))) root else NULL
+  if (file.exists(file.path(root, "tools", "generate-tables.R"))) return(root)
+  require_oracles("tools/generate-tables.R is not in the source tree")
+  NULL
 }

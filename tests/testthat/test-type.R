@@ -182,3 +182,82 @@ test_that("mime_type() rejects malformed arguments", {
   expect_error(mime_type("a", strict = 1), class = "zumime_type_error")
   expect_error(mime_type("a", limit = -1), class = "zumime_type_error")
 })
+
+test_that("special files are typed without being opened", {
+  skip_on_os("windows")
+  mkfifo <- Sys.which("mkfifo")
+  skip_if(!nzchar(mkfifo), "mkfifo is not available")
+  dir <- withr::local_tempdir()
+  fifo <- file.path(dir, "pipe")
+  system2(mkfifo, shQuote(fifo))
+  # Opening a FIFO would block until a writer came.
+  t <- mime_type(c(fifo, "/dev/null"))
+  expect_identical(t$type, c("inode/fifo", "inode/chardevice"))
+  expect_identical(as.character(t$confidence), c("definite", "definite"))
+})
+
+test_that("limit = 0 reads whole files", {
+  e <- c(list("big.bin" = as.raw(rep(1:255, 40))), ooxml_entries("word"))
+  dir <- local_tree(list("r.docx" = build_zip(e)))
+  t <- mime_type(file.path(dir, "r.docx"), limit = 0)
+  expect_identical(t$type, docx_type())
+})
+
+test_that("a file that cannot be opened is an NA row", {
+  skip_on_os("windows")
+  dir <- local_tree(list("locked.pdf" = pdf_bytes()))
+  p <- file.path(dir, "locked.pdf")
+  Sys.chmod(p, "000")
+  withr::defer(Sys.chmod(p, "644"))
+  skip_if(file.access(p, 4) == 0, "running with permission to read anyway")
+  t <- mime_type(p)
+  expect_identical(t$type, NA_character_)
+  expect_error(mime_type(p, strict = TRUE), class = "zumime_io_error")
+})
+
+test_that("a non-ASCII path is read", {
+  name <- "café 中.png"
+  skip_if(.Platform$OS.type != "windows" && !l10n_info()[["UTF-8"]],
+    "the native encoding cannot represent the name")
+  dir <- withr::local_tempdir()
+  path <- file.path(dir, name)
+  writeBin(png_bytes(), path)
+  expect_identical(mime_type(path)$type, "image/png")
+  expect_identical(mime_check(path, "image"), TRUE)
+})
+
+test_that("suggested packages are reached only when asked, through one door", {
+  dir <- local_tree(list(
+    a.txt = c(charToRaw("caf"), as.raw(0xe9), charToRaw("\n")),
+    b = "{a: 1}\n",
+    c.gz = gzip_bytes("{\"a\": 1}")
+  ))
+  p <- file.path(dir, c("a.txt", "b", "c.gz"))
+  local_mocked_bindings(has_package = function(pkg) FALSE)
+  expect_error(mime_type(p, charset = "detect"),
+    class = "zumime_dependency_error")
+  expect_error(mime_type(p, inner = "decompress"),
+    class = "zumime_dependency_error")
+  expect_identical(zumime_info()$family, character())
+  expect_identical(mime_type(p, text = "family")$type[2], "text/plain")
+
+  local_mocked_bindings(
+    has_package = function(pkg) TRUE,
+    suggested_fun = function(pkg, name) {
+      switch(name,
+        utf_detect = function(x) "Shift_JIS",
+        sniff_csv = function(path, delimiter) list(ncol = 1L, nrow = 0L),
+        json_validate = function(x) TRUE,
+        toml_validate = function(x) stop("not toml"),
+        komp_decompress = function(x, codec, max_output) stop("corrupt")
+      )
+    }
+  )
+  t <- mime_type(p, charset = "detect", text = "family", inner = "decompress")
+  # zuutf replaces the C1 guess; zujson's answer is taken where the
+  # scanner found no JSON; zukomp failing falls back to the name.
+  expect_identical(t$charset[1], "Shift_JIS")
+  expect_identical(t$type[2], "application/json")
+  expect_identical(t$inner[3], NA_character_)
+  expect_identical(zumime_info()$family, c("zucsv", "zujson", "zutoml"))
+})

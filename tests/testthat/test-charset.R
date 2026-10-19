@@ -79,3 +79,43 @@ test_that("line endings are reported for text", {
   expect_identical(nl("ab"), NA_character_)
   expect_identical(mime_sniff(png_bytes())$newline, NA_character_)
 })
+
+test_that("the charset rules apply in their order", {
+  bom <- as.raw(c(0xef, 0xbb, 0xbf))
+  # The supplied parameter beats a BOM.
+  expect_identical(
+    sniff_charset(c(bom, charToRaw("hi")), type = "text/plain; charset=koi8-r"),
+    "koi8-r"
+  )
+  # A BOM beats an XML declaration.
+  expect_identical(
+    sniff_charset(c(bom, charToRaw(
+      "<?xml version=\"1.0\" encoding=\"ISO-8859-2\"?><a/>"))),
+    "UTF-8"
+  )
+  # The meta prescan reads only the first 1024 bytes.
+  late <- paste0("<html>", strrep(" ", 1100), "<meta charset=koi8-r>")
+  expect_identical(sniff_charset(charToRaw(late)), "UTF-8")
+})
+
+test_that("four-byte UTF-8 is valid and an F5 lead byte is not", {
+  expect_identical(
+    sniff_charset(c(charToRaw("smile "), as.raw(c(0xf0, 0x9f, 0x98, 0x80)))),
+    "UTF-8"
+  )
+  expect_identical(sniff_charset(c(charToRaw("x"), as.raw(c(0xf5, 0x41)))),
+    "ISO-8859-1")
+})
+
+test_that("the meta prescan trims labels, skips markup and keeps the first", {
+  html <- function(s) charToRaw(paste0("<html>", s))
+  expect_identical(sniff_charset(html("<meta charset=\" koi8-r \">")), "koi8-r")
+  expect_identical(sniff_charset(html("<meta foo charset=koi8-r>")), "koi8-r")
+  expect_identical(sniff_charset(html(paste0(
+    "<meta http-equiv=content-type ",
+    "content=\"text/html; charset='koi8-r'\">"))), "koi8-r")
+  expect_identical(sniff_charset(html("<meta charset=koi8-r charset=big5>")),
+    "koi8-r")
+  expect_identical(sniff_charset(html(
+    "<!x><?pi?></p><meta charset=koi8-r>")), "koi8-r")
+})

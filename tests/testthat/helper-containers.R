@@ -60,9 +60,10 @@ ooxml_entries <- function(folder, main_ct = NULL, vba = FALSE) {
   e
 }
 
-# An OLE2 compound file: 512-byte sectors, the FAT in sector 0, the
-# directory in sector 1 (and 2 when more than four entries).
-build_ole2 <- function(streams, clsid = raw(16)) {
+# An OLE2 compound file: 512-byte sectors, the FAT in sector 0, `pad` free
+# sectors, then the directory (more than one sector beyond four entries). A
+# large `pad` puts the directory past the head, as Office does.
+build_ole2 <- function(streams, clsid = raw(16), pad = 0L) {
   entry <- function(name, type, clsid = raw(16)) {
     n <- unlist(lapply(utf8ToInt(name), function(cp) u16(cp)))
     n <- c(n, as.raw(c(0, 0)))
@@ -86,7 +87,7 @@ build_ole2 <- function(streams, clsid = raw(16)) {
   header[31:32] <- u16(9)
   header[33:34] <- u16(6)
   header[45:48] <- u32(1)
-  header[49:52] <- u32(1)
+  header[49:52] <- u32(1 + pad)
   header[57:60] <- u32(4096)
   header[61:64] <- as.raw(c(0xfe, 0xff, 0xff, 0xff))
   header[77:512] <- as.raw(0xff)
@@ -94,10 +95,11 @@ build_ole2 <- function(streams, clsid = raw(16)) {
   fat <- rep(as.raw(0xff), 512)
   fat[1:4] <- as.raw(c(0xfd, 0xff, 0xff, 0xff))
   for (k in seq_len(ndir)) {
-    nxt <- if (k < ndir) u32(k + 1) else as.raw(c(0xfe, 0xff, 0xff, 0xff))
-    fat[(4 * k + 1):(4 * k + 4)] <- nxt
+    sec <- pad + k
+    nxt <- if (k < ndir) u32(sec + 1) else as.raw(c(0xfe, 0xff, 0xff, 0xff))
+    fat[(4 * sec + 1):(4 * sec + 4)] <- nxt
   }
-  c(header, fat, dir)
+  c(header, fat, raw(512 * pad), dir)
 }
 
 msi_clsid <- function() {
@@ -210,4 +212,38 @@ stream_inputs <- function() {
     rds = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20))),
     ws = charToRaw("      "), short = as.raw(0xff)
   ))
+}
+
+# A gzip member over raw DEFLATE `deflate`, with optional header fields
+# (FEXTRA, FNAME, FCOMMENT, FHCRC) and a trailer whose size is `isize`. The
+# CRC is zero: zumime does not check it.
+gzip_member <- function(deflate, isize, extra = NULL, name = NULL,
+                        comment = NULL, hcrc = FALSE) {
+  flg <- 0L
+  fields <- raw()
+  if (!is.null(extra)) {
+    flg <- flg + 4L
+    fields <- c(fields, u16(length(extra)), extra)
+  }
+  if (!is.null(name)) {
+    flg <- flg + 8L
+    fields <- c(fields, charToRaw(name), as.raw(0))
+  }
+  if (!is.null(comment)) {
+    flg <- flg + 16L
+    fields <- c(fields, charToRaw(comment), as.raw(0))
+  }
+  if (hcrc) {
+    flg <- flg + 2L
+    fields <- c(fields, raw(2))
+  }
+  c(as.raw(c(0x1f, 0x8b, 8, flg)), raw(4), as.raw(c(0, 3)), fields, deflate,
+    raw(4), u32(isize))
+}
+
+# Bits, least significant first, packed into bytes.
+pack_bits <- function(bits) {
+  bits <- c(bits, rep(0L, (8 - length(bits) %% 8) %% 8))
+  m <- matrix(bits, nrow = 8)
+  as.raw(colSums(m * 2^(0:7)))
 }

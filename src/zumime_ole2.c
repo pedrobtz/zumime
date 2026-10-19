@@ -49,16 +49,25 @@ static void on_entry(ole_scan *s, const unsigned char *e, int index) {
   if (name_is(name, "EncryptionInfo")) s->encryption_info = 1;
 }
 
-/* The FAT entry for sector `sec`, or ENDOFCHAIN when it is not in hand. */
-static uint32_t fat_next(const unsigned char *b, size_t len, size_t ssz,
-                         uint32_t sec) {
+/* Bytes at an offset of the file, through the caller's accessor: a view of
+ * a buffer, or a read into `scratch` from a file. NULL when not available. */
+typedef struct {
+  zumime_ole2_get get;
+  void *ctx;
+  const unsigned char *header;
+} ole_src;
+
+/* The FAT entry for sector `sec`, or ENDOFCHAIN when it is not available. */
+static uint32_t fat_next(const ole_src *src, size_t ssz, uint32_t sec) {
   size_t per = ssz / 4;
   size_t idx = sec / per;
   if (idx >= 109) return ENDOFCHAIN;
-  uint32_t fat_sec = zumime_le32(b + 76 + 4 * idx);
+  uint32_t fat_sec = zumime_le32(src->header + 76 + 4 * idx);
+  if (fat_sec >= 0xFFFFFFFAu) return ENDOFCHAIN;
   uint64_t off = ((uint64_t) fat_sec + 1) * ssz + (sec % per) * 4;
-  if (fat_sec >= 0xFFFFFFFAu || off + 4 > len) return ENDOFCHAIN;
-  return zumime_le32(b + off);
+  unsigned char scratch[4];
+  const unsigned char *p = src->get(src->ctx, off, 4, scratch);
+  return p ? zumime_le32(p) : ENDOFCHAIN;
 }
 
 /* Class ids of the Windows Installer database, patch and transform. */
@@ -70,25 +79,36 @@ static int is_msi_clsid(const unsigned char *c) {
          memcmp(c + 3, tail, 13) == 0;
 }
 
-int zumime_read_ole2(const unsigned char *b, size_t len, int *encrypted) {
+int zumime_read_ole2_at(zumime_ole2_get get, void *ctx, int *encrypted) {
   *encrypted = -1;
-  if (len < 512) return -1;
-  uint16_t shift = zumime_le16(b + 30);
+  unsigned char hbuf[512];
+  const unsigned char *h = get(ctx, 0, 512, hbuf);
+  if (h == NULL) return -1;
+  uint16_t shift = zumime_le16(h + 30);
   if (shift != 9 && shift != 12) return -1;
   size_t ssz = (size_t) 1 << shift;
+  /* h stays valid: the header has its own scratch, hbuf. */
+  ole_src src = {get, ctx, h};
 
   ole_scan s;
   memset(&s, 0, sizeof(s));
-  uint32_t sec = zumime_le32(b + 48);
+  uint32_t sec = zumime_le32(h + 48);
   int index = 0;
+  unsigned char dbuf[4096];
   for (int k = 0; k < MAX_DIR_SECTORS && sec < 0xFFFFFFFAu; k++) {
     uint64_t off = ((uint64_t) sec + 1) * ssz;
-    for (size_t e = 0; e < ssz / 128; e++, index++) {
-      uint64_t at = off + e * 128;
-      if (at + 128 > len) goto done;
-      on_entry(&s, b + at, index);
+    const unsigned char *d = get(ctx, off, ssz, dbuf);
+    if (d == NULL) {
+      /* Tolerant of truncation: entries of a partial sector still count. */
+      for (size_t e = 0; e < ssz / 128; e++, index++) {
+        const unsigned char *one = get(ctx, off + e * 128, 128, dbuf);
+        if (one == NULL) goto done;
+        on_entry(&s, one, index);
+      }
+      goto done;
     }
-    uint32_t next = fat_next(b, len, ssz, sec);
+    for (size_t e = 0; e < ssz / 128; e++, index++) on_entry(&s, d + e * 128, index);
+    uint32_t next = fat_next(&src, ssz, sec);
     if (next == sec) break;
     sec = next;
   }
@@ -100,4 +120,22 @@ done:
   if (s.workbook) return ZUMIME_T_APPLICATION_VND_MS_EXCEL;
   if (s.powerpoint) return ZUMIME_T_APPLICATION_VND_MS_POWERPOINT;
   return -1;
+}
+
+typedef struct {
+  const unsigned char *b;
+  size_t len;
+} ole_buf;
+
+static const unsigned char *buf_get(void *ctx, uint64_t off, size_t n,
+                                    unsigned char *scratch) {
+  (void) scratch;
+  const ole_buf *ob = (const ole_buf *) ctx;
+  if (off > ob->len || ob->len - off < n) return NULL;
+  return ob->b + off;
+}
+
+int zumime_read_ole2(const unsigned char *b, size_t len, int *encrypted) {
+  ole_buf ob = {b, len};
+  return zumime_read_ole2_at(buf_get, &ob, encrypted);
 }

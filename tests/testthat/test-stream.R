@@ -96,6 +96,7 @@ test_that("every fixture decides at the whole's type", {
     want <- mime_sniff(x, limit = 4096)$type
     got <- .Call(zumime_stream_bytewise, x, 4096)
     expect_identical(got[[2]], want, info = basename(f))
+    expect_lte(got[[1]], 4096, label = basename(f))
     # Through mime_push() in 512-byte chunks, which may skip work once
     # nothing can decide before the limit.
     s <- mime_sniffer()
@@ -114,4 +115,14 @@ test_that("mime_push() and mime_sniffer() reject malformed arguments", {
   expect_error(mime_push(mime_sniffer(), "text"), class = "zumime_type_error")
   expect_error(mime_sniffer(limit = -1), class = "zumime_type_error")
   expect_error(mime_finish(list()), class = "zumime_type_error")
+})
+
+test_that("the byte count is kept as a double", {
+  # The count of an unlimited sniffer must not wrap at INT_MAX; pushing 2 GB
+  # is too slow for a test, so the storage type is checked instead.
+  s <- mime_sniffer(limit = 0)
+  mime_push(s, raw(10))
+  st <- .Call(zumime_stream_state, s)
+  expect_type(st, "double")
+  expect_identical(st[2], 10)
 })
