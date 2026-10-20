@@ -18,18 +18,19 @@ gzip. Before a parser starts, you want to know which of these you have,
 and whether the file is encrypted or cut short.
 
 zumime answers from both signals in one call and says whether they
-agree. It has no dependencies and no system library, so it gives the
-same answer on every machine.
+agree. It needs no other package at run time and no system library, so
+it gives the same answer on every machine.
 
 - **The browser’s algorithm.** The byte answer is the [WHATWG MIME
   Sniffing Standard](https://mimesniff.spec.whatwg.org/), with its
   supplied type, no-sniff flag and contexts, checked against Go’s
   `net/http` sniff cases.
 - **Containers and R’s own files.** ZIP entry names tell a Word document
-  from a JAR, ISO base media brands tell an M4A from an MP4, and RDS,
+  from a JAR, and ISO base media brands tell an M4A from an MP4, checked
+  against the fixtures of the JavaScript
+  [file-type](https://github.com/sindresorhus/file-type) package. RDS,
   RData, Parquet, SQLite, Stata and SPSS files are known by their
-  headers, checked against the fixtures of the JavaScript
-  [file-type](https://github.com/sindresorhus/file-type) package.
+  headers.
 - **A hierarchy.** Every type has a parent, ending at
   `application/octet-stream`, so an unknown ZIP-based format is still a
   ZIP, and an allowlist of `"image"` accepts every image.
@@ -42,13 +43,7 @@ same answer on every machine.
 
 ## Installation
 
-Install zumime from CRAN:
-
-``` r
-install.packages("zumime")
-```
-
-Or the development version from GitHub:
+zumime is not on CRAN yet. Install the development version from GitHub:
 
 ``` r
 # install.packages("pak")
@@ -79,18 +74,19 @@ paths <- list.files(uploads, full.names = TRUE)
 ```
 
 `mime_type()` types each file from its bytes and from its name. `agree`
-is `FALSE` for the PNG named `.pdf`, and `inner` names what the gzip
-holds:
+is `FALSE` for the PNG named `invoice.pdf`, and `inner` names what the
+gzip holds:
 
 ``` r
 files <- mime_type(paths)
-files[c("type", "confidence", "by_name", "agree", "inner")]
+files$path <- basename(files$path)
+files[c("path", "type", "by_name", "agree", "inner")]
 #> <zumime_result: 4 rows>
-#>                type confidence           by_name agree    inner
-#> 1 application/x-rds   definite application/x-rds  TRUE     <NA>
-#> 2         image/png   definite   application/pdf FALSE     <NA>
-#> 3   application/pdf   definite   application/pdf  TRUE     <NA>
-#> 4  application/gzip   definite  application/gzip  TRUE text/csv
+#>           path              type           by_name agree    inner
+#> 1     cars.rds application/x-rds application/x-rds  TRUE     <NA>
+#> 2  invoice.pdf         image/png   application/pdf FALSE     <NA>
+#> 3   report.pdf   application/pdf   application/pdf  TRUE     <NA>
+#> 4 sales.csv.gz  application/gzip  application/gzip  TRUE text/csv
 ```
 
 `mime_check()` asks only the allowlist question, from the bytes alone,
@@ -127,8 +123,9 @@ mime_is(docx, "application/zip")
 #> [1] TRUE
 ```
 
-Every function starts with `mime_`, and every type is a canonical name
-from the registry that `mime_types()` returns.
+Every function but `zumime_info()` starts with `mime_`, and every type
+it returns is a canonical name from the registry that `mime_types()`
+lists.
 
 ## Learn more
 
@@ -142,11 +139,13 @@ from the registry that `mime_types()` returns.
 ## Related work
 
 The byte answer follows the WHATWG MIME Sniffing Standard and is tested
-against Go’s `net/http` sniff cases and the web-platform-tests
-`mimesniff` fixtures. Container inspection follows
-[file-type](https://github.com/sindresorhus/file-type),
+against Go’s `net/http` sniff cases; `mime_parse()` is tested against
+the web-platform-tests `mimesniff` fixtures. Container inspection
+follows [file-type](https://github.com/sindresorhus/file-type),
 [filetype](https://github.com/h2non/filetype) and
 [mimetype](https://github.com/gabriel-vasile/mimetype); the extension
 table is generated from the [IANA media types
 registry](https://www.iana.org/assignments/media-types/) and Apache
-httpd’s `mime.types`. No code is copied from any of them.
+httpd’s `mime.types`. zumime’s code is written from these references,
+not copied from them. The test suite uses Go’s sniff cases and
+file-type’s answers as oracles, credited where they are used.
