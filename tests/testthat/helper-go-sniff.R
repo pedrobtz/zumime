@@ -1,7 +1,8 @@
 # The sniff cases of Go 1.27.1's net/http/sniff_test.go, the WHATWG table
 # in use (design section 7.2). Copyright 2011 The Go Authors; BSD-3-Clause,
 # https://go.dev/LICENSE. Dumped once with a Go program that printed each
-# case's description, data as hex, and expected Content-Type.
+# case's description, data as hex, and expected Content-Type. The licence
+# notice is in tests/testthat/COPYRIGHTS.
 go_sniff_cases <- function() {
   data.frame(
     desc = c(

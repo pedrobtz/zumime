@@ -6,7 +6,9 @@
 # * https://r-pkgs.org/testing-design.html#sec-tests-files-overview
 # * https://testthat.r-lib.org/articles/special-files.html
 
-library(testthat)
-library(zumime)
-
-test_check("zumime")
+# testthat is a suggested package: CRAN's no-Suggests check runs without it.
+if (requireNamespace("testthat", quietly = TRUE)) {
+  library(testthat)
+  library(zumime)
+  test_check("zumime")
+}
