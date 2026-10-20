@@ -6,13 +6,13 @@ Working Group (WHATWG) Multipurpose Internet Mail Extensions (MIME)
 Sniffing Standard <https://mimesniff.spec.whatwg.org/> over raw vectors
 and paths. Reads inside containers to tell Office documents from plain
 'ZIP' archives, audio from video in 'MP4' files, and Word from Excel in
-legacy Office files, and recognises the data files R users hold, such as
-R's own serialised files, 'Parquet', 'SQLite' and 'Stata' files. Every
-type has a parent in a hierarchy, and an extension table generated from
-the Internet Assigned Numbers Authority (IANA) media types registry and
-the 'Apache' 'httpd' type map answers from the name. One call reports
-both answers, whether they agree, and whether a file is compressed,
-encrypted or truncated.
+legacy Office files, and recognises the data files 'R' users hold, such
+as files saved by 'R', 'Parquet', 'SQLite' and 'Stata' files. Every type
+has a parent in a hierarchy, and an extension table generated from the
+Internet Assigned Numbers Authority (IANA) media types registry and the
+'Apache' 'httpd' type map answers from the name. One call reports both
+answers, whether they agree, and whether a file is compressed, encrypted
+or truncated.
 
 ## See also
 
