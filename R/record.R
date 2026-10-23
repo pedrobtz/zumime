@@ -6,6 +6,12 @@
 #' repeated name keeps its first value. `mime_format()` is "serialize a MIME
 #' type", quoting a value that is empty or not a token.
 #'
+#' `mime_format()` checks a record before serialising it, so an edited
+#' record cannot carry a line break into a header. Type, subtype and
+#' parameter names must be non-empty HTTP tokens. Values must hold only HTTP
+#' quoted-string token code points: tab, U+0020 to U+007E and U+0080 to
+#' U+00FF. A record that breaks this raises `zumime_type_error`.
+#'
 #' @param x A character vector of MIME types, such as `Content-Type`
 #'   header values.
 #' @param strict If `TRUE`, an input that fails to parse raises
@@ -60,6 +66,20 @@ mime_format <- function(record) {
       "`record` must be a record from `mime_parse()` or a list of them."
     )
   }
+  for (i in seq_along(record)) {
+    if (!is.null(record[[i]]) && !is_valid_record(record[[i]])) {
+      zumime_abort(
+        "type",
+        sprintf(
+          paste(
+            "Record %d holds a type, subtype or parameter name that is not",
+            "an HTTP token, or a value outside the quoted-string code points."
+          ),
+          i
+        )
+      )
+    }
+  }
   record <- lapply(record, function(r) {
     if (is.null(r)) {
       return(NULL)
@@ -77,9 +97,9 @@ mime_format <- function(record) {
   .Call(zumime_mime_format, record)
 }
 
-# A record as mime_parse() makes it. Fields are read with [[ so a list with
-# `typex` is not taken for one with `type`. Tokens are not re-checked: the
-# documented input is a record from mime_parse().
+# A record as mime_parse() makes it, by shape. Fields are read with [[ so a
+# list with `typex` is not taken for one with `type`. is_valid_record()
+# checks the contents.
 is_record <- function(r) {
   is.list(r) &&
     is_string(r[["type"]]) &&
@@ -87,6 +107,26 @@ is_record <- function(r) {
     is.list(r[["parameters"]]) &&
     all(vapply(r[["parameters"]], is_string, TRUE)) &&
     (length(r[["parameters"]]) == 0L || !is.null(names(r[["parameters"]])))
+}
+
+# The WHATWG serialiser assumes a valid record: tokens for type, subtype
+# and names, HTTP quoted-string token code points for values. Without the
+# check, a CR or LF in an edited record reaches a header verbatim.
+is_valid_record <- function(r) {
+  p <- r[["parameters"]]
+  is_http_token(c(r[["type"]], r[["subtype"]], names(p))) &&
+    all(vapply(p, is_quoted_token_string, TRUE))
+}
+
+is_http_token <- function(x) {
+  all(grepl("^[-!#$%&'*+.^_`|~0-9A-Za-z]+$", x, perl = TRUE))
+}
+
+# Tab, U+0020 to U+007E and U+0080 to U+00FF. utf8ToInt() gives NA for
+# invalid UTF-8, which is no code point.
+is_quoted_token_string <- function(v) {
+  cp <- utf8ToInt(enc2utf8(v))
+  !anyNA(cp) && all(cp == 0x09L | (cp >= 0x20L & cp != 0x7FL & cp <= 0xFFL))
 }
 
 # x in UTF-8 for the parser. enc2utf8() turns a byte the native encoding

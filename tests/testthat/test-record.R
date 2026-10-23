@@ -94,6 +94,62 @@ test_that("mime_format() reads record fields without partial matching", {
   expect_error(mime_parse("a/b", strict = NA), class = "zumime_type_error")
 })
 
+test_that("mime_format() rejects CR and LF in every field", {
+  rec <- mime_parse("text/plain;charset=utf-8")[[1]]
+  expect_identical(mime_format(rec), "text/plain;charset=utf-8")
+  for (crlf in c("\r\n", "\r", "\n")) {
+    bad_type <- rec
+    bad_type$type <- paste0("text", crlf, "X: y")
+    bad_subtype <- rec
+    bad_subtype$subtype <- paste0("html", crlf, "X: y")
+    bad_name <- rec
+    names(bad_name$parameters) <- paste0("x", crlf, "Injected: 1")
+    bad_value <- rec
+    bad_value$parameters$charset <- paste0("utf-8", crlf, "Set-Cookie: a=b")
+    for (r in list(bad_type, bad_subtype, bad_name, bad_value)) {
+      expect_error(mime_format(r), class = "zumime_type_error")
+      expect_error(mime_format(list(rec, r)), class = "zumime_type_error")
+    }
+  }
+})
+
+test_that("mime_format() rejects fields outside their code point classes", {
+  rec <- function(type = "a", subtype = "b", parameters = list()) {
+    list(type = type, subtype = subtype, parameters = parameters)
+  }
+  bad <- list(
+    rec(type = ""),
+    rec(subtype = "b c"),
+    rec(subtype = "b/c"),
+    rec(parameters = list(x = "a", "b")),
+    rec(parameters = structure(list("v"), names = "")),
+    rec(parameters = list("x;" = "v")),
+    rec(parameters = list(x = "été", "é" = "v")),
+    rec(parameters = list(x = "a\001b"))
+  )
+  for (r in bad) {
+    expect_error(mime_format(r), class = "zumime_type_error")
+  }
+  # Tab, space and U+0080 to U+00FF are quoted-string token code points.
+  expect_identical(
+    mime_format(rec(parameters = list(x = "a\tb", y = "éÿ"))),
+    "a/b;x=\"a\tb\";y=\"éÿ\""
+  )
+})
+
+test_that("mime_format() rejects values above U+00FF", {
+  # 3- and 4-byte code points are not HTTP quoted-string token code points.
+  r <- list(type = "a", subtype = "b", parameters = list(x = "€ \U1F600"))
+  expect_error(mime_format(r), class = "zumime_type_error")
+  r$parameters$x <- "€"
+  expect_error(mime_format(r), class = "zumime_type_error")
+  # Invalid UTF-8 in a value is no code point at all.
+  v <- rawToChar(as.raw(c(0x61, 0xc3)))
+  Encoding(v) <- "UTF-8"
+  r$parameters$x <- v
+  expect_error(mime_format(r), class = "zumime_type_error")
+})
+
 test_that("mime_parse() decodes overlong and surrogate UTF-8 to U+FFFD", {
   marked <- function(...) {
     x <- rawToChar(as.raw(c(...)))

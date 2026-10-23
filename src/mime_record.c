@@ -94,29 +94,20 @@ static R_xlen_t utf8_decode(const char *s, R_xlen_t len, uint32_t *out) {
   return n;
 }
 
+/* Every code point a record holds is at most U+00FF: tokens are ASCII and
+ * the parser drops a value above U+00FF, so one or two bytes suffice. */
 static size_t utf8_encode_one(uint32_t c, char *out) {
   if (c < 0x80) {
     out[0] = (char) c;
     return 1;
-  } else if (c < 0x800) {
-    out[0] = (char) (0xC0 | (c >> 6));
-    out[1] = (char) (0x80 | (c & 0x3F));
-    return 2;
-  } else if (c < 0x10000) {
-    out[0] = (char) (0xE0 | (c >> 12));
-    out[1] = (char) (0x80 | ((c >> 6) & 0x3F));
-    out[2] = (char) (0x80 | (c & 0x3F));
-    return 3;
   }
-  out[0] = (char) (0xF0 | (c >> 18));
-  out[1] = (char) (0x80 | ((c >> 12) & 0x3F));
-  out[2] = (char) (0x80 | ((c >> 6) & 0x3F));
-  out[3] = (char) (0x80 | (c & 0x3F));
-  return 4;
+  out[0] = (char) (0xC0 | (c >> 6));
+  out[1] = (char) (0x80 | (c & 0x3F));
+  return 2;
 }
 
 static SEXP mk_utf8(const uint32_t *cp, R_xlen_t n) {
-  char *buf = R_alloc((size_t) n * 4 + 1, 1);
+  char *buf = R_alloc((size_t) n * 2 + 1, 1);
   size_t len = 0;
   for (R_xlen_t i = 0; i < n; i++) len += utf8_encode_one(cp[i], buf + len);
   return Rf_mkCharLenCE(buf, (int) len, CE_UTF8);
@@ -285,25 +276,28 @@ static void sb_put(sbuf *sb, const char *s, size_t n) {
   sb->len += n;
 }
 
+/* v is checked in R to hold only quoted-string token code points. A
+ * multi-byte UTF-8 sequence never holds '"' or '\\' nor passes is_token(),
+ * so the bytes are copied as they are. */
 static void sb_value(sbuf *sb, const char *v) {
-  R_xlen_t len = (R_xlen_t) strlen(v);
-  uint32_t *cp = (uint32_t *) R_alloc((size_t) len + 1, sizeof(uint32_t));
-  R_xlen_t n = utf8_decode(v, len, cp);
-  if (n > 0 && all_token(cp, n)) {
-    sb_put(sb, v, (size_t) len);
+  size_t len = strlen(v);
+  int token = len > 0;
+  for (size_t i = 0; i < len && token; i++)
+    token = is_token((unsigned char) v[i]);
+  if (token) {
+    sb_put(sb, v, len);
     return;
   }
   sb_put(sb, "\"", 1);
-  for (R_xlen_t i = 0; i < n; i++) {
-    char enc[4];
-    if (cp[i] == '"' || cp[i] == '\\') sb_put(sb, "\\", 1);
-    sb_put(sb, enc, utf8_encode_one(cp[i], enc));
+  for (size_t i = 0; i < len; i++) {
+    if (v[i] == '"' || v[i] == '\\') sb_put(sb, "\\", 1);
+    sb_put(sb, v + i, 1);
   }
   sb_put(sb, "\"", 1);
 }
 
 /* records: a list of records (type, subtype, parameters) or NULLs, already
- * checked in R. */
+ * checked in R by is_record() and is_valid_record(). */
 SEXP zumime_mime_format(SEXP records) {
   R_xlen_t n = XLENGTH(records);
   SEXP out = PROTECT(Rf_allocVector(STRSXP, n));
