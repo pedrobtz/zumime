@@ -97,7 +97,7 @@ print.zumime_sniffer <- function(x, ...) {
   invisible(x)
 }
 
-check_sniffer <- function(s) {
+check_sniffer <- function(s, call = sys.call(sys.parent())) {
   if (
     !inherits(s, "zumime_sniffer") ||
       typeof(s) != "externalptr" ||
@@ -106,7 +106,7 @@ check_sniffer <- function(s) {
     zumime_abort(
       "type",
       "`s` must be a sniffer from `mime_sniffer()`.",
-      call = sys.call(-1L)
+      call = call
     )
   }
 }

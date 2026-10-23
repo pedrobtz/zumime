@@ -89,7 +89,12 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
 
 # mime_register()'s checks on the type, the parent and where the rule may
 # sit. Returns the type's essence and the canonical parent.
-check_register_args <- function(type, parent, rule, call = sys.call(-1L)) {
+check_register_args <- function(
+  type,
+  parent,
+  rule,
+  call = sys.call(sys.parent())
+) {
   rec <- if (is_string(type)) mime_parse(type)[[1]]
   if (is.null(rec)) {
     zumime_abort(
@@ -181,7 +186,7 @@ mime_unregister <- function(type) {
   invisible(NULL)
 }
 
-check_extensions <- function(x) {
+check_extensions <- function(x, call = sys.call(sys.parent())) {
   if (is.null(x)) {
     return(character())
   }
@@ -189,7 +194,7 @@ check_extensions <- function(x) {
     zumime_abort(
       "type",
       "`extensions` must be a character vector or NULL.",
-      call = sys.call(-1L)
+      call = call
     )
   }
   x <- tolower(sub("^\\.", "", x))
@@ -197,13 +202,13 @@ check_extensions <- function(x) {
     zumime_abort(
       "type",
       "`extensions` must not be empty strings.",
-      call = sys.call(-1L)
+      call = call
     )
   }
   x
 }
 
-check_rule <- function(rule) {
+check_rule <- function(rule, call = sys.call(sys.parent())) {
   bad <- function() {
     zumime_abort(
       "type",
@@ -211,8 +216,7 @@ check_rule <- function(rule) {
         "`rule` must be NULL, a function, or a list of `offset`, `bytes`",
         "(1 to 64 bytes) and an optional `mask` of the same length."
       ),
-      # -2: past bad() and check_rule() to mime_register().
-      call = sys.call(-2L)
+      call = call
     )
   }
   if (!is.list(rule) || is.null(rule[["bytes"]])) {

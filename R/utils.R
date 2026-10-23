@@ -1,28 +1,45 @@
 # Helpers used across files: argument checks, optional packages, and two
 # small utilities.
+#
+# Each check names its caller with `call = sys.call(sys.parent())`: the
+# call of the frame the check was called from, not of the frame below it on
+# the stack (`sys.call(-1L)`). So the call is right even when the check is
+# an argument forced inside another function, as in
+# `canonical_type(check_character(x))`. A helper that checks for an exported
+# function passes that function's call on as `call`.
 
-check_character <- function(x, arg = deparse(substitute(x))) {
-  if (!is.character(x) && !(is.atomic(x) && all(is.na(x)))) {
+# A character vector, or an atomic vector of NAs (missing types). NULL is
+# not one, on every R version: is.atomic(NULL) changed in R 4.4.0.
+check_character <- function(
+  x,
+  arg = deparse(substitute(x)),
+  call = sys.call(sys.parent())
+) {
+  if (is.null(x) || !(is.character(x) || (is.atomic(x) && all(is.na(x))))) {
     zumime_abort(
       "type",
       sprintf("`%s` must be a character vector.", arg),
-      call = sys.call(-1L)
+      call = call
     )
   }
   as.character(x)
 }
 
-check_flag <- function(x, arg = deparse(substitute(x))) {
+check_flag <- function(
+  x,
+  arg = deparse(substitute(x)),
+  call = sys.call(sys.parent())
+) {
   if (!isTRUE(x) && !isFALSE(x)) {
     zumime_abort(
       "type",
       sprintf("`%s` must be TRUE or FALSE.", arg),
-      call = sys.call(-1L)
+      call = call
     )
   }
 }
 
-check_limit <- function(limit) {
+check_limit <- function(limit, call = sys.call(sys.parent())) {
   if (
     !is.numeric(limit) ||
       length(limit) != 1L ||
@@ -34,7 +51,7 @@ check_limit <- function(limit) {
     zumime_abort(
       "type",
       "`limit` must be a whole number from 0 to .Machine$integer.max.",
-      call = sys.call(-1L)
+      call = call
     )
   }
   as.double(limit)
@@ -44,7 +61,7 @@ check_choice <- function(
   x,
   choices,
   arg = deparse(substitute(x)),
-  call = sys.call(-1L)
+  call = sys.call(sys.parent())
 ) {
   if (identical(x, choices)) {
     return(choices[1])
@@ -63,7 +80,7 @@ check_choice <- function(
   x
 }
 
-need_package <- function(pkg, what) {
+need_package <- function(pkg, what, call = sys.call(sys.parent())) {
   if (!has_package(pkg)) {
     zumime_abort(
       "dependency",
@@ -72,7 +89,7 @@ need_package <- function(pkg, what) {
         what,
         pkg
       ),
-      call = sys.call(-1L)
+      call = call
     )
   }
 }

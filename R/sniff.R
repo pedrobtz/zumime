@@ -89,7 +89,7 @@ mime_sniff <- function(
 # The supplied MIME type detection algorithm's outcome: the canonical
 # essence (NULL when undefined), its charset parameter, and the
 # check-for-apache-bug flag.
-supplied_type <- function(type) {
+supplied_type <- function(type, call = sys.call(sys.parent())) {
   if (is.null(type) || (length(type) == 1L && is.na(type))) {
     return(list(essence = NULL, charset = NULL, apache_bug = FALSE))
   }
@@ -97,7 +97,7 @@ supplied_type <- function(type) {
     zumime_abort(
       "type",
       "`type` must be a single string or NULL.",
-      call = sys.call(-1L)
+      call = call
     )
   }
   apache_bug <- type %in%
@@ -121,7 +121,7 @@ supplied_type <- function(type) {
 contexts <- c("none", "browsing", "image", "audio_video", "font")
 
 # The context as the C side's enum value.
-check_context <- function(context) {
-  context <- check_choice(context, contexts, call = sys.call(-1L))
+check_context <- function(context, call = sys.call(sys.parent())) {
+  context <- check_choice(context, contexts, call = call)
   match(context, contexts) - 1L
 }
