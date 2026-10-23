@@ -35,7 +35,7 @@ Config/Needs/website:
     knitr,
     rmarkdown
 Config/testthat/edition: 3
-Config/roxygen2/version: 8.1.0
+Config/roxygen2/version: 8.1.1
 Encoding: UTF-8
 Language: en-GB
 Roxygen: list(markdown = TRUE)
