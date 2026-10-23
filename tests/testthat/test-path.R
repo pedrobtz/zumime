@@ -32,3 +32,24 @@ test_that("a tar row past the head is checked with its checksum", {
     expect_identical(mime_type(paths, limit = limit)$type, want)
   }
 })
+
+test_that("a path in \"bytes\" encoding is an error row, not a condition", {
+  x <- "caf\xe9.txt"
+  Encoding(x) <- "bytes"
+  dir <- local_tree(list("a.txt" = "hello\n"))
+  paths <- c(file.path(dir, "a.txt"), x)
+  t <- mime_type(paths)
+  expect_identical(t$type, c("text/plain", NA))
+  expect_identical(as.character(t$confidence[2]), "none")
+  expect_error(mime_type(x, strict = TRUE), class = "zumime_io_error")
+})
+
+test_that("limit = 0 reads a file larger than one read chunk whole", {
+  # The tail of a ZIP past 4 MiB of stored data: only a whole read sees it.
+  e <- c(list("big.bin" = as.raw(rep(1:255, 20000))), ooxml_entries("word"))
+  zip <- build_zip(e)
+  expect_gt(length(zip), 4 * 1024^2)
+  dir <- local_tree(list("r.docx" = zip))
+  t <- mime_type(file.path(dir, "r.docx"), limit = 0)
+  expect_identical(t$type, docx_type())
+})

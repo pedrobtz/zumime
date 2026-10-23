@@ -171,6 +171,7 @@ typedef struct {
 } interruptible_file;
 
 #define INTERRUPT_EVERY (4u * 1024u * 1024u)
+#define READ_CHUNK (1u * 1024u * 1024u)
 
 static void check_interrupt(void *data) {
   (void) data;
@@ -231,7 +232,7 @@ typedef struct {
   int complete; /* -1 NA, 0, 1 */
   int is_dir;
   int failed;
-  int interrupted; /* the user interrupted the completeness read */
+  int interrupted; /* the user interrupted a long read */
   char error[128];
 } path_result;
 
@@ -389,7 +390,29 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
     }
     head = own;
   }
-  size_t head_len = fread(head, 1, cap, f);
+  size_t head_len;
+  if (limit == 0) {
+    /* A whole file can take minutes: read it in chunks through the
+     * interruptible reader, as the completeness read does. */
+    interruptible_file rf = {f, 0, 0};
+    head_len = 0;
+    while (head_len < cap) {
+      size_t want = cap - head_len < READ_CHUNK ? cap - head_len : READ_CHUNK;
+      size_t got = file_reader(&rf, head + head_len, want);
+      head_len += got;
+      if (got < want) break;
+    }
+    /* Not reachable from the tests, which cannot send an interrupt; the
+     * caller raises it once the file is closed. */
+    if (rf.interrupted) {
+      out->interrupted = 1;
+      free(own);
+      fclose(f);
+      return;
+    }
+  } else {
+    head_len = fread(head, 1, cap, f);
+  }
   /* Not reachable from the tests: a read error on an open regular file
    * needs failing hardware or a vanished network share. */
   if (ferror(f)) {
@@ -495,6 +518,21 @@ static void reserve_head(head_buf *hb, const char *path, size_t limit) {
 }
 
 
+/* A path's characters as the platform opens them: UTF-8 on Windows, where
+ * it becomes UTF-16, the native encoding elsewhere. A string in "bytes"
+ * encoding cannot be translated, so the callers give it an error row
+ * instead, as R itself cannot open it. */
+static const char untranslatable[] = "a path in \"bytes\" encoding cannot be "
+                                     "translated";
+
+static const char *path_chars(SEXP s) {
+#ifdef _WIN32
+  return Rf_translateCharUTF8(s);
+#else
+  return Rf_translateChar(s);
+#endif
+}
+
 /* paths: character (UTF-8, expanded); limit: double; complete: logical;
  * supplied, apache_bug, no_sniff, context as in zumime_sniff_raw().
  * Returns list(type, confidence, charset, encrypted, complete, newline,
@@ -537,12 +575,14 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
       pr.complete = -1;
       pr.r.encrypted = -1;
       snprintf(pr.error, sizeof(pr.error), "missing path");
+    } else if (Rf_getCharCE(s) == CE_BYTES) {
+      memset(&pr, 0, sizeof(pr));
+      pr.failed = 1;
+      pr.complete = -1;
+      pr.r.encrypted = -1;
+      snprintf(pr.error, sizeof(pr.error), "%s", untranslatable);
     } else {
-#ifdef _WIN32
-      const char *p = Rf_translateCharUTF8(s); /* opened as UTF-16 */
-#else
-      const char *p = Rf_translateChar(s); /* the native encoding */
-#endif
+      const char *p = path_chars(s);
       reserve_head(&hb, p, lim);
       sniff_path(p, lim, want_complete, &proto, hb.p, hb.cap, &pr, NULL, NULL,
                  NULL);
@@ -681,17 +721,15 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
   for (R_xlen_t i = 0; i < n; i++) {
     if (i > 0 && i % 256 == 0) R_CheckUserInterrupt();
     SEXP s = STRING_ELT(x, i);
-    if (s == NA_STRING) {
+    if (s == NA_STRING || Rf_getCharCE(s) == CE_BYTES) {
       LOGICAL(out)[i] = NA_LOGICAL;
       continue;
     }
-#ifdef _WIN32
-    const char *p = Rf_translateCharUTF8(s);
-#else
-    const char *p = Rf_translateChar(s);
-#endif
+    const char *p = path_chars(s);
     path_result pr;
     int gated = 0;
+    /* limit is never 0 here and completeness is not asked, so no read is
+     * long enough to be interrupted: pr.interrupted stays 0. */
     reserve_head(&hb, p, lim);
     sniff_path(p, lim, 0, &proto, hb.p, hb.cap, &pr, related_to_any,
                (void *) related, &gated);
