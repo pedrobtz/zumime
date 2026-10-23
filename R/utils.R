@@ -1,5 +1,5 @@
-# Helpers used across files: argument checks, optional packages, and two
-# small utilities.
+# Helpers used across files: argument checks, optional packages, the byte
+# readers of the R-side passes, and small utilities.
 #
 # Each check names its caller with `call = sys.call(sys.parent())`: the
 # call of the frame the check was called from, not of the frame below it on
@@ -23,6 +23,20 @@ check_character <- function(
     )
   }
   as.character(x)
+}
+
+check_bytes_or_paths <- function(
+  x,
+  arg = deparse(substitute(x)),
+  call = sys.call(sys.parent())
+) {
+  if (!is.raw(x) && !is.character(x)) {
+    zumime_abort(
+      "type",
+      sprintf("`%s` must be a raw vector or a character vector of paths.", arg),
+      call = call
+    )
+  }
 }
 
 check_flag <- function(
@@ -95,6 +109,38 @@ need_package <- function(pkg, what, call = sys.call(sys.parent())) {
       call = call
     )
   }
+}
+
+# The default `limit` of mime_sniff(), mime_type() and mime_sniffer(),
+# for code that must read what they read. Their formals spell it out so
+# their usage shows it; a test keeps the four in step.
+default_limit <- 4096L
+
+# The first `limit` bytes of row `i`: of the raw vector `x`, or read again
+# from path `x[i]`.
+head_bytes <- function(x, i, limit) {
+  if (is.raw(x)) {
+    return(if (limit > 0 && length(x) > limit) x[seq_len(limit)] else x)
+  }
+  read_bytes(x[i], limit)
+}
+
+# The first `limit` bytes of a file (all of it for 0), or NULL when it
+# cannot be read: the file may have gone or changed since the C pass, and
+# design section 8 says these calls never raise on input.
+read_bytes <- function(path, limit) {
+  tryCatch(
+    {
+      size <- file.size(path)
+      if (is.na(size) || dir.exists(path)) {
+        NULL
+      } else {
+        readBin(path, "raw", if (limit > 0) min(limit, size) else size)
+      }
+    },
+    error = function(e) NULL,
+    warning = function(w) NULL
+  )
 }
 
 # The one place a suggested package is looked up, so tests can stand in for

@@ -58,12 +58,7 @@ mime_sniff <- function(
   context = c("none", "browsing", "image", "audio_video", "font"),
   limit = 4096L
 ) {
-  if (!is.raw(x) && !is.character(x)) {
-    zumime_abort(
-      "type",
-      "`x` must be a raw vector or a character vector of paths."
-    )
-  }
+  check_bytes_or_paths(x)
   supplied <- supplied_type(type)
   check_flag(no_sniff)
   context <- check_context(context)
@@ -118,6 +113,9 @@ supplied_type <- function(type, call = sys.call(sys.parent())) {
   )
 }
 
+# The sniffing contexts in the C enum's order. The `context` defaults of
+# mime_sniff() and mime_sniffer() spell out the same vector, so the usage
+# shows the choices; keep the three in step.
 contexts <- c("none", "browsing", "image", "audio_video", "font")
 
 # The context as the C side's enum value.

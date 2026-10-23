@@ -81,8 +81,10 @@ dir <- tempfile()
 dir.create(dir)
 writeLines(c("a,b", "1,2"), file.path(dir, "data.csv"))
 saveRDS(mtcars, file.path(dir, "cars.rds"))
-writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)),
-  file.path(dir, "logo.txt"))
+writeBin(
+  as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)),
+  file.path(dir, "logo.txt")
+)
 mime_type(list.files(dir, full.names = TRUE))
 unlink(dir, recursive = TRUE)
 }

@@ -3,13 +3,13 @@
 # in R/utils.R.
 zumime_abort <- function(kind, message, call = sys.call(sys.parent())) {
   stop(structure(
+    list(message = message, call = call),
     class = c(
       paste0("zumime_", kind, "_error"),
       "zumime_error",
       "error",
       "condition"
-    ),
-    list(message = message, call = call)
+    )
   ))
 }
 
@@ -17,12 +17,12 @@ zumime_abort <- function(kind, message, call = sys.call(sys.parent())) {
 # that failed.
 zumime_warn <- function(kind, message, call = sys.call(sys.parent())) {
   warning(structure(
+    list(message = message, call = call),
     class = c(
       paste0("zumime_", kind, "_warning"),
       "zumime_warning",
       "warning",
       "condition"
-    ),
-    list(message = message, call = call)
+    )
   ))
 }

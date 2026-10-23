@@ -22,7 +22,7 @@
 #' types[types$type == "application/zip", ]
 mime_types <- function() {
   reg <- session$types
-  if (!nrow(reg)) {
+  if (nrow(reg) == 0L) {
     return(types_registry)
   }
   extra <- data.frame(
@@ -167,6 +167,18 @@ canonical_type <- function(x) {
   unname(x)
 }
 
+# Every type name the session knows: generated, then registered.
+all_types <- function() c(types_registry$type, session$types$type)
+
+# Parent of each type, registered ones included; NA for the root and for
+# unknown types.
+type_parent <- function(type) {
+  p <- types_registry$parent[match(type, types_registry$type)]
+  reg <- match(type, session$types$type)
+  p[!is.na(reg)] <- session$types$parent[reg[!is.na(reg)]]
+  p
+}
+
 # Lineage of one canonical type, nearest first, from the registry and any
 # registered types. Every known type's lineage is computed once per
 # registry version and kept in `session`.
@@ -189,7 +201,7 @@ lineage_table <- function() {
   names(acc) <- types
   for (step in seq_len(max_lineage)) {
     live <- which(!is.na(cur))
-    if (!length(live)) {
+    if (length(live) == 0L) {
       break
     }
     for (i in live) {

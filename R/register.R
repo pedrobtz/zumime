@@ -42,8 +42,12 @@ session$version <- 0L
 #'   `detected_by = "registered"`.
 #' @export
 #' @examples
-#' mime_register("application/x-zumime-demo", "application/octet-stream",
-#'   extensions = "zdemo", rule = list(offset = 0, bytes = "ZDEMO"))
+#' mime_register(
+#'   "application/x-zumime-demo",
+#'   "application/octet-stream",
+#'   extensions = "zdemo",
+#'   rule = list(offset = 0, bytes = "ZDEMO")
+#' )
 #' mime_sniff(charToRaw("ZDEMO\x01\x02"))
 #' mime_guess("file.zdemo")
 #' mime_unregister("application/x-zumime-demo")
@@ -247,22 +251,10 @@ check_rule <- function(rule, call = sys.call(sys.parent())) {
   list(offset = offset, bytes = bytes, mask = mask)
 }
 
-# Every type name the session knows: generated, then registered.
-all_types <- function() c(types_registry$type, session$types$type)
-
-# Parent of each type, registered ones included; NA for the root and for
-# unknown types.
-type_parent <- function(type) {
-  p <- types_registry$parent[match(type, types_registry$type)]
-  reg <- match(type, session$types$type)
-  p[!is.na(reg)] <- session$types$parent[reg[!is.na(reg)]]
-  p
-}
-
 # Function rules whose parent is a row's type, applied in registration
 # order until nothing changes. `x` is a raw vector or the rows' paths.
 apply_registered <- function(out, x, limit) {
-  if (!length(session$rules)) {
+  if (length(session$rules) == 0L) {
     return(out)
   }
   fns <- session$types[session$types$kind == "function", , drop = FALSE]
@@ -284,7 +276,7 @@ apply_registered <- function(out, x, limit) {
       out$confidence[i] <- min(out$confidence[i], as_confidence("probable"))
     }
   }
-  if (length(failed)) {
+  if (length(failed) > 0L) {
     zumime_warn(
       "rule",
       sprintf(
@@ -318,7 +310,9 @@ apply_rules_to <- function(type, bytes, fns) {
         break
       }
     }
-    if (!matched) break
+    if (!matched) {
+      break
+    }
   }
   list(type = type, failed = failed)
 }
@@ -327,28 +321,3 @@ apply_rules_to <- function(type, bytes, fns) {
 # existing parent, so chains cannot loop; the bound keeps a long chain from
 # reading the bytes over and over.
 max_rule_depth <- 8L
-
-head_bytes <- function(x, i, limit) {
-  if (is.raw(x)) {
-    return(if (limit > 0 && length(x) > limit) x[seq_len(limit)] else x)
-  }
-  read_bytes(x[i], limit)
-}
-
-# The first `limit` bytes of a file (all of it for 0), or NULL when it
-# cannot be read: the file may have gone or changed since the C pass, and
-# design section 8 says these calls never raise on input.
-read_bytes <- function(path, limit) {
-  tryCatch(
-    {
-      size <- file.size(path)
-      if (is.na(size) || dir.exists(path)) {
-        NULL
-      } else {
-        readBin(path, "raw", if (limit > 0) min(limit, size) else size)
-      }
-    },
-    error = function(e) NULL,
-    warning = function(w) NULL
-  )
-}

@@ -132,7 +132,7 @@ stream_result <- function(s, chunk, final) {
   out <- raw_result(res, p$supplied)
   # Checked here so a sniffer without function rules skips copying its
   # bytes out for apply_registered().
-  if (length(fns)) {
+  if (length(fns) > 0L) {
     out <- apply_registered(out, stream_bytes(s), p$limit)
   }
   out

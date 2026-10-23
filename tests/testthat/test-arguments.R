@@ -99,3 +99,9 @@ test_that("NULL is not a character vector on any R version", {
   expect_identical(mime_is(NA, "image"), NA)
   expect_identical(mime_extensions(NA), list(character()))
 })
+
+test_that("the default limit is spelled out the same in every formal", {
+  expect_identical(formals(mime_sniff)$limit, default_limit)
+  expect_identical(formals(mime_type)$limit, default_limit)
+  expect_identical(formals(mime_sniffer)$limit, default_limit)
+})
