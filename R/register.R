@@ -87,6 +87,33 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
   invisible(essence)
 }
 
+#' @rdname mime_register
+#' @export
+mime_unregister <- function(type) {
+  if (!is_string(type)) {
+    zumime_abort("type", "`type` must be a single type string.")
+  }
+  type <- canonical_type(type)
+  if (!(type %in% session$types$type)) {
+    zumime_abort("registry", sprintf("\"%s\" is not a registered type.", type))
+  }
+  if (type %in% session$types$parent) {
+    zumime_abort(
+      "registry",
+      sprintf(
+        "\"%s\" is the parent of another registered type.",
+        type
+      )
+    )
+  }
+  .Call(zumime_unregister_type, type)
+  session$types <- session$types[session$types$type != type, , drop = FALSE]
+  session$extensions[[type]] <- NULL
+  session$rules[[type]] <- NULL
+  session$version <- session$version + 1L
+  invisible(NULL)
+}
+
 # mime_register()'s checks on the type, the parent and where the rule may
 # sit. Returns the type's essence and the canonical parent.
 check_register_args <- function(
@@ -157,33 +184,6 @@ check_register_args <- function(
     )
   }
   list(essence = essence, parent = parent)
-}
-
-#' @rdname mime_register
-#' @export
-mime_unregister <- function(type) {
-  if (!is_string(type)) {
-    zumime_abort("type", "`type` must be a single type string.")
-  }
-  type <- canonical_type(type)
-  if (!(type %in% session$types$type)) {
-    zumime_abort("registry", sprintf("\"%s\" is not a registered type.", type))
-  }
-  if (type %in% session$types$parent) {
-    zumime_abort(
-      "registry",
-      sprintf(
-        "\"%s\" is the parent of another registered type.",
-        type
-      )
-    )
-  }
-  .Call(zumime_unregister_type, type)
-  session$types <- session$types[session$types$type != type, , drop = FALSE]
-  session$extensions[[type]] <- NULL
-  session$rules[[type]] <- NULL
-  session$version <- session$version + 1L
-  invisible(NULL)
 }
 
 check_extensions <- function(x, call = sys.call(sys.parent())) {
