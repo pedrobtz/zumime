@@ -42,6 +42,7 @@ test_that("a path in \"bytes\" encoding is an error row, not a condition", {
   expect_identical(t$type, c("text/plain", NA))
   expect_identical(as.character(t$confidence[2]), "none")
   expect_error(mime_type(x, strict = TRUE), class = "zumime_io_error")
+  expect_identical(mime_check(paths, "text/plain"), c(TRUE, FALSE))
 })
 
 test_that("limit = 0 reads a file larger than one read chunk whole", {
