@@ -19,13 +19,13 @@
 #'
 #' The default answer depends on nothing outside the package. Three
 #' arguments ask for an optional family package. `inner = "decompress"`
-#' uses zukomp. `charset = "detect"` uses zuutf. `text = "family"` uses
-#' zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
-#' yet on CRAN; install them from GitHub. An argument whose package is
-#' absent raises `zumime_dependency_error`. `text = "family"` uses whichever
-#' sniffers are installed, listed by `zumime_info()$family`. An error inside
-#' an optional package leaves that answer as it was, so a corrupt stream
-#' keeps the name's `inner`.
+#' uses zukomp and `charset = "detect"` uses zuutf; either raises
+#' `zumime_dependency_error` when its package is absent. `text = "family"`
+#' never raises: it uses whichever of zucsv, zujson and zutoml are
+#' installed, listed by `zumime_info()$family`, and with none it keeps the
+#' standard's answer. zuutf and zutoml are not yet on CRAN; install them
+#' from GitHub. An error inside an optional package leaves that answer as
+#' it was, so a corrupt stream keeps the name's `inner`.
 #'
 #' @param path A character vector of paths.
 #' @param limit The number of bytes to read from each file; `0` reads whole
