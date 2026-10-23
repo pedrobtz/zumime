@@ -50,47 +50,46 @@ static uint32_t ascii_lower(uint32_t c) {
   return (c >= 'A' && c <= 'Z') ? c + 32 : c;
 }
 
-/* UTF-8 to code points; an invalid sequence decodes to U+FFFD, which no
- * code point class here accepts. Returns the number of code points. */
+/* UTF-8 to code points, as the Encoding Standard's UTF-8 decoder: an
+ * overlong form, a surrogate, a code point above U+10FFFF or a truncated
+ * sequence gives U+FFFD, which no code point class here accepts. A byte that
+ * ends a sequence early is decoded again on its own. Returns the number of
+ * code points. */
 static R_xlen_t utf8_decode(const char *s, R_xlen_t len, uint32_t *out) {
   const unsigned char *p = (const unsigned char *) s;
   R_xlen_t i = 0, n = 0;
   while (i < len) {
-    unsigned char b = p[i];
+    unsigned char b = p[i++];
     uint32_t c;
     int extra;
+    unsigned char lo = 0x80, hi = 0xBF;
     if (b < 0x80) {
-      c = b;
-      extra = 0;
-    } else if ((b & 0xE0) == 0xC0) {
+      out[n++] = b;
+      continue;
+    } else if (b >= 0xC2 && b <= 0xDF) {
       c = b & 0x1F;
       extra = 1;
-    } else if ((b & 0xF0) == 0xE0) {
+    } else if (b >= 0xE0 && b <= 0xEF) {
+      if (b == 0xE0) lo = 0xA0;
+      if (b == 0xED) hi = 0x9F;
       c = b & 0x0F;
       extra = 2;
-    } else if ((b & 0xF8) == 0xF0) {
+    } else if (b >= 0xF0 && b <= 0xF4) {
+      if (b == 0xF0) lo = 0x90;
+      if (b == 0xF4) hi = 0x8F;
       c = b & 0x07;
       extra = 3;
     } else {
       out[n++] = 0xFFFD;
-      i++;
       continue;
     }
-    int ok = 1;
-    for (int k = 1; k <= extra; k++) {
-      if (i + k >= len || (p[i + k] & 0xC0) != 0x80) {
-        ok = 0;
-        break;
-      }
-      c = (c << 6) | (p[i + k] & 0x3F);
+    for (; extra > 0; extra--) {
+      if (i >= len || p[i] < lo || p[i] > hi) break;
+      c = (c << 6) | (p[i++] & 0x3F);
+      lo = 0x80;
+      hi = 0xBF;
     }
-    if (!ok) {
-      out[n++] = 0xFFFD;
-      i++;
-      continue;
-    }
-    out[n++] = c;
-    i += extra + 1;
+    out[n++] = extra ? 0xFFFD : c;
   }
   return n;
 }

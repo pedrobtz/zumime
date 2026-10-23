@@ -93,3 +93,29 @@ test_that("mime_format() reads record fields without partial matching", {
   expect_error(mime_format(near), class = "zumime_type_error")
   expect_error(mime_parse("a/b", strict = NA), class = "zumime_type_error")
 })
+
+test_that("mime_parse() decodes overlong and surrogate UTF-8 to U+FFFD", {
+  marked <- function(...) {
+    x <- rawToChar(as.raw(c(...)))
+    Encoding(x) <- "UTF-8"
+    x
+  }
+  t <- c(0x74, 0x65, 0x78, 0x74) # "text"
+  h <- c(0x68, 0x74, 0x6d, 0x6c) # "html"
+  # An overlong "/" in two, three or four bytes is no separator.
+  expect_null(mime_parse(marked(t, 0xc0, 0xaf, h))[[1]])
+  expect_null(mime_parse(marked(t, 0xe0, 0x80, 0xaf, h))[[1]])
+  expect_null(mime_parse(marked(t, 0xf0, 0x80, 0x80, 0xaf, h))[[1]])
+  # An overlong ";" does not split parameters: the one value holds U+FFFD.
+  ab <- c(0x61, 0x2f, 0x62, 0x3b) # "a/b;"
+  rec <- mime_parse(marked(ab, 0x78, 0x3d, 0x31, 0xc0, 0xbb, 0x79, 0x3d, 0x32))
+  expect_length(rec[[1]]$parameters, 0L)
+  # A surrogate and a code point above U+10FFFF are invalid too.
+  expect_null(mime_parse(marked(t, 0xed, 0xa0, 0x80, 0x2f, h))[[1]])
+  expect_null(mime_parse(marked(t, 0x2f, 0xf4, 0x90, 0x80, 0x80))[[1]])
+  rec <- mime_parse(marked(ab, 0x78, 0x3d, 0xed, 0xa0, 0x80))
+  expect_length(rec[[1]]$parameters, 0L)
+  # The largest valid sequences still decode.
+  rec <- mime_parse(marked(ab, 0x78, 0x3d, 0xc3, 0xbf))
+  expect_identical(rec[[1]]$parameters, list(x = "ÿ"))
+})
