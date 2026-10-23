@@ -191,7 +191,7 @@ test_that("an over-long name and a full table are registry errors", {
     added <- c(added, t)
   }
   expect_s3_class(full, "zumime_registry_error")
-  expect_gte(length(added), 200L)
+  expect_identical(length(added), 256L)
 })
 
 test_that("a function rule decides a stream at the limit", {
@@ -299,17 +299,25 @@ test_that("a failing function rule warns once and does not match", {
   mime_register("text/x-zt-broken", "text/plain", rule = function(x) {
     stop("bug in the rule")
   })
-  dir <- local_tree(list(a.txt = "one\n", b.txt = "two\n"))
-  expect_warning(
-    t <- mime_type(file.path(dir, c("a.txt", "b.txt"))),
-    class = "zumime_rule_warning"
-  )
-  expect_identical(t$type, c("text/plain", "text/plain"))
-  expect_warning(
-    r <- mime_sniff(charToRaw("hello")),
-    class = "zumime_warning"
-  )
-  expect_identical(r$type, "text/plain")
+  dir <- local_tree(list(a.txt = "one\n", b.txt = "two\n", c.txt = "3\n"))
+  # Counted, since expect_warning() passes on one warning of several.
+  count_warnings <- function(expr) {
+    n <- 0L
+    value <- withCallingHandlers(
+      expr,
+      zumime_rule_warning = function(w) {
+        n <<- n + 1L
+        invokeRestart("muffleWarning")
+      }
+    )
+    list(value = value, n = n)
+  }
+  t <- count_warnings(mime_type(file.path(dir, c("a.txt", "b.txt", "c.txt"))))
+  expect_identical(t$n, 1L)
+  expect_identical(t$value$type, rep("text/plain", 3L))
+  r <- count_warnings(mime_sniff(charToRaw("hello")))
+  expect_identical(r$n, 1L)
+  expect_identical(r$value$type, "text/plain")
 })
 
 test_that("a rule under a directory never reads it", {
@@ -327,6 +335,40 @@ test_that("a file gone before R re-reads it gives no bytes", {
   expect_identical(read_bytes(path, 4), as.raw(1:4))
   expect_identical(read_bytes(path, 0), as.raw(1:10))
   expect_null(read_bytes(dirname(path), 4096))
+})
+
+test_that("the R-side passes skip a file gone before R re-reads it", {
+  withr::defer(try(mime_unregister("text/x-zt-gone"), silent = TRUE))
+  dir <- local_tree(list(
+    a.txt = c(charToRaw("caf"), as.raw(0xe9), charToRaw("\n")),
+    b.csv.gz = gzip_bytes("a,b\n1,2\n")
+  ))
+  p <- file.path(dir, c("a.txt", "b.csv.gz"))
+  # A rule called on NULL would fail and warn: the #30 regression.
+  mime_register("text/x-zt-gone", "text/plain", rule = function(x) {
+    stopifnot(is.raw(x))
+    TRUE
+  })
+  local_mocked_bindings(
+    read_bytes = function(...) NULL,
+    has_package = function(pkg) TRUE,
+    suggested_fun = function(pkg, name) {
+      switch(
+        name,
+        utf_detect = function(x) "Shift_JIS",
+        komp_decompress = function(x, codec, max_output) png_bytes()
+      )
+    }
+  )
+  expect_no_warning(
+    expect_no_error(
+      t <- mime_type(p, inner = "decompress", charset = "detect")
+    )
+  )
+  # Each pass keeps the C pass's answer: no rule, no zuutf, the name's inner.
+  expect_identical(t$type, c("text/plain", "application/gzip"))
+  expect_identical(t$charset[1], "ISO-8859-1")
+  expect_identical(t$inner, c(NA_character_, "text/csv"))
 })
 
 test_that("a registered compound extension and an offset-only rule", {
