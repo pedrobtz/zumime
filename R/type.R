@@ -339,11 +339,10 @@ family_sniffers <- function() {
 # no charset or only the C1 guess.
 detect_charset <- function(out, limit) {
   detect <- suggested_fun("zuutf", "utf_detect")
-  rows <- which(
-    mime_is(out$type, "text/plain") %in%
-      TRUE &
-      (is.na(out$charset) | out$charset %in% c("windows-1252", "ISO-8859-1"))
-  )
+  is_text <- mime_is(out$type, "text/plain") %in% TRUE
+  undeclared <- is.na(out$charset) |
+    out$charset %in% c("windows-1252", "ISO-8859-1")
+  rows <- which(is_text & undeclared)
   for (i in rows) {
     bytes <- read_bytes(out$path[i], limit)
     if (is.null(bytes)) {
