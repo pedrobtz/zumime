@@ -57,13 +57,16 @@ check_limit <- function(limit, call = sys.call(sys.parent())) {
   as.double(limit)
 }
 
+# One of `choices`. With `vector_default`, the whole of `choices` is the
+# formal's default, as for match.arg(), and stands for the first.
 check_choice <- function(
   x,
   choices,
+  vector_default = TRUE,
   arg = deparse(substitute(x)),
   call = sys.call(sys.parent())
 ) {
-  if (identical(x, choices)) {
+  if (vector_default && identical(x, choices)) {
     return(choices[1])
   }
   if (!is.character(x) || length(x) != 1L || !(x %in% choices)) {
