@@ -28,7 +28,7 @@ Authors:
 Other contributors:
 \itemize{
   \item Apache Software Foundation (copyright holder of the httpd mime.types file the extension table is generated from; see inst/COPYRIGHTS) [copyright holder]
-  \item Mark Adler (author of puff.c, which src/zumime_inflate.c is adapted from; see inst/COPYRIGHTS) [copyright holder]
+  \item Mark Adler (copyright holder of puff.c, the inflater src/zumime_inflate.c is adapted from; see inst/COPYRIGHTS) [copyright holder]
 }
 
 }
