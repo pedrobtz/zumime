@@ -235,25 +235,30 @@ typedef struct {
   char error[128];
 } path_result;
 
-/* Signature rows beyond the head: read each one's bytes at its offset. */
+/* Signature rows beyond the head: read the bytes each one needs and match
+ * them with zumime_match_row(), so the row's flags apply. A tar row needs
+ * the whole 512-byte header for its checksum, so it reads from the start
+ * of the file; any other row reads only its own bytes, matched as if at
+ * offset 0. Rows with a parent run only from their parent's reader, as in
+ * the head. */
 static void offset_rows(FILE *f, int64_t size, size_t head_len,
                         zumime_result *r) {
   if (r->type != ZUMIME_T_APPLICATION_OCTET_STREAM) return;
-  unsigned char probe[256];
+  unsigned char probe[512];
   for (int i = 0; i < zumime_n_sigs; i++) {
     const zumime_sig *row = &zumime_sigs[i];
-    if (row->group != ZUMIME_GROUP_EXTRA || row->offset == 0 || row->len == 0)
-      continue;
+    int tar = (row->flags & ZUMIME_SIG_TAR) != 0;
+    if (row->group != ZUMIME_GROUP_EXTRA || row->parent >= 0) continue;
+    if (!tar && (row->offset == 0 || row->len == 0)) continue;
     uint64_t end = (uint64_t) row->offset + row->len;
-    if (end <= head_len || (int64_t) end > size)
-      continue;
-    if (read_at(f, row->offset, probe, row->len) != row->len) continue;
-    int ok = 1;
-    for (size_t k = 0; k < row->len && ok; k++) {
-      unsigned char m = row->mask ? (unsigned char) row->mask[k] : 0xFF;
-      ok = (probe[k] & m) == (unsigned char) row->pattern[k];
-    }
-    if (ok) {
+    if (tar && end < sizeof(probe)) end = sizeof(probe);
+    if (end <= head_len || (int64_t) end > size) continue;
+    zumime_sig at = *row;
+    uint64_t from = tar ? 0 : row->offset;
+    at.offset = (uint32_t) (row->offset - from);
+    size_t n = (size_t) (end - from);
+    if (read_at(f, (int64_t) from, probe, n) != n) continue;
+    if (zumime_match_row(&at, probe, n)) {
       r->type = row->type;
       r->confidence = ZUMIME_CONF_DEFINITE;
       return;
