@@ -217,6 +217,9 @@ int zumime_can_decide(const unsigned char *buf, size_t len, size_t limit,
     return !earlier_pending(buf, len, limit, in, ZUMIME_N_GROUPS, 0);
   }
   if (zumime_type_is(r->type, ZUMIME_T_TEXT_PLAIN)) return 0;
+  /* Unreachable today (D3): C gives "probable" only to text and "none" only
+   * to octet-stream or the supplied type. Kept so a reader that one day
+   * answers below "definite" waits rather than decides. */
   if (r->confidence != ZUMIME_CONF_DEFINITE &&
       r->type != ZUMIME_T_APPLICATION_OCTET_STREAM)
     return 0;
