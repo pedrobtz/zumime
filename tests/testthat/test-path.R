@@ -53,3 +53,63 @@ test_that("limit = 0 reads a file larger than one read chunk whole", {
   t <- mime_type(file.path(dir, "r.docx"), limit = 0)
   expect_identical(t$type, docx_type())
 })
+
+test_that("gzip completeness reads past 4 MiB of compressed bytes", {
+  withr::local_seed(1)
+  f <- withr::local_tempfile(fileext = ".bin.gz")
+  con <- gzfile(f, "wb")
+  writeBin(as.raw(sample.int(256L, 5 * 1024^2, replace = TRUE) - 1L), con)
+  close(con)
+  expect_gt(file.size(f), 4 * 1024^2)
+  b <- readBin(f, "raw", file.size(f))
+  cut <- withr::local_tempfile(fileext = ".bin.gz")
+  writeBin(b[seq_len(length(b) - 6L)], cut)
+  t <- mime_type(c(f, cut), complete = TRUE)
+  expect_identical(t$type, rep("application/gzip", 2L))
+  expect_identical(t$complete, c(TRUE, FALSE))
+})
+
+test_that("complete = TRUE reads the end of RData in gzip", {
+  f <- withr::local_tempfile(fileext = ".RData")
+  x <- seq_len(5000)
+  save(x, file = f)
+  b <- readBin(f, "raw", file.size(f))
+  cut <- withr::local_tempfile(fileext = ".RData")
+  writeBin(b[seq_len(length(b) - 6L)], cut)
+  t <- mime_type(c(f, cut), complete = TRUE)
+  expect_identical(t$type, rep("application/x-rdata", 2L))
+  expect_identical(t$complete, c(TRUE, FALSE))
+})
+
+test_that("a PDF tail without trailer or /XRef is searched whole", {
+  pdf <- function(dict) {
+    charToRaw(paste0(
+      "%PDF-1.7\n1 0 obj << /Type /Catalog",
+      dict,
+      " >> endobj\nstartxref\n0\n%%EOF\n"
+    ))
+  }
+  dir <- local_tree(list(
+    "locked.pdf" = pdf(" /Encrypt 2 0 R"),
+    "open.pdf" = pdf("")
+  ))
+  t <- mime_type(file.path(dir, c("locked.pdf", "open.pdf")), complete = TRUE)
+  expect_identical(t$type, rep("application/pdf", 2L))
+  expect_identical(t$encrypted, c(TRUE, FALSE))
+  expect_identical(t$complete, c(TRUE, TRUE))
+})
+
+test_that("block devices and sockets are typed without being opened", {
+  skip_on_os("windows")
+  # stat() alone types them, so whichever the host has is enough.
+  blk <- c("/dev/disk0", "/dev/sda", "/dev/vda", "/dev/nvme0n1", "/dev/loop0")
+  sock <- c("/var/run/mDNSResponder", "/run/systemd/journal/socket")
+  blk <- blk[file.exists(blk)]
+  sock <- sock[file.exists(sock)]
+  skip_if(length(blk) + length(sock) == 0L, "no block device or socket")
+  t <- mime_type(c(blk, sock))
+  expect_identical(
+    t$type,
+    c(rep("inode/blockdevice", length(blk)), rep("inode/socket", length(sock)))
+  )
+})

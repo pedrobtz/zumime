@@ -116,10 +116,14 @@ static FILE *open_path(const char *path, int *special) {
       *special = ZUMIME_T_INODE_FIFO;
     else if (S_ISCHR(st.st_mode))
       *special = ZUMIME_T_INODE_CHARDEVICE;
+    /* Block devices and sockets are tested where the host has one
+     * (test-path.R). */
     else if (S_ISBLK(st.st_mode))
       *special = ZUMIME_T_INODE_BLOCKDEVICE;
     else if (S_ISSOCK(st.st_mode))
       *special = ZUMIME_T_INODE_SOCKET;
+    /* Not reachable from the tests: no POSIX system the checks run on has
+     * an inode of another kind (a Solaris door, a BSD whiteout). */
     else
       *special = ZUMIME_T_APPLICATION_OCTET_STREAM;
     return NULL;
@@ -184,6 +188,8 @@ static size_t file_reader(void *ctx, unsigned char *buf, size_t n) {
   r->since_check += n;
   if (r->since_check >= INTERRUPT_EVERY) {
     r->since_check = 0;
+    /* Not reachable from the tests: testthat cannot send an interrupt.
+     * The read after the check is covered by a gzip over 4 MiB. */
     if (!R_ToplevelExec(check_interrupt, NULL)) {
       r->interrupted = 1;
       return 0;
@@ -293,7 +299,9 @@ static int completeness(FILE *f, int64_t size, const unsigned char *head,
     unsigned char *buf = (unsigned char *) malloc(n ? n : 1);
     if (buf == NULL) return -1;
     size_t got = read_at(f, (int64_t) at, buf, n);
-    /* A tail that cannot be read says nothing about completeness. */
+    /* A tail that cannot be read says nothing about completeness. Not
+     * reachable from the tests: the head was read from this open file, so
+     * the tail is empty only if the file shrank or the disk failed since. */
     if (got == 0) {
       free(buf);
       return -1;
