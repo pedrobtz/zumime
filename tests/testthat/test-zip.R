@@ -57,6 +57,9 @@ test_that("a stored mimetype entry decides EPUB and OpenDocument", {
   )
   epub <- list(mimetype = "application/epub+zip", "OEBPS/a.xhtml" = "<x/>")
   expect_identical(sniff_type(build_zip(epub)), "application/epub+zip")
+  # Trailing line ends and spaces are trimmed from the entry's content.
+  epub$mimetype <- "application/epub+zip\r\n "
+  expect_identical(sniff_type(build_zip(epub)), "application/epub+zip")
   # A type the registry does not know under application/zip is not taken.
   odd <- list(mimetype = "text/plain", "a" = "b")
   expect_identical(sniff_type(build_zip(odd)), "application/zip")
@@ -95,6 +98,12 @@ test_that("the encryption flag and the AES extra field set encrypted", {
   expect_true(mime_sniff(build_zip(list(a = "x"), flags = 1L))$encrypted)
   aes <- c(u16(0x9901), u16(7), u16(2), charToRaw("AE"), as.raw(3), u16(0))
   expect_true(mime_sniff(build_zip(list(a = "x"), extra = aes))$encrypted)
+  # The walk steps past an extended-timestamp field to the AES one.
+  ut <- c(u16(0x5455), u16(5), as.raw(1), u32(0))
+  expect_true(
+    mime_sniff(build_zip(list(a = "x"), extra = c(ut, aes)))$encrypted
+  )
+  expect_false(mime_sniff(build_zip(list(a = "x"), extra = ut))$encrypted)
   expect_false(mime_sniff(build_zip(list(a = "x")))$encrypted)
   expect_identical(mime_sniff(png_bytes())$encrypted, NA)
 })
