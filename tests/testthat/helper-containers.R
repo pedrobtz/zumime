@@ -345,8 +345,9 @@ stream_inputs <- function() {
     elf = c(charToRaw("\x7fELF"), raw(60)),
     rds = gzip_bytes(c(charToRaw("X\n"), as.raw(c(0, 0, 0, 3)), raw(20))),
     ws = charToRaw("      "),
-    # Tag-terminated row that does not match: "<html" then "x".
-    htmlx = charToRaw("<htmlx lang=en>words"),
+    # Binary, so the tag-terminated "<HTML" row is consulted and fails on
+    # "x"; it then waits only for the HDF5 row at 2048.
+    htmlx = c(charToRaw("<htmlx"), as.raw(0), raw(2100)),
     short = as.raw(0xff),
     jpeg = as.raw(c(0xff, 0xd8, 0xff, 0xe0, 0, 0)),
     apng = c(
@@ -361,6 +362,20 @@ stream_inputs <- function() {
       charToRaw("IDAT"),
       raw(5)
     ),
+    # An IDAT past the resource header, after a 2500-byte tEXt chunk.
+    png_late = png_late_bytes(),
+    # Readers that wait for the limit, past the resource header.
+    zip_padded = build_zip(c(
+      ooxml_entries("word"),
+      list("word/media/a.bin" = as.raw(rep(1:255, 8)))
+    )),
+    mkv_padded = c(build_ebml("matroska"), raw(2000)),
+    gzip_padded = local({
+      data <- as.raw(rep(1:255, 8))
+      # One stored DEFLATE block, so the member stays as long as its data.
+      block <- c(as.raw(1), u16(length(data)), u16(65535 - length(data)), data)
+      gzip_member(block, length(data))
+    }),
     # The directory past 4 KiB.
     ole_padded = build_ole2(c("WordDocument", "1Table"), pad = 20L),
     # An offset row past 32 KiB.
@@ -370,6 +385,23 @@ stream_inputs <- function() {
       iso
     })
   ))
+}
+
+# A PNG whose first IDAT starts at byte 2546, after a 2500-byte tEXt chunk:
+# its reader settles once the IDAT's chunk header is in, at 2553 bytes.
+png_late_bytes <- function() {
+  c(
+    png_bytes()[1:8],
+    u32be(13),
+    charToRaw("IHDR"),
+    raw(17),
+    u32be(2500),
+    charToRaw("tEXt"),
+    raw(2504),
+    u32be(4),
+    charToRaw("IDAT"),
+    raw(8)
+  )
 }
 
 # A gzip member over raw DEFLATE `deflate`, with optional header fields

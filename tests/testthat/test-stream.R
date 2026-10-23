@@ -92,6 +92,76 @@ test_that("each input decides at the whole's type, never past the limit", {
   }
 })
 
+test_that("each input decides at the whole's type through mime_push() chunks", {
+  # 512-byte chunks carry the padded inputs past the resource header, where
+  # text and the readers that wait for the limit stop sniffing.
+  for (name in names(stream_inputs())) {
+    x <- stream_inputs()[[name]]
+    limit <- max(4096, length(x))
+    s <- mime_sniffer(limit = limit)
+    r <- NULL
+    for (k in seq(1, length(x), by = 512)) {
+      r <- mime_push(s, x[k:min(k + 511, length(x))])
+      if (!is.null(r)) break
+    }
+    # A stream as long as the limit decides on the push that reaches it.
+    if (length(x) >= limit) {
+      expect_false(is.null(r), info = name)
+    }
+    if (is.null(r)) {
+      r <- mime_finish(s)
+    }
+    expect_identical(r$type, mime_sniff(x, limit = limit)$type, info = name)
+  }
+})
+
+test_that("a PNG decides at its first IDAT past the resource header", {
+  x <- png_late_bytes()
+  expect_identical(stream_bytewise(x)[[1]], 2553)
+  s <- mime_sniffer()
+  for (k in 1:4) {
+    expect_null(mime_push(s, x[(512 * k - 511):(512 * k)]))
+  }
+  # The fifth chunk brings the IDAT's chunk header, long before the limit.
+  expect_identical(mime_push(s, x[2049:2560])$type, "image/png")
+  expect_identical(.Call(zumime_stream_state, s)[2], 2560)
+})
+
+test_that("readers that wait for the limit decide at the limit", {
+  inputs <- stream_inputs()
+  for (name in c("zip_padded", "ole_padded", "mkv_padded", "gzip_padded")) {
+    x <- inputs[[name]]
+    s <- mime_sniffer(limit = 2000)
+    # Three chunks pass the resource header without deciding.
+    for (k in 1:3) {
+      expect_null(mime_push(s, x[(512 * k - 511):(512 * k)]), info = name)
+    }
+    r <- mime_push(s, x[1537:2048])
+    expect_identical(r$type, mime_sniff(x, limit = 2000)$type, info = name)
+    expect_identical(.Call(zumime_stream_state, s)[2], 2000, info = name)
+  }
+})
+
+test_that("a stream waits for the bytes of a registered data rule", {
+  withr::defer(try(mime_unregister("image/x-zt-streamgif"), silent = TRUE))
+  mime_register(
+    "image/x-zt-streamgif",
+    "image/gif",
+    rule = list(offset = 20, bytes = "ZT")
+  )
+  gif <- c(charToRaw("GIF89a"), raw(14), charToRaw("ZT"), raw(10))
+  s <- mime_sniffer()
+  expect_null(mime_push(s, gif[1:6]))
+  expect_null(mime_push(s, gif[7:21]))
+  r <- mime_push(s, gif[22])
+  expect_identical(r$type, "image/x-zt-streamgif")
+  expect_identical(r$type, mime_sniff(gif)$type)
+  expect_identical(stream_bytewise(gif)[[1]], 22)
+  # A GIF without the rule's bytes waits as long, then stays image/gif.
+  plain <- c(charToRaw("GIF89a"), raw(26))
+  expect_identical(stream_bytewise(plain), list(22, "image/gif", TRUE))
+})
+
 test_that("each input decides at the whole's type in every context", {
   skip_if_gctorture()
   for (context in c("browsing", "image", "audio_video", "font")) {
@@ -155,6 +225,9 @@ test_that("early decisions happen where the bytes allow them", {
   expect_identical(n(stream_inputs()$jpeg), 4)
   # "MZ" waits until the tar row at 257 can no longer match.
   expect_identical(n(c(charToRaw("MZ"), raw(400))), 258)
+  # Binary after "<html": the tag-terminated row no longer matches at the
+  # "x", so only the HDF5 row at 2048 keeps the answer open.
+  expect_identical(n(stream_inputs()$htmlx), 2049)
   expect_identical(
     n(stream_inputs()$text),
     as.numeric(length(stream_inputs()$text))
