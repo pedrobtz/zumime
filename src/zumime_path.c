@@ -37,15 +37,9 @@ typedef off_t foff;
 #define ftell64 ftello
 #endif
 
-/* Open `path` (UTF-8 on Windows, native elsewhere) for binary reading.
- * Anything that is not a regular file is not opened: *special is set to its
- * inode type (a directory, a FIFO, a device, a socket), as libmagic reports
- * them, because opening a FIFO blocks until a writer comes and a device can
- * be read forever. Otherwise *special is -1. Returns NULL with errno set on
- * failure. */
-static FILE *open_path(const char *path, int *special) {
-  *special = -1;
 #ifdef _WIN32
+/* `path` (UTF-8) as a wide string, malloc()ed, or NULL with errno set. */
+static wchar_t *wide_path(const char *path) {
   int n = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
   if (n <= 0) {
     errno = EINVAL;
@@ -57,13 +51,53 @@ static FILE *open_path(const char *path, int *special) {
     return NULL;
   }
   MultiByteToWideChar(CP_UTF8, 0, path, -1, w, n);
+  return w;
+}
+
+/* _wstat64() fails on a path with a trailing separator, other than a drive
+ * root, where POSIX stat() follows it to the directory. The separators are
+ * stripped, as file.info() does, and the path is tried as given when the
+ * stripped one fails (a UNC share root needs its separator). Only the
+ * Windows legs of CI run this. */
+static int wstat_path(const wchar_t *w, struct _stat64 *st) {
+  size_t len = wcslen(w);
+  size_t keep = len;
+  while (keep > 1 && (w[keep - 1] == L'/' || w[keep - 1] == L'\\') &&
+         !(keep == 3 && w[1] == L':'))
+    keep--;
+  if (keep < len) {
+    wchar_t *t = (wchar_t *) malloc((keep + 1) * sizeof(wchar_t));
+    if (t != NULL) {
+      memcpy(t, w, keep * sizeof(wchar_t));
+      t[keep] = 0;
+      int ok = _wstat64(t, st) == 0;
+      free(t);
+      if (ok) return 0;
+    }
+  }
+  return _wstat64(w, st);
+}
+#endif
+
+/* Open `path` (UTF-8 on Windows, native elsewhere) for binary reading.
+ * Anything that is not a regular file is not opened: *special is set to its
+ * inode type (a directory, a FIFO, a device, a socket), as libmagic reports
+ * them, because opening a FIFO blocks until a writer comes and a device can
+ * be read forever. Otherwise *special is -1. Returns NULL with errno set on
+ * failure. */
+static FILE *open_path(const char *path, int *special) {
+  *special = -1;
+#ifdef _WIN32
+  wchar_t *w = wide_path(path);
+  if (w == NULL) return NULL;
   struct _stat64 st;
-  if (_wstat64(w, &st) == 0) {
-    if (st.st_mode & _S_IFDIR)
+  if (wstat_path(w, &st) == 0) {
+    int fmt = st.st_mode & _S_IFMT;
+    if (fmt == _S_IFDIR)
       *special = ZUMIME_T_INODE_DIRECTORY;
-    else if (st.st_mode & _S_IFCHR)
+    else if (fmt == _S_IFCHR)
       *special = ZUMIME_T_INODE_CHARDEVICE;
-    else if (st.st_mode & _S_IFIFO)
+    else if (fmt == _S_IFIFO)
       *special = ZUMIME_T_INODE_FIFO;
     if (*special >= 0) {
       free(w);
@@ -94,17 +128,15 @@ static FILE *open_path(const char *path, int *special) {
 #endif
 }
 
-/* The size of a regular file at `path` by stat, or -1. Asked before the
- * file is opened, so the head buffer can grow while nothing is open. */
+/* The size of a regular file at `path` by stat, or -1 for anything else.
+ * Asked before the file is opened, so the head buffer can grow while
+ * nothing is open. */
 static int64_t path_size(const char *path) {
 #ifdef _WIN32
-  int n = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
-  if (n <= 0) return -1;
-  wchar_t *w = (wchar_t *) malloc((size_t) n * sizeof(wchar_t));
+  wchar_t *w = wide_path(path);
   if (w == NULL) return -1;
-  MultiByteToWideChar(CP_UTF8, 0, path, -1, w, n);
   struct _stat64 st;
-  int ok = _wstat64(w, &st) == 0;
+  int ok = wstat_path(w, &st) == 0 && (st.st_mode & _S_IFMT) == _S_IFREG;
   free(w);
   return ok ? (int64_t) st.st_size : -1;
 #else
@@ -439,10 +471,15 @@ typedef struct {
   size_t cap;
 } head_buf;
 
+/* A path that is not a regular file (a directory, a device, a missing
+ * path) is not read, so it asks for one byte, not the limit; one that
+ * becomes a file before it is opened is sniffed as truncated. */
 static void reserve_head(head_buf *hb, const char *path, size_t limit) {
   if (limit == 0) return;
   int64_t size = path_size(path);
-  size_t need = size < 0 || (uint64_t) size > limit ? limit : (size_t) size;
+  size_t need = size < 0                   ? 1
+                : (uint64_t) size > limit ? limit
+                                           : (size_t) size;
   if (need == 0) need = 1;
   if (need <= hb->cap) return;
   size_t cap = hb->cap ? hb->cap : 4096;
