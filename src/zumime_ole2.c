@@ -105,6 +105,8 @@ int zumime_read_ole2_at(zumime_ole2_get get, void *ctx, int *encrypted) {
         if (one == NULL) goto done;
         on_entry(&s, one, index);
       }
+      /* Not reachable: the sector is a whole number of entries, so when it
+       * cannot be read whole, one of its entries cannot either. */
       goto done;
     }
     for (size_t e = 0; e < ssz / 128; e++, index++) on_entry(&s, d + e * 128, index);
