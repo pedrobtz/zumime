@@ -301,8 +301,8 @@ the bytes `mime_sniff()` already read.
   R's formats; Stage 5's prefix property allows that step.
 - **Small additions beyond the named readers**, because the corpus
   showed them cheap and exact: the OOXML variants read from
-  `[Content_Types].xml` with a bounded inflater (written for zumime, as
-  D7 requires), APNG, JPEG-LS, QuickTime movies without an `ftyp` box, and
+  `[Content_Types].xml` with a bounded inflater (adapted from `puff.c`,
+  the one exception D7 records), APNG, JPEG-LS, QuickTime movies without an `ftyp` box, and
   rows for executables (ELF, Mach-O, PE), TIFF, PSD, FLAC, AAC, AMR, SWF,
   FLV, CAB, RPM, deb, ar, LZ4, lzip, compress, pcap, Avro, DICOM, JPEG XL,
   Blender, ICNS, glTF binary, PST and EOT outside the font context.

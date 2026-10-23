@@ -26,6 +26,15 @@ upstream file's URL, retrieval date and SHA-256.
    analytic data formats, and canonical-extension overrides. MIT, as the
    package.
 
+The DEFLATE decoder in src/zumime_inflate.c is adapted from puff.c
+version 2.3, Mark Adler's reference inflater in zlib's contrib/puff:
+https://github.com/madler/zlib/tree/develop/contrib/puff
+Copyright (C) 2002-2013 Mark Adler. It is used under puff's zlib-style
+licence, whose notice the file keeps in full. The file marks it as altered:
+zumime's version reports errors through a flag instead of longjmp(), reads
+through a refillable input and a 32 KiB window, and adds the gzip member
+check.
+
 The test suite also carries data from Go's net/http sniff tests (BSD-3-Clause,
 The Go Authors) and from file-type (MIT, Sindre Sorhus), used as oracles and
 not installed. tests/testthat/COPYRIGHTS holds their notices in full.

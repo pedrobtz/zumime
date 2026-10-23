@@ -1,11 +1,41 @@
-/* A DEFLATE decoder (RFC 1951), written for zumime. It has two uses: the
- * first bytes of a stream, enough to see an RDS or RData header or an
- * OOXML [Content_Types].xml (design section 6.2), stopping as soon as the
+/* A DEFLATE decoder (RFC 1951), adapted for zumime from Mark Adler's
+ * puff.c (zlib's contrib/puff, version 2.3). It has two uses: the first
+ * bytes of a stream, enough to see an RDS or RData header or an OOXML
+ * [Content_Types].xml (design section 6.2), stopping as soon as the
  * caller's buffer is full; and the gzip completeness check of
  * `complete = TRUE` (design section 6.7), which inflates a whole stream
  * through a 32 KiB window, discarding the output, to find its trailer.
  * Stored, fixed and dynamic Huffman blocks; a canonical-code decoder that
- * reads one bit at a time. */
+ * reads one bit at a time.
+ *
+ * Changes from puff.c, made for zumime: errors set a flag instead of
+ * longjmp(); input can be refilled through a reader; output goes to a
+ * 32 KiB window and only its first bytes are kept; decoding can stop when
+ * that capture is full; the gzip member and trailer check is new.
+ *
+ * puff.c's notice, as its licence requires:
+ *
+ *   Copyright (C) 2002-2013 Mark Adler, all rights reserved
+ *   version 2.3, 21 Jan 2013
+ *
+ *   This software is provided 'as-is', without any express or implied
+ *   warranty.  In no event will the author be held liable for any damages
+ *   arising from the use of this software.
+ *
+ *   Permission is granted to anyone to use this software for any purpose,
+ *   including commercial applications, and to alter it and redistribute it
+ *   freely, subject to the following restrictions:
+ *
+ *   1. The origin of this software must not be misrepresented; you must not
+ *      claim that you wrote the original software. If you use this software
+ *      in a product, an acknowledgment in the product documentation would be
+ *      appreciated but is not required.
+ *   2. Altered source versions must be plainly marked as such, and must not be
+ *      misrepresented as being the original software.
+ *   3. This notice may not be removed or altered from any source distribution.
+ *
+ *   Mark Adler    madler@alumni.caltech.edu
+ */
 
 #include <stdlib.h>
 #include <string.h>
