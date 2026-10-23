@@ -36,7 +36,7 @@ mime_parse <- function(x, strict = FALSE) {
   out <- .Call(zumime_mime_parse, utf8_or_replace(x))
   if (strict) {
     bad <- which(vapply(out, is.null, logical(1)) & !is.na(x))
-    if (length(bad)) {
+    if (length(bad) > 0) {
       zumime_abort(
         "parse",
         sprintf(
@@ -59,7 +59,7 @@ mime_format <- function(record) {
   }
   if (
     !is.list(record) ||
-      !all(vapply(record, function(r) is.null(r) || is_record(r), TRUE))
+      !all(vapply(record, function(r) is.null(r) || is_record(r), logical(1)))
   ) {
     zumime_abort(
       "type",
@@ -105,7 +105,7 @@ is_record <- function(r) {
     is_string(r[["type"]]) &&
     is_string(r[["subtype"]]) &&
     is.list(r[["parameters"]]) &&
-    all(vapply(r[["parameters"]], is_string, TRUE)) &&
+    all(vapply(r[["parameters"]], is_string, logical(1))) &&
     (length(r[["parameters"]]) == 0L || !is.null(names(r[["parameters"]])))
 }
 
@@ -115,7 +115,7 @@ is_record <- function(r) {
 is_valid_record <- function(r) {
   p <- r[["parameters"]]
   is_http_token(c(r[["type"]], r[["subtype"]], names(p))) &&
-    all(vapply(p, is_quoted_token_string, TRUE))
+    all(vapply(p, is_quoted_token_string, logical(1)))
 }
 
 is_http_token <- function(x) {
