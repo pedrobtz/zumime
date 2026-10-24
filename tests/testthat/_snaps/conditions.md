@@ -1,4 +1,4 @@
-# a type error names the argument
+# each condition class has a message that names its subject
 
     Code
       mime_sniff(1)
@@ -6,7 +6,7 @@
       Error in `mime_sniff()`:
       ! `x` must be a raw vector or a character vector of paths.
 
-# an io error names the path
+---
 
     Code
       mime_type(missing, strict = TRUE)
@@ -14,7 +14,7 @@
       Error in `mime_type()`:
       ! Cannot read "<dir>/nope.pdf": <reason>.
 
-# a parse error names the input
+---
 
     Code
       mime_parse("nope", strict = TRUE)
@@ -22,7 +22,7 @@
       Error in `mime_parse()`:
       ! Input 1 is not a valid MIME type: "nope".
 
-# a registry error names the type
+---
 
     Code
       mime_register("image/png", "application/octet-stream")
@@ -30,7 +30,7 @@
       Error in `mime_register()`:
       ! "image/png" is already a type.
 
-# a dependency error names the package
+---
 
     Code
       mime_type(path, inner = "decompress")
@@ -38,11 +38,19 @@
       Error in `mime_type()`:
       ! `inner = "decompress"` needs the zukomp package, which is not installed.
 
-# a state error says to start again
+---
 
     Code
       mime_push(s, raw(1))
     Condition
       Error in `mime_push()`:
       ! The sniffer is finished; start a new one.
+
+---
+
+    Code
+      r <- mime_sniff(charToRaw("hello"))
+    Condition
+      Warning:
+      The rule registered for "text/x-zt-snap" failed and was taken as FALSE.
 

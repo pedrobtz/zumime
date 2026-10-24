@@ -19,13 +19,13 @@
 #'
 #' The default answer depends on nothing outside the package. Three
 #' arguments ask for an optional family package. `inner = "decompress"`
-#' uses zukomp. `charset = "detect"` uses zuutf. `text = "family"` uses
-#' zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
-#' yet on CRAN; install them from GitHub. An argument whose package is
-#' absent raises `zumime_dependency_error`. `text = "family"` uses whichever
-#' sniffers are installed, listed by `zumime_info()$family`. An error inside
-#' an optional package leaves that answer as it was, so a corrupt stream
-#' keeps the name's `inner`.
+#' uses zukomp and `charset = "detect"` uses zuutf; either raises
+#' `zumime_dependency_error` when its package is absent. `text = "family"`
+#' never raises: it uses whichever of zucsv, zujson and zutoml are
+#' installed, listed by `zumime_info()$family`, and with none it keeps the
+#' standard's answer. zuutf and zutoml are not yet on CRAN; install them
+#' from GitHub. An error inside an optional package leaves that answer as
+#' it was, so a corrupt stream keeps the name's `inner`.
 #'
 #' @param path A character vector of paths.
 #' @param limit The number of bytes to read from each file; `0` reads whole
@@ -58,8 +58,10 @@
 #' dir.create(dir)
 #' writeLines(c("a,b", "1,2"), file.path(dir, "data.csv"))
 #' saveRDS(mtcars, file.path(dir, "cars.rds"))
-#' writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)),
-#'   file.path(dir, "logo.txt"))
+#' writeBin(
+#'   as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)),
+#'   file.path(dir, "logo.txt")
+#' )
 #' mime_type(list.files(dir, full.names = TRUE))
 #' unlink(dir, recursive = TRUE)
 mime_type <- function(
@@ -144,7 +146,7 @@ sniff_paths <- function(
 # The C loop caught an interrupt inside a long read so it could close the
 # file first; raise it again as R would have.
 resignal_interrupt <- function() {
-  signalCondition(structure(class = c("interrupt", "condition"), list()))
+  signalCondition(structure(list(), class = c("interrupt", "condition")))
   invokeRestart("abort")
 }
 
@@ -235,14 +237,16 @@ wrapper_types <- c(
 inner_type <- function(out, inner, limit) {
   res <- rep(NA_character_, nrow(out))
   wrapped <- which(out$type %in% wrapper_types)
-  if (!length(wrapped)) {
+  if (length(wrapped) == 0L) {
     return(res)
   }
   res[wrapped] <- inner_by_name(out$path[wrapped])
   if (inner == "decompress") {
     for (i in wrapped[out$type[wrapped] == "application/gzip"]) {
       by_bytes <- decompress_type(out$path[i], limit)
-      if (!is.na(by_bytes)) res[i] <- by_bytes
+      if (!is.na(by_bytes)) {
+        res[i] <- by_bytes
+      }
     }
   }
   res
@@ -293,7 +297,9 @@ family_refine <- function(out) {
         sniffer(out$path[i]),
         error = function(e) NA_character_
       )
-      if (!is.na(found)) break
+      if (!is.na(found)) {
+        break
+      }
     }
     if (!is.na(found)) {
       out$type[i] <- found
@@ -339,11 +345,10 @@ family_sniffers <- function() {
 # no charset or only the C1 guess.
 detect_charset <- function(out, limit) {
   detect <- suggested_fun("zuutf", "utf_detect")
-  rows <- which(
-    mime_is(out$type, "text/plain") %in%
-      TRUE &
-      (is.na(out$charset) | out$charset %in% c("windows-1252", "ISO-8859-1"))
-  )
+  is_text <- mime_is(out$type, "text/plain") %in% TRUE
+  undeclared <- is.na(out$charset) |
+    out$charset %in% c("windows-1252", "ISO-8859-1")
+  rows <- which(is_text & undeclared)
   for (i in rows) {
     bytes <- read_bytes(out$path[i], limit)
     if (is.null(bytes)) {
@@ -351,7 +356,9 @@ detect_charset <- function(out, limit) {
     }
     # An optional package's failure leaves the charset as it was (D6).
     cand <- tryCatch(detect(bytes), error = function(e) character())
-    if (length(cand)) out$charset[i] <- cand[1]
+    if (length(cand) > 0L) {
+      out$charset[i] <- cand[1]
+    }
   }
   out
 }

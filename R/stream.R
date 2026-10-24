@@ -97,7 +97,7 @@ print.zumime_sniffer <- function(x, ...) {
   invisible(x)
 }
 
-check_sniffer <- function(s) {
+check_sniffer <- function(s, call = sys.call(sys.parent())) {
   if (
     !inherits(s, "zumime_sniffer") ||
       typeof(s) != "externalptr" ||
@@ -106,7 +106,7 @@ check_sniffer <- function(s) {
     zumime_abort(
       "type",
       "`s` must be a sniffer from `mime_sniffer()`.",
-      call = sys.call(-1L)
+      call = call
     )
   }
 }
@@ -132,7 +132,7 @@ stream_result <- function(s, chunk, final) {
   out <- raw_result(res, p$supplied)
   # Checked here so a sniffer without function rules skips copying its
   # bytes out for apply_registered().
-  if (length(fns)) {
+  if (length(fns) > 0L) {
     out <- apply_registered(out, stream_bytes(s), p$limit)
   }
   out

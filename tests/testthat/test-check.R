@@ -65,6 +65,12 @@ test_that("mime_check() rejects malformed arguments", {
   expect_error(mime_check(1, "image"), class = "zumime_type_error")
   expect_error(mime_check("a", 1), class = "zumime_type_error")
   expect_error(mime_check("a", "image", "certain"), class = "zumime_type_error")
+  expect_error(mime_check("a", "image", NA), class = "zumime_type_error")
+  # min_confidence has one default, so the whole set of levels is not one.
+  expect_error(
+    mime_check("a", "image", c("none", "extension", "probable", "definite")),
+    class = "zumime_type_error"
+  )
 })
 
 test_that("mime_check() reads only the head of a long raw vector", {

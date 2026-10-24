@@ -35,30 +35,13 @@
 #' mime_check(png, "image")
 #' unlink(dir, recursive = TRUE)
 mime_check <- function(x, allowed, min_confidence = "probable") {
-  if (!is.character(x) && !is.raw(x)) {
-    zumime_abort(
-      "type",
-      "`x` must be a raw vector or a character vector of paths."
-    )
-  }
+  check_bytes_or_paths(x)
   allowed <- check_character(allowed)
-  if (
-    !is.character(min_confidence) ||
-      length(min_confidence) != 1L ||
-      !(min_confidence %in% confidence_levels)
-  ) {
-    zumime_abort(
-      "type",
-      sprintf(
-        "`min_confidence` must be one of %s.",
-        paste0("\"", confidence_levels, "\"", collapse = ", ")
-      )
-    )
-  }
+  check_choice(min_confidence, confidence_levels, vector_default = FALSE)
   m <- as_confidence(min_confidence)
   # The same bytes mime_type() reads by default, which the equality with it
   # requires.
-  limit <- as.double(formals(mime_type)$limit)
+  limit <- as.double(default_limit)
 
   # Function rules run in R after the C pass, so the shortcut cannot see
   # them; answer in full.

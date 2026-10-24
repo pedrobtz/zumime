@@ -43,8 +43,12 @@ raises an error counts as \code{FALSE}, and the call warns once with a
 that a function rule decides, since data rules run first.
 }
 \examples{
-mime_register("application/x-zumime-demo", "application/octet-stream",
-  extensions = "zdemo", rule = list(offset = 0, bytes = "ZDEMO"))
+mime_register(
+  "application/x-zumime-demo",
+  "application/octet-stream",
+  extensions = "zdemo",
+  rule = list(offset = 0, bytes = "ZDEMO")
+)
 mime_sniff(charToRaw("ZDEMO\x01\x02"))
 mime_guess("file.zdemo")
 mime_unregister("application/x-zumime-demo")

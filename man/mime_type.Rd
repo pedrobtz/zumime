@@ -68,21 +68,23 @@ finding, not an error.
 
 The default answer depends on nothing outside the package. Three
 arguments ask for an optional family package. \code{inner = "decompress"}
-uses zukomp. \code{charset = "detect"} uses zuutf. \code{text = "family"} uses
-zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
-yet on CRAN; install them from GitHub. An argument whose package is
-absent raises \code{zumime_dependency_error}. \code{text = "family"} uses whichever
-sniffers are installed, listed by \code{zumime_info()$family}. An error inside
-an optional package leaves that answer as it was, so a corrupt stream
-keeps the name's \code{inner}.
+uses zukomp and \code{charset = "detect"} uses zuutf; either raises
+\code{zumime_dependency_error} when its package is absent. \code{text = "family"}
+never raises: it uses whichever of zucsv, zujson and zutoml are
+installed, listed by \code{zumime_info()$family}, and with none it keeps the
+standard's answer. zuutf and zutoml are not yet on CRAN; install them
+from GitHub. An error inside an optional package leaves that answer as
+it was, so a corrupt stream keeps the name's \code{inner}.
 }
 \examples{
 dir <- tempfile()
 dir.create(dir)
 writeLines(c("a,b", "1,2"), file.path(dir, "data.csv"))
 saveRDS(mtcars, file.path(dir, "cars.rds"))
-writeBin(as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)),
-  file.path(dir, "logo.txt"))
+writeBin(
+  as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)),
+  file.path(dir, "logo.txt")
+)
 mime_type(list.files(dir, full.names = TRUE))
 unlink(dir, recursive = TRUE)
 }
