@@ -224,13 +224,16 @@ a stage establishes it.
 
 ## Definition of done
 
-`devtools::document()` and `devtools::check()` clean, meaning 0 errors,
-0 warnings and 0 notes. The one allowed note is “New submission” before
-the first release. `devtools::test(shuffle = TRUE)` green. CI green at
-the change’s tier: the quick profile for a `quick` roadmap stage or an
-ordinary pull request, the full profile for a `full` stage, `Full CI`,
-and every release. A user-facing change also needs a test, roxygen
-documentation and a `NEWS.md` entry.
+[`devtools::document()`](https://devtools.r-lib.org/reference/document.html)
+and
+[`devtools::check()`](https://devtools.r-lib.org/reference/check.html)
+clean, meaning 0 errors, 0 warnings and 0 notes. The one allowed note is
+“New submission” before the first release.
+`devtools::test(shuffle = TRUE)` green. CI green at the change’s tier:
+the quick profile for a `quick` roadmap stage or an ordinary pull
+request, the full profile for a `full` stage, `Full CI`, and every
+release. A user-facing change also needs a test, roxygen documentation
+and a `NEWS.md` entry.
 
 ## Releasing to CRAN
 

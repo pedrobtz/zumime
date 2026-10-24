@@ -83,6 +83,14 @@ of <code>type</code>, <code>subtype</code> and <code>parameters</code> (a named 
 <p><code>mime_format()</code> returns a character vector, <code>NA</code> for a <code>NULL</code> record.</p>
     </div>
     <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p><code>mime_format()</code> checks a record before serialising it, so an edited
+record cannot carry a line break into a header. Type, subtype and
+parameter names must be non-empty HTTP tokens. Values must hold only HTTP
+quoted-string token code points: tab, U+0020 to U+007E and U+0080 to
+U+00FF. A record that breaks this raises <code>zumime_type_error</code>.</p>
+    </div>
+    <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p><a href="https://mimesniff.spec.whatwg.org/#parsing-a-mime-type" class="external-link">https://mimesniff.spec.whatwg.org/#parsing-a-mime-type</a></p>
     </div>

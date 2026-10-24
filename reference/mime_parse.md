@@ -38,6 +38,14 @@ for input that fails to parse and for `NA`.
 
 `mime_format()` returns a character vector, `NA` for a `NULL` record.
 
+## Details
+
+`mime_format()` checks a record before serialising it, so an edited
+record cannot carry a line break into a header. Type, subtype and
+parameter names must be non-empty HTTP tokens. Values must hold only
+HTTP quoted-string token code points: tab, U+0020 to U+007E and U+0080
+to U+00FF. A record that breaks this raises `zumime_type_error`.
+
 ## References
 
 <https://mimesniff.spec.whatwg.org/#parsing-a-mime-type>

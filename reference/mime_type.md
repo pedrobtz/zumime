@@ -114,9 +114,9 @@ writeBin(
 mime_type(list.files(dir, full.names = TRUE))
 #> <zumime_result: 3 rows>
 #>                                        path              type confidence
-#> 1 /tmp/RtmpR88omD/file1ac338fc06dc/cars.rds application/x-rds   definite
-#> 2 /tmp/RtmpR88omD/file1ac338fc06dc/data.csv        text/plain   probable
-#> 3 /tmp/RtmpR88omD/file1ac338fc06dc/logo.txt         image/png   definite
+#> 1 /tmp/Rtmpfwv96Q/file1a185645074b/cars.rds application/x-rds   definite
+#> 2 /tmp/Rtmpfwv96Q/file1a185645074b/data.csv        text/plain   probable
+#> 3 /tmp/Rtmpfwv96Q/file1a185645074b/logo.txt         image/png   definite
 #>   charset           by_name agree inner encrypted complete newline interpreter
 #> 1    <NA> application/x-rds  TRUE  <NA>        NA       NA    <NA>        <NA>
 #> 2   UTF-8          text/csv  TRUE  <NA>        NA       NA      lf        <NA>
