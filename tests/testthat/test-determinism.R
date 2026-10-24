@@ -18,7 +18,12 @@ test_that("mime_type() gives the same frame on every platform", {
     "k.doc" = build_ole2("WordDocument"),
     "sub/l.gz" = gzip_bytes("a,b\n1,2\n")
   ))
-  paths <- c(sort(list.files(dir, recursive = TRUE)), "sub", "missing.pdf")
+  paths <- c(
+    sort(list.files(dir, recursive = TRUE)),
+    "sub",
+    "sub/",
+    "missing.pdf"
+  )
   t <- mime_type(file.path(dir, paths), complete = TRUE)
   t$path <- paths
   lines <- vapply(
@@ -44,6 +49,7 @@ test_that("mime_type() gives the same frame on every platform", {
       "k.doc|application/msword|definite|NA|application/msword|TRUE|NA|NA|NA|NA|NA",
       "sub/l.gz|application/gzip|definite|NA|application/gzip|TRUE|NA|NA|TRUE|NA|NA",
       "sub|inode/directory|definite|NA|NA|NA|NA|NA|NA|NA|NA",
+      "sub/|inode/directory|definite|NA|NA|NA|NA|NA|NA|NA|NA",
       "missing.pdf|NA|none|NA|application/pdf|NA|NA|NA|NA|NA|NA"
     )
   )

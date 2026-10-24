@@ -128,7 +128,7 @@ sniff_paths <- function(
 ) {
   res <- .Call(
     zumime_sniff_paths,
-    path.expand(path),
+    expand_paths(path),
     limit,
     complete,
     supplied$essence,
@@ -141,6 +141,14 @@ sniff_paths <- function(
   }
   names(res) <- path_fields
   res
+}
+
+# path.expand() for every path R can translate. One in "bytes" encoding is
+# passed on as it is, and the C loop gives it an error row.
+expand_paths <- function(path) {
+  ok <- Encoding(path) != "bytes"
+  path[ok] <- path.expand(path[ok])
+  path
 }
 
 # The C loop caught an interrupt inside a long read so it could close the
@@ -165,9 +173,14 @@ check_strict <- function(path, res, strict) {
   bad <- which(!is.na(res$error))
   if (strict && length(bad)) {
     i <- bad[1]
+    # A path in "bytes" encoding is shown with its bytes escaped.
+    shown <- path[i]
+    if (!is.na(shown) && Encoding(shown) == "bytes") {
+      shown <- encodeString(shown)
+    }
     zumime_abort(
       "io",
-      sprintf("Cannot read \"%s\": %s.", path[i], res$error[i]),
+      sprintf("Cannot read \"%s\": %s.", shown, res$error[i]),
       call = sys.call(-1L)
     )
   }

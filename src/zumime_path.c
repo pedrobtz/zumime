@@ -37,15 +37,9 @@ typedef off_t foff;
 #define ftell64 ftello
 #endif
 
-/* Open `path` (UTF-8 on Windows, native elsewhere) for binary reading.
- * Anything that is not a regular file is not opened: *special is set to its
- * inode type (a directory, a FIFO, a device, a socket), as libmagic reports
- * them, because opening a FIFO blocks until a writer comes and a device can
- * be read forever. Otherwise *special is -1. Returns NULL with errno set on
- * failure. */
-static FILE *open_path(const char *path, int *special) {
-  *special = -1;
 #ifdef _WIN32
+/* `path` (UTF-8) as a wide string, malloc()ed, or NULL with errno set. */
+static wchar_t *wide_path(const char *path) {
   int n = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
   if (n <= 0) {
     errno = EINVAL;
@@ -57,13 +51,53 @@ static FILE *open_path(const char *path, int *special) {
     return NULL;
   }
   MultiByteToWideChar(CP_UTF8, 0, path, -1, w, n);
+  return w;
+}
+
+/* _wstat64() fails on a path with a trailing separator, other than a drive
+ * root, where POSIX stat() follows it to the directory. The separators are
+ * stripped, as file.info() does, and the path is tried as given when the
+ * stripped one fails (a UNC share root needs its separator). Only the
+ * Windows legs of CI run this. */
+static int wstat_path(const wchar_t *w, struct _stat64 *st) {
+  size_t len = wcslen(w);
+  size_t keep = len;
+  while (keep > 1 && (w[keep - 1] == L'/' || w[keep - 1] == L'\\') &&
+         !(keep == 3 && w[1] == L':'))
+    keep--;
+  if (keep < len) {
+    wchar_t *t = (wchar_t *) malloc((keep + 1) * sizeof(wchar_t));
+    if (t != NULL) {
+      memcpy(t, w, keep * sizeof(wchar_t));
+      t[keep] = 0;
+      int ok = _wstat64(t, st) == 0;
+      free(t);
+      if (ok) return 0;
+    }
+  }
+  return _wstat64(w, st);
+}
+#endif
+
+/* Open `path` (UTF-8 on Windows, native elsewhere) for binary reading.
+ * Anything that is not a regular file is not opened: *special is set to its
+ * inode type (a directory, a FIFO, a device, a socket), as libmagic reports
+ * them, because opening a FIFO blocks until a writer comes and a device can
+ * be read forever. Otherwise *special is -1. Returns NULL with errno set on
+ * failure. */
+static FILE *open_path(const char *path, int *special) {
+  *special = -1;
+#ifdef _WIN32
+  wchar_t *w = wide_path(path);
+  if (w == NULL) return NULL;
   struct _stat64 st;
-  if (_wstat64(w, &st) == 0) {
-    if (st.st_mode & _S_IFDIR)
+  if (wstat_path(w, &st) == 0) {
+    int fmt = st.st_mode & _S_IFMT;
+    if (fmt == _S_IFDIR)
       *special = ZUMIME_T_INODE_DIRECTORY;
-    else if (st.st_mode & _S_IFCHR)
+    else if (fmt == _S_IFCHR)
       *special = ZUMIME_T_INODE_CHARDEVICE;
-    else if (st.st_mode & _S_IFIFO)
+    else if (fmt == _S_IFIFO)
       *special = ZUMIME_T_INODE_FIFO;
     if (*special >= 0) {
       free(w);
@@ -82,10 +116,14 @@ static FILE *open_path(const char *path, int *special) {
       *special = ZUMIME_T_INODE_FIFO;
     else if (S_ISCHR(st.st_mode))
       *special = ZUMIME_T_INODE_CHARDEVICE;
+    /* Block devices and sockets are tested where the host has one
+     * (test-path.R). */
     else if (S_ISBLK(st.st_mode))
       *special = ZUMIME_T_INODE_BLOCKDEVICE;
     else if (S_ISSOCK(st.st_mode))
       *special = ZUMIME_T_INODE_SOCKET;
+    /* Not reachable from the tests: no POSIX system the checks run on has
+     * an inode of another kind (a Solaris door, a BSD whiteout). */
     else
       *special = ZUMIME_T_APPLICATION_OCTET_STREAM;
     return NULL;
@@ -94,17 +132,15 @@ static FILE *open_path(const char *path, int *special) {
 #endif
 }
 
-/* The size of a regular file at `path` by stat, or -1. Asked before the
- * file is opened, so the head buffer can grow while nothing is open. */
+/* The size of a regular file at `path` by stat, or -1 for anything else.
+ * Asked before the file is opened, so the head buffer can grow while
+ * nothing is open. */
 static int64_t path_size(const char *path) {
 #ifdef _WIN32
-  int n = MultiByteToWideChar(CP_UTF8, 0, path, -1, NULL, 0);
-  if (n <= 0) return -1;
-  wchar_t *w = (wchar_t *) malloc((size_t) n * sizeof(wchar_t));
+  wchar_t *w = wide_path(path);
   if (w == NULL) return -1;
-  MultiByteToWideChar(CP_UTF8, 0, path, -1, w, n);
   struct _stat64 st;
-  int ok = _wstat64(w, &st) == 0;
+  int ok = wstat_path(w, &st) == 0 && (st.st_mode & _S_IFMT) == _S_IFREG;
   free(w);
   return ok ? (int64_t) st.st_size : -1;
 #else
@@ -139,6 +175,7 @@ typedef struct {
 } interruptible_file;
 
 #define INTERRUPT_EVERY (4u * 1024u * 1024u)
+#define READ_CHUNK (1u * 1024u * 1024u)
 
 static void check_interrupt(void *data) {
   (void) data;
@@ -151,6 +188,8 @@ static size_t file_reader(void *ctx, unsigned char *buf, size_t n) {
   r->since_check += n;
   if (r->since_check >= INTERRUPT_EVERY) {
     r->since_check = 0;
+    /* Not reachable from the tests: testthat cannot send an interrupt.
+     * The read after the check is covered by a gzip over 4 MiB. */
     if (!R_ToplevelExec(check_interrupt, NULL)) {
       r->interrupted = 1;
       return 0;
@@ -199,29 +238,34 @@ typedef struct {
   int complete; /* -1 NA, 0, 1 */
   int is_dir;
   int failed;
-  int interrupted; /* the user interrupted the completeness read */
+  int interrupted; /* the user interrupted a long read */
   char error[128];
 } path_result;
 
-/* Signature rows beyond the head: read each one's bytes at its offset. */
+/* Signature rows beyond the head: read the bytes each one needs and match
+ * them with zumime_match_row(), so the row's flags apply. A tar row needs
+ * the whole 512-byte header for its checksum, so it reads from the start
+ * of the file; any other row reads only its own bytes, matched as if at
+ * offset 0. Rows with a parent run only from their parent's reader, as in
+ * the head. */
 static void offset_rows(FILE *f, int64_t size, size_t head_len,
                         zumime_result *r) {
   if (r->type != ZUMIME_T_APPLICATION_OCTET_STREAM) return;
-  unsigned char probe[256];
+  unsigned char probe[512];
   for (int i = 0; i < zumime_n_sigs; i++) {
     const zumime_sig *row = &zumime_sigs[i];
-    if (row->group != ZUMIME_GROUP_EXTRA || row->offset == 0 || row->len == 0)
-      continue;
+    int tar = (row->flags & ZUMIME_SIG_TAR) != 0;
+    if (row->group != ZUMIME_GROUP_EXTRA || row->parent >= 0) continue;
+    if (!tar && (row->offset == 0 || row->len == 0)) continue;
     uint64_t end = (uint64_t) row->offset + row->len;
-    if (end <= head_len || (int64_t) end > size)
-      continue;
-    if (read_at(f, row->offset, probe, row->len) != row->len) continue;
-    int ok = 1;
-    for (size_t k = 0; k < row->len && ok; k++) {
-      unsigned char m = row->mask ? (unsigned char) row->mask[k] : 0xFF;
-      ok = (probe[k] & m) == (unsigned char) row->pattern[k];
-    }
-    if (ok) {
+    if (tar && end < sizeof(probe)) end = sizeof(probe);
+    if (end <= head_len || (int64_t) end > size) continue;
+    zumime_sig at = *row;
+    uint64_t from = tar ? 0 : row->offset;
+    at.offset = (uint32_t) (row->offset - from);
+    size_t n = (size_t) (end - from);
+    if (read_at(f, (int64_t) from, probe, n) != n) continue;
+    if (zumime_match_row(&at, probe, n)) {
       r->type = row->type;
       r->confidence = ZUMIME_CONF_DEFINITE;
       return;
@@ -255,7 +299,9 @@ static int completeness(FILE *f, int64_t size, const unsigned char *head,
     unsigned char *buf = (unsigned char *) malloc(n ? n : 1);
     if (buf == NULL) return -1;
     size_t got = read_at(f, (int64_t) at, buf, n);
-    /* A tail that cannot be read says nothing about completeness. */
+    /* A tail that cannot be read says nothing about completeness. Not
+     * reachable from the tests: the head was read from this open file, so
+     * the tail is empty only if the file shrank or the disk failed since. */
     if (got == 0) {
       free(buf);
       return -1;
@@ -352,7 +398,29 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
     }
     head = own;
   }
-  size_t head_len = fread(head, 1, cap, f);
+  size_t head_len;
+  if (limit == 0) {
+    /* A whole file can take minutes: read it in chunks through the
+     * interruptible reader, as the completeness read does. */
+    interruptible_file rf = {f, 0, 0};
+    head_len = 0;
+    while (head_len < cap) {
+      size_t want = cap - head_len < READ_CHUNK ? cap - head_len : READ_CHUNK;
+      size_t got = file_reader(&rf, head + head_len, want);
+      head_len += got;
+      if (got < want) break;
+    }
+    /* Not reachable from the tests, which cannot send an interrupt; the
+     * caller raises it once the file is closed. */
+    if (rf.interrupted) {
+      out->interrupted = 1;
+      free(own);
+      fclose(f);
+      return;
+    }
+  } else {
+    head_len = fread(head, 1, cap, f);
+  }
   /* Not reachable from the tests: a read error on an open regular file
    * needs failing hardware or a vanished network share. */
   if (ferror(f)) {
@@ -439,10 +507,15 @@ typedef struct {
   size_t cap;
 } head_buf;
 
+/* A path that is not a regular file (a directory, a device, a missing
+ * path) is not read, so it asks for one byte, not the limit; one that
+ * becomes a file before it is opened is sniffed as truncated. */
 static void reserve_head(head_buf *hb, const char *path, size_t limit) {
   if (limit == 0) return;
   int64_t size = path_size(path);
-  size_t need = size < 0 || (uint64_t) size > limit ? limit : (size_t) size;
+  size_t need = size < 0                   ? 1
+                : (uint64_t) size > limit ? limit
+                                           : (size_t) size;
   if (need == 0) need = 1;
   if (need <= hb->cap) return;
   size_t cap = hb->cap ? hb->cap : 4096;
@@ -452,6 +525,21 @@ static void reserve_head(head_buf *hb, const char *path, size_t limit) {
   hb->cap = cap;
 }
 
+
+/* A path's characters as the platform opens them: UTF-8 on Windows, where
+ * it becomes UTF-16, the native encoding elsewhere. A string in "bytes"
+ * encoding cannot be translated, so the callers give it an error row
+ * instead, as R itself cannot open it. */
+static const char untranslatable[] = "a path in \"bytes\" encoding cannot be "
+                                     "translated";
+
+static const char *path_chars(SEXP s) {
+#ifdef _WIN32
+  return Rf_translateCharUTF8(s);
+#else
+  return Rf_translateChar(s);
+#endif
+}
 
 /* paths: character (UTF-8, expanded); limit: double; complete: logical;
  * supplied, apache_bug, no_sniff, context as in zumime_sniff_raw().
@@ -495,12 +583,14 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
       pr.complete = -1;
       pr.r.encrypted = -1;
       snprintf(pr.error, sizeof(pr.error), "missing path");
+    } else if (Rf_getCharCE(s) == CE_BYTES) {
+      memset(&pr, 0, sizeof(pr));
+      pr.failed = 1;
+      pr.complete = -1;
+      pr.r.encrypted = -1;
+      snprintf(pr.error, sizeof(pr.error), "%s", untranslatable);
     } else {
-#ifdef _WIN32
-      const char *p = Rf_translateCharUTF8(s); /* opened as UTF-16 */
-#else
-      const char *p = Rf_translateChar(s); /* the native encoding */
-#endif
+      const char *p = path_chars(s);
       reserve_head(&hb, p, lim);
       sniff_path(p, lim, want_complete, &proto, hb.p, hb.cap, &pr, NULL, NULL,
                  NULL);
@@ -639,17 +729,15 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
   for (R_xlen_t i = 0; i < n; i++) {
     if (i > 0 && i % 256 == 0) R_CheckUserInterrupt();
     SEXP s = STRING_ELT(x, i);
-    if (s == NA_STRING) {
+    if (s == NA_STRING || Rf_getCharCE(s) == CE_BYTES) {
       LOGICAL(out)[i] = NA_LOGICAL;
       continue;
     }
-#ifdef _WIN32
-    const char *p = Rf_translateCharUTF8(s);
-#else
-    const char *p = Rf_translateChar(s);
-#endif
+    const char *p = path_chars(s);
     path_result pr;
     int gated = 0;
+    /* limit is never 0 here and completeness is not asked, so no read is
+     * long enough to be interrupted: pr.interrupted stays 0. */
     reserve_head(&hb, p, lim);
     sniff_path(p, lim, 0, &proto, hb.p, hb.cap, &pr, related_to_any,
                (void *) related, &gated);
