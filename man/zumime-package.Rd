@@ -29,6 +29,8 @@ Other contributors:
 \itemize{
   \item Apache Software Foundation (copyright holder of the httpd mime.types file the extension table is generated from; see inst/COPYRIGHTS) [copyright holder]
   \item Mark Adler (copyright holder of puff.c, the inflater src/zumime_inflate.c is adapted from; see inst/COPYRIGHTS) [copyright holder]
+  \item The Go Authors (copyright holder of the net/http sniff cases in tests/testthat/helper-go-sniff.R; see tests/testthat/COPYRIGHTS) [copyright holder]
+  \item Sindre Sorhus (copyright holder of the file-type answers in tests/testthat/helper-file-type.R; see tests/testthat/COPYRIGHTS) [copyright holder]
 }
 
 }
