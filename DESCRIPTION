@@ -4,15 +4,21 @@ Version: 0.1.0
 Authors@R: c(
     person("Pedro", "Baltazar", , "pedrobtz@gmail.com", role = c("aut", "cre", "cph")),
     person("Apache Software Foundation", role = "cph",
-           comment = "copyright holder of the httpd mime.types file the extension table is generated from; see inst/COPYRIGHTS")
+           comment = "copyright holder of the httpd mime.types file the extension table is generated from; see inst/COPYRIGHTS"),
+    person("Mark", "Adler", role = "cph",
+           comment = "copyright holder of puff.c, the inflater src/zumime_inflate.c is adapted from; see inst/COPYRIGHTS"),
+    person("The Go Authors", role = "cph",
+           comment = "copyright holder of the net/http sniff cases in tests/testthat/helper-go-sniff.R; see tests/testthat/COPYRIGHTS"),
+    person("Sindre", "Sorhus", role = "cph",
+           comment = "copyright holder of the file-type answers in tests/testthat/helper-file-type.R; see tests/testthat/COPYRIGHTS")
   )
 Description: Tells what a file is from its first bytes and from its name,
     with no system library. Implements the Web Hypertext Application
     Technology Working Group (WHATWG) Multipurpose Internet Mail Extensions
     (MIME) Sniffing Standard <https://mimesniff.spec.whatwg.org/> over raw
-    vectors and paths. Reads inside containers to tell Office documents
-    from plain 'ZIP' archives, audio from video in 'MP4' files, and Word
-    from Excel in legacy Office files, and recognises the data files 'R'
+    vectors and paths. Reads inside containers to tell 'Office' documents
+    from plain 'ZIP' archives, audio from video in 'MP4' files, and 'Word'
+    from 'Excel' in legacy 'Office' files, and recognises the data files 'R'
     users hold, such as files saved by 'R', 'Parquet', 'SQLite' and 'Stata'
     files. Every type has a parent in a hierarchy, and an extension
     table generated from the Internet Assigned Numbers Authority (IANA)

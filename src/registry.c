@@ -15,6 +15,8 @@ zumime_registered zumime_reg[ZUMIME_MAX_REGISTERED];
 int zumime_reg_add(const char *name, int parent, int has_rule, uint32_t offset,
                    const unsigned char *bytes, const unsigned char *mask,
                    size_t len) {
+  /* Not reachable from the tests: mime_register() refuses a name over 127
+   * bytes and a rule over 64 bytes before it calls here. */
   if (strlen(name) >= sizeof(zumime_reg[0].name) || len > ZUMIME_RULE_MAX)
     return -1;
   for (int k = 0; k < ZUMIME_MAX_REGISTERED; k++) {

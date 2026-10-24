@@ -16,8 +16,8 @@ on 2026-10-18. From here on this file is authoritative; the RFC is history.
   from the `create-pkg.sh` scaffold; the name was free on crandb on
   2026-10-17 per `base-layer-candidates.md`). No `Imports`. No
   `LinkingTo`. `Suggests: testthat, zukomp, zuutf, zucsv, zujson, zutoml`.
-  One shared object; vendors no code (D7); ships two generated tables
-  (D8). MIT.
+  One shared object; vendors no code, adapts one file (D7); ships two
+  generated tables (D8). MIT.
 - **Source:** this repository's `rfcs/base-layer-candidates.md` §5.1 as of
   commit `074b398` (2026-10-18), which this RFC promotes and whose five
   open questions it settles; the WHATWG MIME Sniffing Standard (living
@@ -144,7 +144,7 @@ endings") answered from the same bytes.
 | Internal C prefix | `zumime_` |
 | From C | no (§14) |
 | Hides symbols | yes (R3) |
-| Vendored code | none (D7); generated tables (D8) |
+| Vendored code | none; inflater adapted from puff.c (D7); generated tables (D8) |
 | `Depends: R` | 4.1 (R2) |
 | Language | en-GB (R2) |
 
@@ -659,7 +659,10 @@ the order that sketch listed them.
 - **D7 (C).** No vendored code. The sniffer, the readers and the algorithm are
   written for this package against the standard and the three reference
   implementations; the pieces are small and the oracles make divergence
-  visible.
+  visible. One exception: the bounded inflater, `src/zumime_inflate.c`, is
+  adapted from Mark Adler's `puff.c` (zlib's `contrib/puff`, zlib licence).
+  It keeps puff's notice, marks the changes, and names Adler as `cph` in
+  `Authors@R` and in `inst/COPYRIGHTS`.
 - **D8 (C).** The registry is generated from IANA's registry and Apache's
   `mime.types`, with a hand-maintained `tools/types.yaml` for what neither
   has, and emitted as both `R/sysdata.rda` and a C header so R and C share one

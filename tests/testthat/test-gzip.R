@@ -174,7 +174,37 @@ test_that("every other DEFLATE error branch is incomplete", {
       rep(0L, 14)
     )
   )
+  # Code-length code with every length zero: complete, but no code
+  # decodes, so the first code-length symbol fails after 15 bits.
+  streams$no_code_length <- c(dynamic(0, 0, c(0, 0, 0, 0)), rep(0L, 16))
   members <- lapply(streams, function(b) gzip_member(pack_bits(b), 26))
+  # Literal code {0: "0", 256: "1"} and an empty block, "1": complete but
+  # for the distance code, so only its check makes these incomplete.
+  # Code-length code {0: "00", 1: "01", 2: "10", 18: "11"}.
+  cl_0_1_2_18 <- c(0, 0, 2, 2, rep(0, 11), 2, 0, 2)
+  empty <- list(
+    # Three distance codes of length 1: over-subscribed.
+    over_subscribed_distance = c(
+      dynamic(0, 2, cl_0_1_18),
+      code("11"),
+      zeros("0", 138),
+      zeros("0", 117),
+      code("11"),
+      rep(code("11"), 3),
+      code("1")
+    ),
+    # Two distance codes of length 2: incomplete.
+    incomplete_distance = c(
+      dynamic(0, 1, cl_0_1_2_18),
+      code("01"),
+      zeros("11", 138),
+      zeros("11", 117),
+      code("01"),
+      rep(code("10"), 2),
+      code("1")
+    )
+  )
+  members <- c(members, lapply(empty, function(b) gzip_member(pack_bits(b), 0)))
   header <- gzip_member(raw(), 0)[1:10]
   # A stored block cut inside its header, and one cut inside its data.
   members$stored_header <- c(header, as.raw(c(1, 100)))
