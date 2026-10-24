@@ -63,8 +63,12 @@ where registered types show `detected_by = "registered"`.
 ## Examples
 
 ``` r
-mime_register("application/x-zumime-demo", "application/octet-stream",
-  extensions = "zdemo", rule = list(offset = 0, bytes = "ZDEMO"))
+mime_register(
+  "application/x-zumime-demo",
+  "application/octet-stream",
+  extensions = "zdemo",
+  rule = list(offset = 0, bytes = "ZDEMO")
+)
 mime_sniff(charToRaw("ZDEMO\x01\x02"))
 #> <zumime_result: 1 row>
 #>   path                      type confidence charset inner encrypted complete

@@ -102,8 +102,12 @@ that a function rule decides, since data rules run first.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">mime_register</span><span class="op">(</span><span class="st">"application/x-zumime-demo"</span>, <span class="st">"application/octet-stream"</span>,</span></span>
-<span class="r-in"><span>  extensions <span class="op">=</span> <span class="st">"zdemo"</span>, rule <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>offset <span class="op">=</span> <span class="fl">0</span>, bytes <span class="op">=</span> <span class="st">"ZDEMO"</span><span class="op">)</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">mime_register</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"application/x-zumime-demo"</span>,</span></span>
+<span class="r-in"><span>  <span class="st">"application/octet-stream"</span>,</span></span>
+<span class="r-in"><span>  extensions <span class="op">=</span> <span class="st">"zdemo"</span>,</span></span>
+<span class="r-in"><span>  rule <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>offset <span class="op">=</span> <span class="fl">0</span>, bytes <span class="op">=</span> <span class="st">"ZDEMO"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="mime_sniff.html">mime_sniff</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rawConversion.html" class="external-link">charToRaw</a></span><span class="op">(</span><span class="st">"ZDEMO\x01\x02"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;zumime_result: 1 row&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   path                      type confidence charset inner encrypted complete</span>

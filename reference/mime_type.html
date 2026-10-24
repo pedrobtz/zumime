@@ -127,13 +127,13 @@ named <code>.txt</code>; and <code>NA</code> when either is unknown. A disagreem
 finding, not an error.</p>
 <p>The default answer depends on nothing outside the package. Three
 arguments ask for an optional family package. <code>inner = "decompress"</code>
-uses zukomp. <code>charset = "detect"</code> uses zuutf. <code>text = "family"</code> uses
-zucsv, zujson and zutoml, each when installed. zuutf and zutoml are not
-yet on CRAN; install them from GitHub. An argument whose package is
-absent raises <code>zumime_dependency_error</code>. <code>text = "family"</code> uses whichever
-sniffers are installed, listed by <code>zumime_info()$family</code>. An error inside
-an optional package leaves that answer as it was, so a corrupt stream
-keeps the name's <code>inner</code>.</p>
+uses zukomp and <code>charset = "detect"</code> uses zuutf; either raises
+<code>zumime_dependency_error</code> when its package is absent. <code>text = "family"</code>
+never raises: it uses whichever of zucsv, zujson and zutoml are
+installed, listed by <code>zumime_info()$family</code>, and with none it keeps the
+standard's answer. zuutf and zutoml are not yet on CRAN; install them
+from GitHub. An error inside an optional package leaves that answer as
+it was, so a corrupt stream keeps the name's <code>inner</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
@@ -147,14 +147,16 @@ keeps the name's <code>inner</code>.</p>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">dir</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"a,b"</span>, <span class="st">"1,2"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"data.csv"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">saveRDS</a></span><span class="op">(</span><span class="va">mtcars</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"cars.rds"</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/readBin.html" class="external-link">writeBin</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/raw.html" class="external-link">as.raw</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0x89</span>, <span class="fl">0x50</span>, <span class="fl">0x4e</span>, <span class="fl">0x47</span>, <span class="fl">0x0d</span>, <span class="fl">0x0a</span>, <span class="fl">0x1a</span>, <span class="fl">0x0a</span><span class="op">)</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"logo.txt"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/readBin.html" class="external-link">writeBin</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/raw.html" class="external-link">as.raw</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0x89</span>, <span class="fl">0x50</span>, <span class="fl">0x4e</span>, <span class="fl">0x47</span>, <span class="fl">0x0d</span>, <span class="fl">0x0a</span>, <span class="fl">0x1a</span>, <span class="fl">0x0a</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">dir</span>, <span class="st">"logo.txt"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">mime_type</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">dir</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;zumime_result: 3 rows&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                                        path              type confidence</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /tmp/Rtmp0cGl9M/file1ab9195ce604/cars.rds application/x-rds   definite</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 /tmp/Rtmp0cGl9M/file1ab9195ce604/data.csv        text/plain   probable</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /tmp/Rtmp0cGl9M/file1ab9195ce604/logo.txt         image/png   definite</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /tmp/RtmpR88omD/file1ac338fc06dc/cars.rds application/x-rds   definite</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 /tmp/RtmpR88omD/file1ac338fc06dc/data.csv        text/plain   probable</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /tmp/RtmpR88omD/file1ac338fc06dc/logo.txt         image/png   definite</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   charset           by_name agree inner encrypted complete newline interpreter</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1    &lt;NA&gt; application/x-rds  TRUE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2   UTF-8          text/csv  TRUE  &lt;NA&gt;        NA       NA      lf        &lt;NA&gt;</span>
