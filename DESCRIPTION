@@ -31,7 +31,6 @@ BugReports: https://github.com/pedrobtz/zumime/issues
 Depends: 
     R (>= 4.1)
 Suggests: 
-    jsonlite,
     testthat (>= 3.0.0),
     withr,
     zucsv,

@@ -33,13 +33,13 @@ skip_if_not_oracle_package <- function(pkg) {
 # holding U+0000 cannot be an R string, so those entries are dropped and
 # counted in attr(, "dropped").
 wpt_mime_entries <- function(file) {
-  skip_if_not_oracle_package("jsonlite")
+  skip_if_not_oracle_package("zujson")
   text <- paste(
     readLines(file, warn = FALSE, encoding = "UTF-8"),
     collapse = "\n"
   )
   text <- gsub("\\u0000", "<<NUL>>", text, fixed = TRUE)
-  entries <- Filter(is.list, jsonlite::fromJSON(text, simplifyVector = FALSE))
+  entries <- Filter(is.list, zujson::json_parse(text, simplify = FALSE))
   nul <- vapply(
     entries,
     function(e) grepl("<<NUL>>", e$input, fixed = TRUE),

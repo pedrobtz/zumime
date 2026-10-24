@@ -32,6 +32,13 @@ their order, names are lower-cased, quoted values are unescaped, and a
 repeated name keeps its first value. \code{mime_format()} is "serialize a MIME
 type", quoting a value that is empty or not a token.
 }
+\details{
+\code{mime_format()} checks a record before serialising it, so an edited
+record cannot carry a line break into a header. Type, subtype and
+parameter names must be non-empty HTTP tokens. Values must hold only HTTP
+quoted-string token code points: tab, U+0020 to U+007E and U+0080 to
+U+00FF. A record that breaks this raises \code{zumime_type_error}.
+}
 \examples{
 rec <- mime_parse("Text/HTML; Charset=\"UTF-8\"; charset=latin1")
 str(rec)
