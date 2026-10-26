@@ -107,3 +107,10 @@ test_that("the default limit is spelled out the same in every formal", {
   expect_identical(formals(mime_type)$limit, default_limit)
   expect_identical(formals(mime_sniffer)$limit, default_limit)
 })
+
+test_that("mime_type()'s choices are spelled out the same in its formals", {
+  f <- formals(mime_type)
+  expect_identical(eval(f$inner), inner_choices)
+  expect_identical(eval(f$text), text_choices)
+  expect_identical(eval(f$charset), charset_choices)
+})

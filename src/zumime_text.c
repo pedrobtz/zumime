@@ -137,11 +137,17 @@ static int line_format(const unsigned char *b, size_t len) {
   if (starts(b, len, "-----BEGIN PGP PUBLIC KEY BLOCK-----") ||
       starts(b, len, "-----BEGIN PGP PRIVATE KEY BLOCK-----"))
     return ZUMIME_T_APPLICATION_PGP_KEYS;
+  /* PEM: "-----BEGIN <label>-----" with the closing dashes at byte 80 at
+   * most. A label may hold hyphens between its characters (RFC 7468 §3),
+   * so the line is read to its end. */
   if (starts(b, len, "-----BEGIN ")) {
-    size_t i = 11;
-    while (i < len && i < 80 && b[i] != '\n' && b[i] != '-') i++;
-    if (i + 5 <= len && memcmp(b + i, "-----", 5) == 0)
-      return ZUMIME_T_APPLICATION_X_PEM_FILE;
+    size_t e = 11;
+    while (e < len && e < 86 && b[e] != '\n' && b[e] != '\r') e++;
+    if (e >= 16 && e <= 85 && memcmp(b + e - 5, "-----", 5) == 0) {
+      size_t end = e - 5;
+      if (end == 11 || (b[11] != '-' && b[end - 1] != '-'))
+        return ZUMIME_T_APPLICATION_X_PEM_FILE;
+    }
   }
   /* SubRip: a cue number, then "00:00:01,000 --> 00:00:02,000". */
   size_t i = 0;

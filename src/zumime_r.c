@@ -206,6 +206,19 @@ SEXP zumime_stream_new(SEXP limit) {
   return s;
 }
 
+/* TRUE when the protected field has the shape zumime_stream_new() gives
+ * it, so a hand-made external pointer is refused before it is read. */
+SEXP zumime_stream_valid(SEXP s) {
+  SEXP prot = R_ExternalPtrProtected(s);
+  int ok = TYPEOF(prot) == VECSXP && XLENGTH(prot) == 4 &&
+           TYPEOF(VECTOR_ELT(prot, 0)) == RAWSXP &&
+           TYPEOF(VECTOR_ELT(prot, 1)) == REALSXP &&
+           XLENGTH(VECTOR_ELT(prot, 1)) == 1 &&
+           TYPEOF(VECTOR_ELT(prot, 3)) == INTSXP &&
+           XLENGTH(VECTOR_ELT(prot, 3)) == 1;
+  return Rf_ScalarLogical(ok);
+}
+
 SEXP zumime_stream_buffer(SEXP s) {
   return VECTOR_ELT(R_ExternalPtrProtected(s), 0);
 }

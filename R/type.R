@@ -7,7 +7,7 @@
 #' encrypted or truncated, its line endings, and a script's interpreter.
 #'
 #' Unreadable and missing paths give a row with `type` `NA` and
-#' `confidence` `"none"`, so one bad entry does not abort a scan of a tree;
+#' `confidence` `"none"`, so one bad entry does not abort a scan of a tree.
 #' `strict = TRUE` raises `zumime_io_error` instead. A directory is
 #' `inode/directory`, and nothing is read from it.
 #'
@@ -31,10 +31,10 @@
 #' @param limit The number of bytes to read from each file; `0` reads whole
 #'   files.
 #' @param complete If `TRUE`, also read each file's end and fill
-#'   `complete`: a ZIP needs its end-of-central-directory record, a PDF
-#'   `%%EOF` in its last kilobyte, a gzip stream must inflate to its
-#'   trailer, and Parquet must end in `PAR1`. Other formats give `NA`. A
-#'   PDF is `encrypted` when its trailer dictionary, found in the last 4 KB,
+#'   `complete`. A ZIP needs its end-of-central-directory record. A PDF
+#'   needs `%%EOF` in its last kilobyte. A gzip stream must inflate to its
+#'   trailer. Parquet must end in `PAR1`. Other formats give `NA`. A PDF
+#'   is `encrypted` when its trailer dictionary, found in the last 4 KB,
 #'   names `/Encrypt`.
 #' @param inner How to find the type inside a compression wrapper (gzip,
 #'   bzip2, xz, zstd, LZ4, lzip, compress): `"name"` takes it from the rest
@@ -77,9 +77,9 @@ mime_type <- function(
   limit <- check_limit(limit)
   check_flag(complete)
   check_flag(strict)
-  inner <- check_choice(inner, c("name", "decompress"))
-  text <- check_choice(text, c("whatwg", "family"))
-  charset <- check_choice(charset, c("declared", "detect"))
+  inner <- check_choice(inner, inner_choices)
+  text <- check_choice(text, text_choices)
+  charset <- check_choice(charset, charset_choices)
   if (inner == "decompress") {
     need_package("zukomp", "inner = \"decompress\"")
   }
@@ -102,20 +102,14 @@ mime_type <- function(
   out$inner <- inner_type(out, inner, limit)
   out$by_name <- mime_guess(path)
   out$agree <- agree(out$type, out$confidence, out$by_name)
-  out[c(
-    "path",
-    "type",
-    "confidence",
-    "charset",
-    "by_name",
-    "agree",
-    "inner",
-    "encrypted",
-    "complete",
-    "newline",
-    "interpreter"
-  )]
+  out[type_columns]
 }
+
+# The choices of mime_type()'s `inner`, `text` and `charset`. Its formals
+# spell them out so its usage shows them; a test keeps them in step.
+inner_choices <- c("name", "decompress")
+text_choices <- c("whatwg", "family")
+charset_choices <- c("declared", "detect")
 
 # The C loop, with the context and supplied type of mime_sniff() when
 # given. Paths are expanded here; the loop opens them as given.
@@ -236,7 +230,7 @@ agree <- function(type, confidence, by_name) {
   # in a type, so it separates the two unambiguously.
   key <- paste(type, by_name, sep = "\r")
   pairs <- unique(data.frame(key, type, by_name)[known, , drop = FALSE])
-  one <- vapply(
+  pair_agree <- vapply(
     seq_len(nrow(pairs)),
     function(k) {
       isTRUE(mime_is(pairs$type[k], pairs$by_name[k])) ||
@@ -244,7 +238,7 @@ agree <- function(type, confidence, by_name) {
     },
     logical(1)
   )
-  out[known] <- one[match(key[known], pairs$key)]
+  out[known] <- pair_agree[match(key[known], pairs$key)]
   out
 }
 
@@ -260,22 +254,22 @@ wrapper_types <- c(
 
 # The type inside a compression wrapper, from the rest of the name or, with
 # "decompress", from the bytes zukomp inflates.
-inner_type <- function(out, inner, limit) {
-  res <- rep(NA_character_, nrow(out))
+inner_type <- function(out, how, limit) {
+  inner <- rep(NA_character_, nrow(out))
   wrapped <- which(out$type %in% wrapper_types)
   if (length(wrapped) == 0L) {
-    return(res)
+    return(inner)
   }
-  res[wrapped] <- inner_by_name(out$path[wrapped])
-  if (inner == "decompress") {
+  inner[wrapped] <- inner_by_name(out$path[wrapped])
+  if (how == "decompress") {
     for (i in wrapped[out$type[wrapped] == "application/gzip"]) {
       by_bytes <- decompress_type(out$path[i], limit)
       if (!is.na(by_bytes)) {
-        res[i] <- by_bytes
+        inner[i] <- by_bytes
       }
     }
   }
-  res
+  inner
 }
 
 inner_by_name <- function(path) {
@@ -300,14 +294,14 @@ decompress_type <- function(path, limit) {
   decompress <- suggested_fun("zukomp", "komp_decompress")
   # An optional package's failure degrades the answer, never raises
   # (design D6): a corrupt stream keeps the name's answer.
-  out <- tryCatch(
+  inflated <- tryCatch(
     decompress(bytes, "gzip", max_output = cap),
     error = function(e) NULL
   )
-  if (is.null(out)) {
+  if (is.null(inflated)) {
     return(NA_character_)
   }
-  mime_sniff(out, limit = limit)$type
+  mime_sniff(inflated, limit = limit)$type
 }
 
 # text = "family": a still generic text/plain is offered to the family's
@@ -337,8 +331,6 @@ family_refine <- function(out) {
   }
   out
 }
-
-family_packages <- c("zucsv", "zujson", "zutoml")
 
 family_sniffers <- function() {
   have <- vapply(family_packages, has_package, logical(1))

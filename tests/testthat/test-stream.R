@@ -294,4 +294,10 @@ test_that("a sniffer stripped of its parameters is a type error", {
   expect_error(mime_finish(s), class = "zumime_type_error")
   fake <- structure(list(), class = "zumime_sniffer")
   expect_error(mime_push(fake, raw(1)), class = "zumime_type_error")
+  # An external pointer not made by mime_sniffer(), with a real one's
+  # attributes copied over.
+  forged <- zumime_stream_new$address
+  attributes(forged) <- attributes(mime_sniffer())
+  expect_error(mime_push(forged, raw(1)), class = "zumime_type_error")
+  expect_error(mime_finish(forged), class = "zumime_type_error")
 })

@@ -37,7 +37,8 @@ raw vector) and columns \code{path} (\code{NA} for a raw vector), \code{type} (a
 canonical type), \code{confidence} (an ordered factor:
 \verb{none < extension < probable < definite}), \code{charset}, \code{inner},
 \code{encrypted}, \code{complete}, \code{newline} (\code{"lf"}, \code{"crlf"}, \code{"cr"},
-\code{"mixed"}, or \code{NA}) and \code{interpreter}.
+\code{"mixed"}, or \code{NA}) and \code{interpreter}. \code{inner} and \code{complete} are
+always \code{NA} here; \code{\link[=mime_type]{mime_type()}} fills them.
 }
 \description{
 Runs the WHATWG MIME Sniffing Standard's "MIME type sniffing algorithm"
@@ -56,9 +57,10 @@ only for types of that kind and otherwise return the supplied type.
 
 A text result carries \code{charset}, from the first rule that answers: the
 supplied type's \code{charset} parameter, a byte-order mark, an XML
-declaration, an HTML \verb{<meta>} prescan, valid UTF-8, then the C1 rule
-(\code{windows-1252} when a byte in 0x80 to 0x9F appears, else
-\code{ISO-8859-1}), which lowers \code{confidence} to \code{"probable"}.
+declaration, an HTML \verb{<meta>} prescan, valid UTF-8, then the C1 rule.
+The C1 rule gives \code{windows-1252} when a byte in 0x80 to 0x9F appears,
+else \code{ISO-8859-1}. It is a guess, so it lowers \code{confidence} to
+\code{"probable"}.
 }
 \examples{
 png <- as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))

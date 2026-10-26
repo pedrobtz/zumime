@@ -116,13 +116,20 @@ need_package <- function(pkg, what, call = sys.call(sys.parent())) {
 # their usage shows it; a test keeps the four in step.
 default_limit <- 4096L
 
+# The family's text sniffers for text = "family", in the order they are
+# tried; zumime_info() lists those installed.
+family_packages <- c("zucsv", "zujson", "zutoml")
+
 # The first `limit` bytes of row `i`: of the raw vector `x`, or read again
 # from path `x[i]`.
 head_bytes <- function(x, i, limit) {
-  if (is.raw(x)) {
-    return(if (limit > 0 && length(x) > limit) x[seq_len(limit)] else x)
+  if (!is.raw(x)) {
+    return(read_bytes(x[i], limit))
   }
-  read_bytes(x[i], limit)
+  if (limit > 0 && length(x) > limit) {
+    return(x[seq_len(limit)])
+  }
+  x
 }
 
 # The first `limit` bytes of a file (all of it for 0), or NULL when it

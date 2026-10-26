@@ -35,8 +35,8 @@ in its \code{.onUnload()}, since registering a type that exists is an error.
 }
 \details{
 A data rule, \code{list(offset, bytes, mask)}, runs in C whenever the bytes
-have been typed as the parent, costs what a built-in signature costs,
-and is reported at \code{"definite"}. It sees only the bytes read: a rule
+have been typed as the parent. It costs what a built-in signature costs.
+It is reported at \code{"definite"}. It sees only the bytes read: a rule
 that ends past 4096 bytes needs a larger \code{limit}. A function rule is
 called from R with the bytes read and must return \code{TRUE} or \code{FALSE}. It
 runs last, only when the parent matched, and is reported at

@@ -40,6 +40,7 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
 SEXP zumime_probe_count(void);
 SEXP zumime_stream_new(SEXP limit);
 SEXP zumime_stream_state(SEXP s);
+SEXP zumime_stream_valid(SEXP s);
 SEXP zumime_stream_buffer(SEXP s);
 SEXP zumime_stream_push(SEXP s, SEXP chunk, SEXP final, SEXP limit,
                         SEXP supplied, SEXP apache_bug, SEXP no_sniff,

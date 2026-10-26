@@ -101,7 +101,8 @@ check_sniffer <- function(s, call = sys.call(sys.parent())) {
   if (
     !inherits(s, "zumime_sniffer") ||
       typeof(s) != "externalptr" ||
-      !is.list(attr(s, "params"))
+      !is.list(attr(s, "params")) ||
+      !.Call(zumime_stream_valid, s)
   ) {
     zumime_abort(
       "type",
@@ -115,7 +116,7 @@ stream_result <- function(s, chunk, final) {
   p <- attr(s, "params")
   # Function rules apply only in context "none"; elsewhere nothing waits
   # for them.
-  fns <- if (p$context == 0L) {
+  rule_parents <- if (p$context == 0L) {
     session$types$parent[session$types$kind == "function"]
   } else {
     character()
@@ -130,7 +131,7 @@ stream_result <- function(s, chunk, final) {
     p$supplied$apache_bug,
     p$no_sniff,
     p$context,
-    as.character(fns)
+    as.character(rule_parents)
   )
   if (is.null(res)) {
     return(NULL)
@@ -139,7 +140,7 @@ stream_result <- function(s, chunk, final) {
   out <- raw_result(res, p$supplied)
   # Checked here so a sniffer without function rules skips copying its
   # bytes out for apply_registered().
-  if (length(fns) > 0L) {
+  if (length(rule_parents) > 0L) {
     out <- apply_registered(
       out,
       stream_bytes(s),

@@ -21,8 +21,8 @@ session$version <- 0L
 #' in its `.onUnload()`, since registering a type that exists is an error.
 #'
 #' A data rule, `list(offset, bytes, mask)`, runs in C whenever the bytes
-#' have been typed as the parent, costs what a built-in signature costs,
-#' and is reported at `"definite"`. It sees only the bytes read: a rule
+#' have been typed as the parent. It costs what a built-in signature costs.
+#' It is reported at `"definite"`. It sees only the bytes read: a rule
 #' that ends past 4096 bytes needs a larger `limit`. A function rule is
 #' called from R with the bytes read and must return `TRUE` or `FALSE`. It
 #' runs last, only when the parent matched, and is reported at
@@ -219,8 +219,7 @@ check_extensions <- function(x, call = sys.call(sys.parent())) {
 }
 
 check_rule_function <- function(rule, call = sys.call(sys.parent())) {
-  params <- names(formals(args(rule)))
-  if (length(params) == 0L) {
+  if (length(formals(args(rule))) == 0L) {
     zumime_abort(
       "type",
       "A function `rule` must take the bytes as an argument.",
