@@ -6,7 +6,8 @@ Adds a type under a parent in the hierarchy, so that
 [`mime_check()`](https://pedrobtz.github.io/zumime/reference/mime_check.md)
 and the registry functions know it until the session ends or
 `mime_unregister()` removes it. A package that wants its format
-recognised registers it in its `.onLoad()`.
+recognised registers it in its `.onLoad()`. It unregisters it in its
+`.onUnload()`, since registering a type that exists is an error.
 
 ## Usage
 
@@ -37,7 +38,7 @@ mime_unregister(type)
   `NULL` for a type known by name only; a list of `offset` (a whole
   number), `bytes` (a raw vector or a string, at most 64 bytes) and an
   optional `mask` (a raw vector as long as `bytes`); or a function of
-  one raw vector.
+  one raw vector, the bytes read.
 
 ## Value
 
@@ -48,12 +49,17 @@ returns `NULL`, invisibly.
 
 A data rule, `list(offset, bytes, mask)`, runs in C whenever the bytes
 have been typed as the parent, costs what a built-in signature costs,
-and is reported at `"definite"`. A function rule is called from R with
-the bytes read and must return `TRUE` or `FALSE`; it runs last, only
-when the parent matched, and is reported at `"probable"`. A function
-rule that raises an error counts as `FALSE`, and the call warns once
-with a `zumime_rule_warning` naming the type. A data rule cannot sit
-under a type that a function rule decides, since data rules run first.
+and is reported at `"definite"`. It sees only the bytes read: a rule
+that ends past 4096 bytes needs a larger `limit`. A function rule is
+called from R with the bytes read and must return `TRUE` or `FALSE`. It
+runs last, only when the parent matched, and is reported at
+`"probable"`. A function rule that raises an error counts as `FALSE`,
+and the call warns once with a `zumime_rule_warning` naming the type. A
+data rule cannot sit under a type that a function rule decides, since
+data rules run first.
+
+Both kinds refine only what zumime sniffs in the `"none"` context. They
+never run in another context, nor on a supplied type that stands.
 
 ## See also
 

@@ -57,7 +57,9 @@ dependency and no system library.
 - [`mime_register()`](https://pedrobtz.github.io/zumime/reference/mime_register.md)
   and
   [`mime_unregister()`](https://pedrobtz.github.io/zumime/reference/mime_register.md)
-  add a type for the session.
+  add a type for the session, with a data rule matched in C or a
+  function rule called from R. Either refines only what zumime sniffs in
+  the default context.
 - Optional help from the family, used only when asked:
   `inner = "decompress"` (zukomp), `text = "family"` (zucsv, zujson,
   zutoml) and `charset = "detect"` (zuutf).
