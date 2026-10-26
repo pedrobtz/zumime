@@ -18,10 +18,28 @@ test_that("the sniffer core compiles as C11 without R and without warnings", {
     logical(1)
   )
   src <- src[!uses_r]
-  expect_true(all(
-    c("zumime_sniff.c", "zumime_table.c", "registry.c") %in%
-      basename(src)
-  ))
+  # Every file of layers 1 to 3: one that gained an R header would
+  # otherwise drop out of this check unseen.
+  expect_setequal(
+    basename(src),
+    c(
+      "registry.c",
+      "zumime_bmff.c",
+      "zumime_charset.c",
+      "zumime_ebml.c",
+      "zumime_inflate.c",
+      "zumime_ogg.c",
+      "zumime_ole2.c",
+      "zumime_png.c",
+      "zumime_rdata.c",
+      "zumime_refine.c",
+      "zumime_sniff.c",
+      "zumime_stream.c",
+      "zumime_table.c",
+      "zumime_text.c",
+      "zumime_zip.c"
+    )
+  )
   out <- withr::local_tempdir()
   for (f in src) {
     log <- suppressWarnings(system2(

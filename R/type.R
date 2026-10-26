@@ -90,11 +90,12 @@ mime_type <- function(
   res <- sniff_paths(path, limit, complete)
   check_strict(path, res, strict)
   out <- path_result(path, res)
-  out <- apply_registered(out, path, limit)
-
+  # Function rules run last (design section 6.9), so they also see the
+  # types text = "family" finds.
   if (text == "family") {
     out <- family_refine(out)
   }
+  out <- apply_registered(out, path, limit)
   if (charset == "detect") {
     out <- detect_charset(out, limit)
   }
@@ -136,9 +137,7 @@ sniff_paths <- function(
     no_sniff,
     context
   )
-  if (isTRUE(attr(res, "interrupted"))) {
-    resignal_interrupt()
-  }
+  raise_if_interrupted(res)
   names(res) <- path_fields
   res
 }
@@ -152,26 +151,33 @@ expand_paths <- function(path) {
 }
 
 # The C loop caught an interrupt inside a long read so it could close the
-# file first; raise it again as R would have.
+# file first, and marked its result; raise it again as R would have.
+raise_if_interrupted <- function(res) {
+  if (isTRUE(attr(res, "interrupted", exact = TRUE))) {
+    resignal_interrupt()
+  }
+  invisible(res)
+}
+
 resignal_interrupt <- function() {
   signalCondition(structure(list(), class = c("interrupt", "condition")))
   invokeRestart("abort")
 }
 
-check_paths <- function(path) {
+check_paths <- function(path, call = sys.call(sys.parent())) {
   if (!is.character(path)) {
     zumime_abort(
       "type",
       "`path` must be a character vector of paths.",
-      call = sys.call(-1L)
+      call = call
     )
   }
   path
 }
 
-check_strict <- function(path, res, strict) {
+check_strict <- function(path, res, strict, call = sys.call(sys.parent())) {
   bad <- which(!is.na(res$error))
-  if (strict && length(bad)) {
+  if (strict && length(bad) > 0L) {
     i <- bad[1]
     # A path in "bytes" encoding is shown with its bytes escaped.
     shown <- path[i]
@@ -181,7 +187,7 @@ check_strict <- function(path, res, strict) {
     zumime_abort(
       "io",
       sprintf("Cannot read \"%s\": %s.", shown, res$error[i]),
-      call = sys.call(-1L)
+      call = call
     )
   }
 }

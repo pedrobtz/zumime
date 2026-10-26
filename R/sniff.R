@@ -66,7 +66,7 @@ mime_sniff <- function(
   if (is.character(x)) {
     res <- sniff_paths(x, limit, FALSE, supplied, no_sniff, context)
     out <- path_result(x, res, supplied)
-    return(apply_registered(out, x, limit))
+    return(apply_registered(out, x, limit, sniffed(res$type, context)))
   }
 
   res <- .Call(
@@ -78,15 +78,25 @@ mime_sniff <- function(
     no_sniff,
     context
   )
-  apply_registered(raw_result(res, supplied), x, limit)
+  names(res) <- raw_fields
+  out <- raw_result(res, supplied)
+  apply_registered(out, x, limit, sniffed(res$type, context))
+}
+
+# The rows zumime typed itself: context "none" and not a supplied type that
+# stands, which C returns as NA. Registered rules refine only these, as the
+# C side's data rules do.
+sniffed <- function(type, context) {
+  context == 0L & !is.na(type)
 }
 
 # The supplied MIME type detection algorithm's outcome: the canonical
 # essence (NULL when undefined), its charset parameter, and the
 # check-for-apache-bug flag.
 supplied_type <- function(type, call = sys.call(sys.parent())) {
+  none <- list(essence = NULL, charset = NULL, apache_bug = FALSE)
   if (is.null(type) || (length(type) == 1L && is.na(type))) {
-    return(list(essence = NULL, charset = NULL, apache_bug = FALSE))
+    return(none)
   }
   if (!is.character(type) || length(type) != 1L) {
     zumime_abort(
@@ -104,7 +114,7 @@ supplied_type <- function(type, call = sys.call(sys.parent())) {
     )
   rec <- mime_parse(type)[[1]]
   if (is.null(rec)) {
-    return(list(essence = NULL, charset = NULL, apache_bug = FALSE))
+    return(none)
   }
   list(
     essence = canonical_type(paste0(rec$type, "/", rec$subtype)),

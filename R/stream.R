@@ -113,7 +113,13 @@ check_sniffer <- function(s, call = sys.call(sys.parent())) {
 
 stream_result <- function(s, chunk, final) {
   p <- attr(s, "params")
-  fns <- session$types$parent[session$types$kind == "function"]
+  # Function rules apply only in context "none"; elsewhere nothing waits
+  # for them.
+  fns <- if (p$context == 0L) {
+    session$types$parent[session$types$kind == "function"]
+  } else {
+    character()
+  }
   res <- .Call(
     zumime_stream_push,
     s,
@@ -129,11 +135,17 @@ stream_result <- function(s, chunk, final) {
   if (is.null(res)) {
     return(NULL)
   }
+  names(res) <- raw_fields
   out <- raw_result(res, p$supplied)
   # Checked here so a sniffer without function rules skips copying its
   # bytes out for apply_registered().
   if (length(fns) > 0L) {
-    out <- apply_registered(out, stream_bytes(s), p$limit)
+    out <- apply_registered(
+      out,
+      stream_bytes(s),
+      p$limit,
+      sniffed(res$type, p$context)
+    )
   }
   out
 }

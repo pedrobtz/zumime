@@ -32,9 +32,9 @@ path_fields <- c(
 )
 
 # The one-row result for bytes in hand, from zumime_sniff_raw or
-# zumime_stream_push. A supplied type that stands comes back as NA.
+# zumime_stream_push, its elements named by `raw_fields`. A supplied type
+# that stands comes back as NA.
 raw_result <- function(res, supplied) {
-  names(res) <- raw_fields
   type <- res$type
   if (is.na(type)) {
     type <- supplied$essence

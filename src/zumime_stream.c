@@ -196,11 +196,14 @@ static int reader_settled(const unsigned char *buf, size_t len, int base,
   return 1;
 }
 
-static int registered_pending(size_t len, int type) {
+/* 1 when a registered data rule under `type` could still match: its bytes
+ * end past those in hand but within the limit. */
+static int registered_pending(size_t len, size_t limit, int type) {
   for (int k = 0; k < ZUMIME_MAX_REGISTERED; k++) {
     const zumime_registered *r = &zumime_reg[k];
-    if (r->active && r->has_rule && r->parent == type &&
-        (uint64_t) r->offset + r->len > len)
+    uint64_t end = (uint64_t) r->offset + r->len;
+    if (r->active && r->has_rule && r->parent == type && end > len &&
+        end <= limit)
       return 1;
   }
   return 0;
@@ -246,6 +249,8 @@ int zumime_can_decide(const unsigned char *buf, size_t len, size_t limit,
   if (earlier_pending(buf, len, limit, in, group, index)) return 0;
   if (in->context == ZUMIME_CTX_NONE && !reader_settled(buf, len, base, r->type))
     return 0;
-  if (registered_pending(len, base) || registered_pending(len, r->type)) return 0;
+  if (registered_pending(len, limit, base) ||
+      registered_pending(len, limit, r->type))
+    return 0;
   return 1;
 }

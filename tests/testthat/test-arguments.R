@@ -2,6 +2,8 @@
 # helper raised it and however lazily its argument was forced.
 
 test_that("an argument error's call is the exported function", {
+  # Should a check regress, the registration must not outlive this test.
+  withr::defer(try(mime_unregister("application/x-zt-arg"), silent = TRUE))
   caller <- function(expr) {
     e <- tryCatch(expr, zumime_error = identity)
     if (!inherits(e, "zumime_error")) {

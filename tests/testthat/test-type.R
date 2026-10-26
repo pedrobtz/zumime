@@ -453,11 +453,53 @@ test_that("suggested packages are reached only when asked, through one door", {
   expect_identical(zumime_info()$family, c("zucsv", "zujson", "zutoml"))
 })
 
-test_that("an interrupt caught in C is raised again as an interrupt", {
-  # testthat cannot send an interrupt, so the R half is tested alone: the
-  # condition reaches an interrupt handler, as a real one would.
-  got <- tryCatch(resignal_interrupt(), interrupt = function(c) "interrupt")
-  expect_identical(got, "interrupt")
+test_that("a result marked interrupted is raised again as an interrupt", {
+  marked <- structure(list(), interrupted = TRUE)
+  got <- tryCatch(raise_if_interrupted(marked), interrupt = function(c) "yes")
+  expect_identical(got, "yes")
+  expect_identical(raise_if_interrupted(list()), list())
+})
+
+test_that("an interrupt during a long read marks the C loop's result", {
+  skip_on_os("windows")
+  skip_on_cran()
+  withr::local_seed(1)
+  dir <- withr::local_tempdir()
+  big <- file.path(dir, "big")
+  writeBin(as.raw(sample.int(256, 12 * 2^20, replace = TRUE) - 1L), big)
+  gz <- file.path(dir, "big.gz")
+  con <- gzfile(gz, "wb", compression = 1)
+  writeBin(readBin(big, "raw", file.size(big)), con)
+  close(con)
+  # The signal sets R's pending interrupt, and the read's check inside
+  # R_ToplevelExec() catches it. R also checks every thousand or so
+  # evaluations: when that comes first, the call never starts, so try
+  # again. Calling .Call directly keeps that window to a few evaluations.
+  interrupted <- function(path, limit, complete) {
+    for (try in 1:50) {
+      tools::pskill(Sys.getpid(), tools::SIGINT)
+      res <- tryCatch(
+        .Call(
+          zumime_sniff_paths,
+          path,
+          limit,
+          complete,
+          NULL,
+          FALSE,
+          FALSE,
+          0L
+        ),
+        interrupt = function(c) NULL
+      )
+      if (!is.null(res)) {
+        return(isTRUE(attr(res, "interrupted", exact = TRUE)))
+      }
+    }
+    NA
+  }
+  # The whole-file read of limit = 0, then the completeness read of gzip.
+  expect_true(interrupted(big, 0, FALSE))
+  expect_true(interrupted(gz, 4096, TRUE))
 })
 
 test_that("a large limit costs nothing for small files", {

@@ -402,7 +402,7 @@ void zumime_sniff(const unsigned char *buf, size_t len, const zumime_input *in,
     extend(buf, len, out);
     if (in->base_only) return;
     zumime_refine(buf, len, in, out);
-    zumime_apply_registered(buf, len, out);
+    if (!in->defer_registered) zumime_apply_registered(buf, len, out);
   }
 
   /* Charset and line endings, for a text result. */
