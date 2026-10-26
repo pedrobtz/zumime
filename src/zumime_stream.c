@@ -33,6 +33,10 @@ static int row_pending(const zumime_sig *row, const unsigned char *buf,
     if (s >= len) return 1;
     if ((row->flags & ZUMIME_SIG_TT) && p == (size_t) row->len - 1) {
       if (buf[s] != 0x20 && buf[s] != 0x3E) return 0;
+      /* Not reachable from the tests: only the scriptable HTML rows end in
+       * a tag-terminating byte. One that matches to that byte makes the
+       * answer text/html, which zumime_can_decide() never decides early,
+       * and a supplied type that stands never consults those rows. */
       continue;
     }
     unsigned char m = row->mask ? (unsigned char) row->mask[p] : 0xFF;

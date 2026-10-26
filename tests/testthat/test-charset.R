@@ -179,3 +179,23 @@ test_that("the meta prescan trims labels, skips markup and keeps the first", {
     "koi8-r"
   )
 })
+
+test_that("an XML declaration's label is trimmed and must be in hand", {
+  expect_identical(
+    sniff_charset(charToRaw(
+      "<?xml version=\"1.0\" encoding=\" ISO-8859-2 \"?><a/>"
+    )),
+    "ISO-8859-2"
+  )
+  # The declaration's bytes end before any encoding: it names none.
+  expect_identical(sniff_charset(charToRaw("<?xml version=\"1.0\" ")), "UTF-8")
+  late <- paste0("<?xml ", strrep(" ", 1100), "encoding=\"koi8-r\"?><a/>")
+  expect_identical(sniff_charset(charToRaw(late)), "UTF-8")
+})
+
+test_that("the meta prescan allows spaces around an attribute's =", {
+  expect_identical(
+    sniff_charset(charToRaw("<html><meta charset = koi8-r>")),
+    "koi8-r"
+  )
+})
