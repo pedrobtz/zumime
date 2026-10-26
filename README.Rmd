@@ -42,12 +42,12 @@ the same answer on every machine.
   `application/octet-stream`, so an unknown ZIP-based format is still a ZIP,
   and an allowlist of `"image"` accepts every image.
 * **What to know before opening.** Encryption, completeness, line endings
-  and a script's interpreter, read from the same bytes, and the type inside
+  and a script's interpreter, read from the file's bytes, and the type inside
   a compression wrapper, from the name or, with
   [zukomp](https://github.com/pedrobtz/zukomp), from the decompressed
   bytes.
-* **The same answer everywhere.** No `mime.types`, no Windows registry, no
-  libmagic: the extension table is generated from IANA's registry and
+* **The same answer everywhere.** No system `mime.types`, no Windows
+  registry, no libmagic: the extension table is generated from IANA's registry and
   Apache httpd's `mime.types`.
 
 ## Installation
@@ -129,8 +129,9 @@ mime_is(docx, "application/zip")
 unlink(uploads, recursive = TRUE)
 ```
 
-Every function but `zumime_info()` starts with `mime_`, and every type it
-returns is a canonical name from the registry that `mime_types()` lists.
+Every function but `zumime_info()` starts with `mime_`. Every type zumime
+finds is a canonical name from the registry that `mime_types()` lists; a
+supplied type that stands comes back as its lower-cased essence.
 
 ## Learn more
 
