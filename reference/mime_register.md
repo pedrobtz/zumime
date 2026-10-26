@@ -48,15 +48,15 @@ returns `NULL`, invisibly.
 ## Details
 
 A data rule, `list(offset, bytes, mask)`, runs in C whenever the bytes
-have been typed as the parent, costs what a built-in signature costs,
-and is reported at `"definite"`. It sees only the bytes read: a rule
-that ends past 4096 bytes needs a larger `limit`. A function rule is
-called from R with the bytes read and must return `TRUE` or `FALSE`. It
-runs last, only when the parent matched, and is reported at
-`"probable"`. A function rule that raises an error counts as `FALSE`,
-and the call warns once with a `zumime_rule_warning` naming the type. A
-data rule cannot sit under a type that a function rule decides, since
-data rules run first.
+have been typed as the parent. It costs what a built-in signature costs.
+It is reported at `"definite"`. It sees only the bytes read: a rule that
+ends past 4096 bytes needs a larger `limit`. A function rule is called
+from R with the bytes read and must return `TRUE` or `FALSE`. It runs
+last, only when the parent matched, and is reported at `"probable"`. A
+function rule that raises an error counts as `FALSE`, and the call warns
+once with a `zumime_rule_warning` naming the type. A data rule cannot
+sit under a type that a function rule decides, since data rules run
+first.
 
 Both kinds refine only what zumime sniffs in the `"none"` context. They
 never run in another context, nor on a supplied type that stands.

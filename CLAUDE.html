@@ -139,7 +139,7 @@
 <li>
 <strong>Helpers live in <code>tests/testthat/helper-*.R</code>.</strong> <code>helper-abi.R</code> (symbol audit), <code>helper-tables.R</code> (<code>source_root()</code>), <code>helper-fixtures.R</code> (<code>fixture_dir()</code>, <code>wpt_mime_entries()</code>), <code>helper-bytes.R</code> (byte builders), <code>helper-go-sniff.R</code> (Go’s sniff cases), <code>helper-containers.R</code> (ZIP, OLE2, ftyp, Ogg and EBML builders), <code>helper-file-type.R</code> (file-type’s answers and the unclaimed fixtures).</li>
 <li>
-<strong>Keep the suite inside the CRAN time budget.</strong> Only the scaffold’s placeholder test exists; no runtime to report.</li>
+<strong>Keep the suite inside the CRAN time budget.</strong> With <code>NOT_CRAN=false</code> the whole suite, load included, took 41 s on an Apple-silicon Mac (2026-10-26). The translated-path memory test (about 20 s) and the interrupt test skip on CRAN; the CI legs still run them.</li>
 </ul></div>
 <div class="section level2">
 <h2 id="definition-of-done">Definition of done<a class="anchor" aria-label="anchor" href="#definition-of-done"></a></h2>

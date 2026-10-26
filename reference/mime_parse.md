@@ -1,10 +1,10 @@
 # Parse and serialise MIME types
 
 `mime_parse()` is the WHATWG MIME Sniffing Standard's "parse a MIME
-type": type and subtype are lower-cased HTTP tokens; parameters keep
-their order, names are lower-cased, quoted values are unescaped, and a
-repeated name keeps its first value. `mime_format()` is "serialize a
-MIME type", quoting a value that is empty or not a token.
+type". Type and subtype are lower-cased HTTP tokens. Parameters keep
+their order, and their names are lower-cased. Quoted values are
+unescaped. A repeated name keeps its first value. `mime_format()` is
+"serialize a MIME type". It quotes a value that is empty or not a token.
 
 ## Usage
 

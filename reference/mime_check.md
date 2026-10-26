@@ -24,8 +24,8 @@ mime_check(x, allowed, min_confidence = "probable")
 
 - min_confidence:
 
-  The weakest evidence accepted: `"probable"` (the default) accepts byte
-  evidence of either kind; `"definite"` is for allowlists that must not
+  The weakest evidence accepted. `"probable"`, the default, accepts byte
+  evidence of either kind. `"definite"` is for allowlists that must not
   trust a text heuristic. `"extension"` and `"none"` are accepted for
   completeness.
 
@@ -40,10 +40,10 @@ for an unreadable path unless `min_confidence` is `"none"`, where it is
 The answer always equals
 `mime_is(t$type, allowed) & t$confidence >= min_confidence`, with
 `t <- mime_type(x)`, or `mime_sniff(x)` for a raw vector. It is computed
-in one pass, with a shortcut that this equality hides. The container
-readers, text readers and tail reads are skipped for every input whose
-first answer could not end as an allowed type. No result frame is built.
-Call
+in one pass, with a shortcut that does not change the answer. The
+container readers, text readers and tail reads are skipped for every
+input whose first answer could not end as an allowed type. No result
+frame is built. Call
 [`mime_type()`](https://pedrobtz.github.io/zumime/reference/mime_type.md)
 to learn why a file was refused.
 

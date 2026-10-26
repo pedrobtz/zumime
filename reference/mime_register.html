@@ -89,8 +89,8 @@ of one raw vector, the bytes read.</p></dd>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>A data rule, <code>list(offset, bytes, mask)</code>, runs in C whenever the bytes
-have been typed as the parent, costs what a built-in signature costs,
-and is reported at <code>"definite"</code>. It sees only the bytes read: a rule
+have been typed as the parent. It costs what a built-in signature costs.
+It is reported at <code>"definite"</code>. It sees only the bytes read: a rule
 that ends past 4096 bytes needs a larger <code>limit</code>. A function rule is
 called from R with the bytes read and must return <code>TRUE</code> or <code>FALSE</code>. It
 runs last, only when the parent matched, and is reported at

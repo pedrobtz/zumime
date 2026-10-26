@@ -63,8 +63,8 @@ as <code><a href="mime_is.html">mime_is()</a></code> takes them.</p></dd>
 
 
 <dt id="arg-min-confidence">min_confidence<a class="anchor" aria-label="anchor" href="#arg-min-confidence"></a></dt>
-<dd><p>The weakest evidence accepted: <code>"probable"</code> (the
-default) accepts byte evidence of either kind; <code>"definite"</code> is for
+<dd><p>The weakest evidence accepted. <code>"probable"</code>, the
+default, accepts byte evidence of either kind. <code>"definite"</code> is for
 allowlists that must not trust a text heuristic. <code>"extension"</code> and
 <code>"none"</code> are accepted for completeness.</p></dd>
 
@@ -80,9 +80,10 @@ where it is <code>NA</code>.</p>
     <p>The answer always equals
 <code>mime_is(t$type, allowed) &amp; t$confidence &gt;= min_confidence</code>, with
 <code>t &lt;- mime_type(x)</code>, or <code>mime_sniff(x)</code> for a raw vector. It is computed
-in one pass, with a shortcut that this equality hides. The container
-readers, text readers and tail reads are skipped for every input whose
-first answer could not end as an allowed type. No result frame is built.
+in one pass, with a shortcut that does not change the answer. The
+container readers, text readers and tail reads are skipped for every
+input whose first answer could not end as an allowed type. No result
+frame is built.
 Call <code><a href="mime_type.html">mime_type()</a></code> to learn why a file was refused.</p>
     </div>
     <div class="section level2">

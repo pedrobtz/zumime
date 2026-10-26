@@ -35,10 +35,10 @@ mime_type(
 
 - complete:
 
-  If `TRUE`, also read each file's end and fill `complete`: a ZIP needs
-  its end-of-central-directory record, a PDF `%%EOF` in its last
-  kilobyte, a gzip stream must inflate to its trailer, and Parquet must
-  end in `PAR1`. Other formats give `NA`. A PDF is `encrypted` when its
+  If `TRUE`, also read each file's end and fill `complete`. A ZIP needs
+  its end-of-central-directory record. A PDF needs `%%EOF` in its last
+  kilobyte. A gzip stream must inflate to its trailer. Parquet must end
+  in `PAR1`. Other formats give `NA`. A PDF is `encrypted` when its
   trailer dictionary, found in the last 4 KB, names `/Encrypt`.
 
 - inner:
@@ -73,7 +73,7 @@ A `zumime_result` data frame with one row per path and columns `path`,
 ## Details
 
 Unreadable and missing paths give a row with `type` `NA` and
-`confidence` `"none"`, so one bad entry does not abort a scan of a tree;
+`confidence` `"none"`, so one bad entry does not abort a scan of a tree.
 `strict = TRUE` raises `zumime_io_error` instead. A directory is
 `inode/directory`, and nothing is read from it.
 
@@ -114,9 +114,9 @@ writeBin(
 mime_type(list.files(dir, full.names = TRUE))
 #> <zumime_result: 3 rows>
 #>                                        path              type confidence
-#> 1 /tmp/RtmpMwcLiZ/file1a92375ab30c/cars.rds application/x-rds   definite
-#> 2 /tmp/RtmpMwcLiZ/file1a92375ab30c/data.csv        text/plain   probable
-#> 3 /tmp/RtmpMwcLiZ/file1a92375ab30c/logo.txt         image/png   definite
+#> 1 /tmp/Rtmph9nlpC/file19b86621882d/cars.rds application/x-rds   definite
+#> 2 /tmp/Rtmph9nlpC/file19b86621882d/data.csv        text/plain   probable
+#> 3 /tmp/Rtmph9nlpC/file19b86621882d/logo.txt         image/png   definite
 #>   charset           by_name agree inner encrypted complete newline interpreter
 #> 1    <NA> application/x-rds  TRUE  <NA>        NA       NA    <NA>        <NA>
 #> 2   UTF-8          text/csv  TRUE  <NA>        NA       NA      lf        <NA>

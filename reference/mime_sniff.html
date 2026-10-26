@@ -97,7 +97,8 @@ raw vector) and columns <code>path</code> (<code>NA</code> for a raw vector), <c
 canonical type), <code>confidence</code> (an ordered factor:
 <code>none &lt; extension &lt; probable &lt; definite</code>), <code>charset</code>, <code>inner</code>,
 <code>encrypted</code>, <code>complete</code>, <code>newline</code> (<code>"lf"</code>, <code>"crlf"</code>, <code>"cr"</code>,
-<code>"mixed"</code>, or <code>NA</code>) and <code>interpreter</code>.</p>
+<code>"mixed"</code>, or <code>NA</code>) and <code>interpreter</code>. <code>inner</code> and <code>complete</code> are
+always <code>NA</code> here; <code><a href="mime_type.html">mime_type()</a></code> fills them.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -110,9 +111,10 @@ and <code>"font"</code> are the standard's context-specific algorithms: they loo
 only for types of that kind and otherwise return the supplied type.</p>
 <p>A text result carries <code>charset</code>, from the first rule that answers: the
 supplied type's <code>charset</code> parameter, a byte-order mark, an XML
-declaration, an HTML <code>&lt;meta&gt;</code> prescan, valid UTF-8, then the C1 rule
-(<code>windows-1252</code> when a byte in 0x80 to 0x9F appears, else
-<code>ISO-8859-1</code>), which lowers <code>confidence</code> to <code>"probable"</code>.</p>
+declaration, an HTML <code>&lt;meta&gt;</code> prescan, valid UTF-8, then the C1 rule.
+The C1 rule gives <code>windows-1252</code> when a byte in 0x80 to 0x9F appears,
+else <code>ISO-8859-1</code>. It is a guess, so it lowers <code>confidence</code> to
+<code>"probable"</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
