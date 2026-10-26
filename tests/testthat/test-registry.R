@@ -29,3 +29,17 @@ test_that("registry functions reject a non-character argument", {
   expect_error(mime_is("image/png", 3), class = "zumime_type_error")
   expect_error(mime_extensions(1), class = "zumime_error")
 })
+
+test_that("a type string in bytes encoding is an unknown type, not an error", {
+  b <- "text/plain\xff"
+  Encoding(b) <- "bytes"
+  png <- as.raw(c(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a))
+  expect_identical(mime_parse(b), list(NULL))
+  expect_identical(mime_sniff(png, type = b)$type, "image/png")
+  expect_identical(mime_finish(mime_sniffer(type = b))$type, "text/plain")
+  expect_false(mime_is(b, "image"))
+  expect_false(mime_check(png, b))
+  expect_identical(mime_extensions(b), list(character()))
+  expect_type(mime_parent(b), "list")
+  expect_error(mime_register("text/x-zt-b", b), class = "zumime_registry_error")
+})

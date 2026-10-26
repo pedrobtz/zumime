@@ -133,6 +133,7 @@ is_quoted_token_string <- function(v) {
 # cannot hold into the text "<c3>", which then parses as a value; the
 # standard decodes it to U+FFFD, which no token or value may hold.
 utf8_or_replace <- function(x) {
+  x <- bytes_to_utf8(x)
   bad <- !is.na(x) & Encoding(x) == "unknown" & !validUTF8(x)
   # U+FFFD as bytes: as a string it would be translated to the native
   # encoding, which may not hold it.

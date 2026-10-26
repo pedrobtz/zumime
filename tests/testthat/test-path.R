@@ -14,6 +14,27 @@ test_that("a head buffer is sized by what each path holds", {
   expect_lt(peak, 500)
 })
 
+test_that("translated paths are released path by path", {
+  # One latin1 path of 100 kB, 4000 times: R translates each element for
+  # fopen(), so holding every copy until the call returns takes 400 MB.
+  # Released copies are garbage that the next collection frees, so the
+  # peak stays near the collector's trigger, at least 64 MB.
+  one <- paste0("caf\xe9", strrep("x", 1e5))
+  Encoding(one) <- "latin1"
+  p <- rep(one, 4000)
+  peak_mb <- function(f) {
+    gc(reset = TRUE)
+    g <- gc()
+    if (g["Vcells", "gc trigger"] * 8 / 2^20 > 100) {
+      skip("the collector's trigger is too high to tell")
+    }
+    suppressWarnings(f(p))
+    (gc()["Vcells", "max used"] - g["Vcells", "used"]) * 8 / 2^20
+  }
+  expect_lt(peak_mb(mime_sniff), 150)
+  expect_lt(peak_mb(function(p) mime_check(p, "text/plain")), 150)
+})
+
 test_that("a directory with a trailing separator is a directory", {
   dir <- withr::local_tempdir()
   t <- mime_type(c(paste0(dir, "/"), paste0(dir, "//")))

@@ -161,7 +161,7 @@ mime_is <- function(x, what) {
 # trimmed, lower-cased, aliases resolved. Unknown types come back as their
 # essence; NA stays NA.
 canonical_type <- function(x) {
-  x <- tolower(trimws(sub(";.*$", "", x)))
+  x <- tolower(trimws(sub(";.*$", "", bytes_to_utf8(x))))
   hit <- match(x, names(types_alias_map))
   x[!is.na(hit)] <- types_alias_map[hit[!is.na(hit)]]
   unname(x)

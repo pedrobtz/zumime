@@ -77,8 +77,11 @@ related_sets <- function(allowed) {
   }
   lapply(allowed, function(a) {
     # A carriage return cannot occur in a type, so this key is no type's.
+    # Types are ASCII: any other string matches none and is not cached, as
+    # an environment cannot hold every string as a name in every locale.
     key <- if (is.na(a)) "\rNA" else a
-    hit <- session$related[[key]]
+    cache <- is.na(a) || !is.na(iconv(a, "", "ASCII"))
+    hit <- if (cache) session$related[[key]]
     if (!is.null(hit)) {
       return(hit)
     }
@@ -94,7 +97,9 @@ related_sets <- function(allowed) {
       related = sort(unique(ids[match(c(within, up), types)])),
       within = sort(unique(ids[match(within, types)]))
     )
-    assign(key, set, envir = session$related)
+    if (cache) {
+      assign(key, set, envir = session$related)
+    }
     set
   })
 }

@@ -142,11 +142,14 @@ sniff_paths <- function(
   res
 }
 
-# path.expand() for every path R can translate. One in "bytes" encoding is
-# passed on as it is, and the C loop gives it an error row.
+# path.expand() for the paths that start with a tilde, the only ones it
+# changes. It translates each path it is given and holds every copy until
+# it returns, so the others skip it; the bytes are tested, which needs no
+# translation. One in "bytes" encoding is passed on as it is, and the C
+# loop gives it an error row.
 expand_paths <- function(path) {
-  ok <- Encoding(path) != "bytes"
-  path[ok] <- path.expand(path[ok])
+  tilde <- grepl("^~", path, useBytes = TRUE) & Encoding(path) != "bytes"
+  path[tilde] <- path.expand(path[tilde])
   path
 }
 
