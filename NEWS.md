@@ -35,7 +35,9 @@ dependency and no system library.
   sources.
 * `mime_parse()` and `mime_format()` parse and serialise a MIME type as the
   WHATWG standard defines it.
-* `mime_register()` and `mime_unregister()` add a type for the session.
+* `mime_register()` and `mime_unregister()` add a type for the session,
+  with a data rule matched in C or a function rule called from R. Either
+  refines only what zumime sniffs in the default context.
 * Optional help from the family, used only when asked: `inner =
   "decompress"` (zukomp), `text = "family"` (zucsv, zujson, zutoml) and
   `charset = "detect"` (zuutf).

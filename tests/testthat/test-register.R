@@ -388,3 +388,111 @@ test_that("a registered compound extension and an offset-only rule", {
     class = "zumime_type_error"
   )
 })
+
+test_that("function rules run only in context none and not on a supplied type", {
+  withr::defer(try(mime_unregister("text/x-zt-ctx"), silent = TRUE))
+  mime_register("text/x-zt-ctx", "text/plain", rule = function(x) TRUE)
+  x <- charToRaw("hello")
+  expect_identical(mime_sniff(x)$type, "text/x-zt-ctx")
+  expect_identical(mime_sniff(x, context = "browsing")$type, "text/plain")
+  expect_identical(
+    mime_sniff(x, type = "text/plain", no_sniff = TRUE)$type,
+    "text/plain"
+  )
+  path <- withr::local_tempfile()
+  writeBin(x, path)
+  expect_identical(
+    mime_sniff(path, type = "text/plain", no_sniff = TRUE)$type,
+    "text/plain"
+  )
+  expect_identical(mime_sniff(path, context = "browsing")$type, "text/plain")
+  s <- mime_sniffer(type = "text/plain", no_sniff = TRUE)
+  mime_push(s, x)
+  expect_identical(mime_finish(s)$type, "text/plain")
+  s <- mime_sniffer(context = "browsing")
+  mime_push(s, x)
+  expect_identical(mime_finish(s)$type, "text/plain")
+})
+
+test_that("a data rule sees a type found past the head on every route", {
+  withr::defer(try(mime_unregister("application/x-zt-iso"), silent = TRUE))
+  x <- raw(40000)
+  x[1:4] <- charToRaw("ZZZZ")
+  x[32770:32774] <- charToRaw("CD001")
+  path <- withr::local_tempfile()
+  writeBin(x, path)
+  expect_identical(mime_type(path)$type, "application/x-iso9660-image")
+  mime_register(
+    "application/x-zt-iso",
+    "application/x-iso9660-image",
+    rule = list(offset = 0, bytes = "ZZZZ")
+  )
+  expect_identical(mime_type(path)$type, "application/x-zt-iso")
+  expect_identical(mime_type(path, limit = 0)$type, "application/x-zt-iso")
+  expect_identical(mime_sniff(x, limit = 0)$type, "application/x-zt-iso")
+  expect_true(mime_check(path, "application/x-zt-iso"))
+})
+
+test_that("a rule under octet-stream does not pre-empt a type past the head", {
+  withr::defer(try(mime_unregister("application/x-zt-any"), silent = TRUE))
+  x <- raw(40000)
+  x[1:4] <- charToRaw("ZZZZ")
+  x[32770:32774] <- charToRaw("CD001")
+  path <- withr::local_tempfile()
+  writeBin(x, path)
+  mime_register(
+    "application/x-zt-any",
+    "application/octet-stream",
+    rule = list(offset = 0, bytes = "ZZZZ")
+  )
+  expect_identical(mime_sniff(x, limit = 0)$type, "application/x-iso9660-image")
+  expect_identical(mime_type(path)$type, "application/x-iso9660-image")
+  expect_identical(
+    mime_type(path, limit = 0)$type,
+    "application/x-iso9660-image"
+  )
+})
+
+test_that("a function rule sees a type that text = \"family\" found", {
+  withr::defer(try(mime_unregister("text/x-zt-idcsv"), silent = TRUE))
+  dir <- local_tree(list(a = "id,name\n1,a\n2,b\n"))
+  local_mocked_bindings(
+    has_package = function(pkg) pkg == "zucsv",
+    suggested_fun = function(pkg, name) {
+      function(path, delimiter) list(ncol = 2L, nrow = 2L)
+    }
+  )
+  mime_register("text/x-zt-idcsv", "text/csv", rule = function(x) {
+    startsWith(rawToChar(x), "id,")
+  })
+  t <- mime_type(file.path(dir, "a"), text = "family")
+  expect_identical(t$type, "text/x-zt-idcsv")
+  expect_identical(as.character(t$confidence), "probable")
+})
+
+test_that("a stream does not wait for a data rule past its limit", {
+  withr::defer(try(mime_unregister("image/x-zt-far"), silent = TRUE))
+  gif <- c(charToRaw("GIF89a"), raw(100))
+  expect_identical(mime_push(mime_sniffer(), gif)$type, "image/gif")
+  mime_register(
+    "image/x-zt-far",
+    "image/gif",
+    rule = list(offset = 100000, bytes = "Q")
+  )
+  expect_identical(mime_push(mime_sniffer(), gif)$type, "image/gif")
+  s <- mime_sniffer(limit = 0)
+  expect_null(mime_push(s, gif))
+})
+
+test_that("a function rule must take an argument", {
+  expect_error(
+    mime_register("text/x-zt-arity", "text/plain", rule = function() TRUE),
+    class = "zumime_type_error"
+  )
+  expect_false("text/x-zt-arity" %in% mime_types()$type)
+  withr::defer(try(mime_unregister("text/x-zt-dots"), silent = TRUE))
+  mime_register("text/x-zt-dots", "text/plain", rule = function(...) FALSE)
+  withr::defer(try(mime_unregister("text/x-zt-prim"), silent = TRUE))
+  mime_register("text/x-zt-prim", "text/plain", rule = is.raw)
+  expect_true(all(c("text/x-zt-dots", "text/x-zt-prim") %in% mime_types()$type))
+})

@@ -431,6 +431,7 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
 
   zumime_input in = *proto;
   in.truncated = (int64_t) head_len < size;
+  in.defer_registered = 1;
   if (gate != NULL) {
     zumime_input b = in;
     b.base_only = 1;
@@ -486,6 +487,11 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
     if (t >= 0) out->r.type = t;
     out->r.encrypted = enc;
   }
+  /* After the probes past the head, so a registered rule sees the type a
+   * raw vector of the whole file would give. */
+  if (proto->context == ZUMIME_CTX_NONE && out->r.type != ZUMIME_SUPPLIED &&
+      !proto->base_only)
+    zumime_apply_registered(head, head_len, &out->r);
   if (want_complete && out->r.type != ZUMIME_SUPPLIED)
     out->complete =
         completeness(f, size, head, head_len, &out->r, &out->interrupted);

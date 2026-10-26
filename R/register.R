@@ -17,16 +17,22 @@ session$version <- 0L
 #' Adds a type under a parent in the hierarchy, so that [mime_sniff()],
 #' [mime_type()], [mime_check()] and the registry functions know it until
 #' the session ends or [mime_unregister()] removes it. A package that wants
-#' its format recognised registers it in its `.onLoad()`.
+#' its format recognised registers it in its `.onLoad()`. It unregisters it
+#' in its `.onUnload()`, since registering a type that exists is an error.
 #'
 #' A data rule, `list(offset, bytes, mask)`, runs in C whenever the bytes
 #' have been typed as the parent, costs what a built-in signature costs,
-#' and is reported at `"definite"`. A function rule is called from R with
-#' the bytes read and must return `TRUE` or `FALSE`; it runs last, only when
-#' the parent matched, and is reported at `"probable"`. A function rule that
-#' raises an error counts as `FALSE`, and the call warns once with a
-#' `zumime_rule_warning` naming the type. A data rule cannot sit under a type
-#' that a function rule decides, since data rules run first.
+#' and is reported at `"definite"`. It sees only the bytes read: a rule
+#' that ends past 4096 bytes needs a larger `limit`. A function rule is
+#' called from R with the bytes read and must return `TRUE` or `FALSE`. It
+#' runs last, only when the parent matched, and is reported at
+#' `"probable"`. A function rule that raises an error counts as `FALSE`, and
+#' the call warns once with a `zumime_rule_warning` naming the type. A data
+#' rule cannot sit under a type that a function rule decides, since data
+#' rules run first.
+#'
+#' Both kinds refine only what zumime sniffs in the `"none"` context. They
+#' never run in another context, nor on a supplied type that stands.
 #'
 #' @param type The new type, such as `"application/x-myformat"`.
 #' @param parent An existing type the new one descends from.
@@ -35,7 +41,7 @@ session$version <- 0L
 #' @param rule `NULL` for a type known by name only; a list of `offset` (a
 #'   whole number), `bytes` (a raw vector or a string, at most 64 bytes)
 #'   and an optional `mask` (a raw vector as long as `bytes`); or a function
-#'   of one raw vector.
+#'   of one raw vector, the bytes read.
 #' @return `mime_register()` returns the type, invisibly.
 #'   `mime_unregister()` returns `NULL`, invisibly.
 #' @seealso [mime_types()], where registered types show
@@ -59,7 +65,7 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
   data_rule <- NULL
   fn <- NULL
   if (is.function(rule)) {
-    fn <- rule
+    fn <- check_rule_function(rule)
   } else if (!is.null(rule)) {
     data_rule <- check_rule(rule)
   }
@@ -95,7 +101,7 @@ mime_register <- function(type, parent, extensions = NULL, rule = NULL) {
 #' @export
 mime_unregister <- function(type) {
   if (!is_string(type)) {
-    zumime_abort("type", "`type` must be a single type string.")
+    zumime_abort("type", "`type` must be a single MIME type string.")
   }
   type <- canonical_type(type)
   if (!(type %in% session$types$type)) {
@@ -212,8 +218,20 @@ check_extensions <- function(x, call = sys.call(sys.parent())) {
   x
 }
 
+check_rule_function <- function(rule, call = sys.call(sys.parent())) {
+  params <- names(formals(args(rule)))
+  if (length(params) == 0L) {
+    zumime_abort(
+      "type",
+      "A function `rule` must take the bytes as an argument.",
+      call = call
+    )
+  }
+  rule
+}
+
 check_rule <- function(rule, call = sys.call(sys.parent())) {
-  bad <- function() {
+  abort_bad_rule <- function() {
     zumime_abort(
       "type",
       paste(
@@ -224,7 +242,7 @@ check_rule <- function(rule, call = sys.call(sys.parent())) {
     )
   }
   if (!is.list(rule) || is.null(rule[["bytes"]])) {
-    bad()
+    abort_bad_rule()
   }
   offset <- rule[["offset"]] %||% 0
   bytes <- rule[["bytes"]]
@@ -232,7 +250,7 @@ check_rule <- function(rule, call = sys.call(sys.parent())) {
     bytes <- charToRaw(bytes)
   }
   if (!is.raw(bytes) || length(bytes) < 1L || length(bytes) > 64L) {
-    bad()
+    abort_bad_rule()
   }
   if (
     !is.numeric(offset) ||
@@ -242,24 +260,26 @@ check_rule <- function(rule, call = sys.call(sys.parent())) {
       offset != floor(offset) ||
       offset > .Machine$integer.max
   ) {
-    bad()
+    abort_bad_rule()
   }
   mask <- rule[["mask"]]
   if (!is.null(mask) && (!is.raw(mask) || length(mask) != length(bytes))) {
-    bad()
+    abort_bad_rule()
   }
   list(offset = offset, bytes = bytes, mask = mask)
 }
 
 # Function rules whose parent is a row's type, applied in registration
-# order until nothing changes. `x` is a raw vector or the rows' paths.
-apply_registered <- function(out, x, limit) {
+# order until nothing changes. `x` is a raw vector or the rows' paths;
+# `rows` says which rows the rules may refine.
+apply_registered <- function(out, x, limit, rows = TRUE) {
   if (length(session$rules) == 0L) {
     return(out)
   }
   fns <- session$types[session$types$kind == "function", , drop = FALSE]
   failed <- character()
-  for (i in seq_len(nrow(out))) {
+  rows <- rep_len(rows, nrow(out))
+  for (i in which(rows)) {
     type <- out$type[i]
     # A directory or other inode is never opened.
     if (is.na(type) || !any(fns$parent == type) || startsWith(type, "inode/")) {
@@ -297,14 +317,14 @@ apply_rules_to <- function(type, bytes, fns) {
   for (level in seq_len(max_rule_depth)) {
     matched <- FALSE
     for (h in which(fns$parent == type)) {
+      # NA marks a rule that raised an error.
       ok <- tryCatch(
         isTRUE(session$rules[[fns$type[h]]](bytes)),
-        error = function(e) {
-          failed <<- c(failed, fns$type[h])
-          FALSE
-        }
+        error = function(e) NA
       )
-      if (ok) {
+      if (is.na(ok)) {
+        failed <- c(failed, fns$type[h])
+      } else if (ok) {
         type <- fns$type[h]
         matched <- TRUE
         break
