@@ -123,6 +123,16 @@ supplied_type <- function(type, call = sys.call(sys.parent())) {
   )
 }
 
+# Whether a supplied essence is text, as C decides it: a known type that
+# descends from text/plain, or an unknown one under text/.
+is_text_type <- function(essence) {
+  if (essence %in% all_types()) {
+    isTRUE(mime_is(essence, "text/plain"))
+  } else {
+    startsWith(essence, "text/")
+  }
+}
+
 # The sniffing contexts in the C enum's order. The `context` defaults of
 # mime_sniff() and mime_sniffer() spell out the same vector, so the usage
 # shows the choices; keep the three in step.

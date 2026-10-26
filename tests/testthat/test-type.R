@@ -341,6 +341,21 @@ test_that("an unregistered text/ type keeps a charset on every route", {
   }
 })
 
+test_that("a supplied charset does not reach a non-text type on any route", {
+  x <- charToRaw("hello world")
+  dir <- local_tree(list(a = x))
+  type <- "image/png; charset=utf-8"
+  raw_route <- mime_sniff(x, type = type, no_sniff = TRUE)
+  path_route <- mime_sniff(file.path(dir, "a"), type = type, no_sniff = TRUE)
+  s <- mime_sniffer(type = type, no_sniff = TRUE)
+  mime_push(s, x)
+  stream_route <- mime_finish(s)
+  for (r in list(raw_route, path_route, stream_route)) {
+    expect_identical(r$type, "image/png")
+    expect_identical(r$charset, NA_character_)
+  }
+})
+
 test_that("mime_type() rejects malformed arguments", {
   expect_error(mime_type(1), class = "zumime_type_error")
   expect_error(mime_type("a", inner = "zip"), class = "zumime_type_error")

@@ -402,10 +402,19 @@ void zumime_sniff(const unsigned char *buf, size_t len, const zumime_input *in,
     extend(buf, len, out);
     if (in->base_only) return;
     zumime_refine(buf, len, in, out);
-    if (!in->defer_registered) zumime_apply_registered(buf, len, out);
+  }
+  if (!in->defer_finish) zumime_sniff_finish(buf, len, in, out);
+}
+
+void zumime_sniff_finish(const unsigned char *buf, size_t len,
+                         const zumime_input *in, zumime_result *out) {
+  if (in->context == ZUMIME_CTX_NONE && out->type != ZUMIME_SUPPLIED) {
+    if (in->base_only) return;
+    zumime_apply_registered(buf, len, out);
   }
 
-  /* Charset and line endings, for a text result. */
+  /* Charset and line endings, for a text result. They come after the
+   * registered rules, which set the confidence a C1 guess then lowers. */
   int is_text, is_xml, is_html;
   if (out->type == ZUMIME_SUPPLIED) {
     const char *s = in->supplied;
@@ -416,7 +425,7 @@ void zumime_sniff(const unsigned char *buf, size_t len, const zumime_input *in,
                   : starts_with(s, "text/");
   } else {
     is_xml = zumime_type_is(out->type, ZUMIME_T_APPLICATION_XML);
-    is_html = out->type == ZUMIME_T_TEXT_HTML;
+    is_html = zumime_type_is(out->type, ZUMIME_T_TEXT_HTML);
     is_text = zumime_type_is(out->type, ZUMIME_T_TEXT_PLAIN);
   }
   /* A charset and line endings belong to text: a text type whose bytes are
