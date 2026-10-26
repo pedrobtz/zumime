@@ -153,14 +153,14 @@ it was, so a corrupt stream keeps the name's <code>inner</code>.</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">mime_type</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">dir</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;zumime_result: 3 rows&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                                        path              type confidence</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /tmp/Rtmpfwv96Q/file1a185645074b/cars.rds application/x-rds   definite</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 /tmp/Rtmpfwv96Q/file1a185645074b/data.csv        text/plain   probable</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /tmp/Rtmpfwv96Q/file1a185645074b/logo.txt         image/png   definite</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   charset           by_name agree inner encrypted complete newline interpreter</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1    &lt;NA&gt; application/x-rds  TRUE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   UTF-8          text/csv  TRUE  &lt;NA&gt;        NA       NA      lf        &lt;NA&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3    &lt;NA&gt;        text/plain FALSE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                       path              type confidence charset</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 /tmp/RtmpvenbmV/file1a92ac6bb1f/cars.rds application/x-rds   definite    &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 /tmp/RtmpvenbmV/file1a92ac6bb1f/data.csv        text/plain   probable   UTF-8</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 /tmp/RtmpvenbmV/file1a92ac6bb1f/logo.txt         image/png   definite    &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             by_name agree inner encrypted complete newline interpreter</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 application/x-rds  TRUE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2          text/csv  TRUE  &lt;NA&gt;        NA       NA      lf        &lt;NA&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3        text/plain FALSE  &lt;NA&gt;        NA       NA    &lt;NA&gt;        &lt;NA&gt;</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">dir</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
