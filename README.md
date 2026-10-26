@@ -34,22 +34,18 @@ it gives the same answer on every machine.
 - **A hierarchy.** Every type has a parent, ending at
   `application/octet-stream`, so an unknown ZIP-based format is still a
   ZIP, and an allowlist of `"image"` accepts every image.
-- **What to know before opening.** The type inside a compression
-  wrapper, encryption, completeness, line endings and a script’s
-  interpreter, read from the same bytes.
+- **What to know before opening.** Encryption, completeness, line
+  endings and a script’s interpreter, read from the same bytes, and the
+  type inside a compression wrapper, from the name or, with
+  [zukomp](https://github.com/pedrobtz/zukomp), from the decompressed
+  bytes.
 - **The same answer everywhere.** No `mime.types`, no Windows registry,
   no libmagic: the extension table is generated from IANA’s registry and
   Apache httpd’s `mime.types`.
 
 ## Installation
 
-Install zumime from CRAN:
-
-``` r
-install.packages("zumime")
-```
-
-Or the development version from GitHub:
+zumime is not on CRAN yet. Install the development version from GitHub:
 
 ``` r
 # install.packages("pak")
@@ -81,7 +77,7 @@ paths <- list.files(uploads, full.names = TRUE)
 
 `mime_type()` types each file from its bytes and from its name. `agree`
 is `FALSE` for the PNG named `invoice.pdf`, and `inner` names what the
-gzip holds:
+gzip holds, guessed from the `.csv` before the `.gz`:
 
 ``` r
 files <- mime_type(paths)
