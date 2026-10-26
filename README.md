@@ -45,7 +45,13 @@ it gives the same answer on every machine.
 
 ## Installation
 
-zumime is not on CRAN yet. Install the development version from GitHub:
+Install zumime from CRAN:
+
+``` r
+install.packages("zumime")
+```
+
+Or install the development version from GitHub:
 
 ``` r
 # install.packages("pak")
