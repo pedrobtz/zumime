@@ -40,6 +40,6 @@ test_that("a type string in bytes encoding is an unknown type, not an error", {
   expect_false(mime_is(b, "image"))
   expect_false(mime_check(png, b))
   expect_identical(mime_extensions(b), list(character()))
-  expect_type(mime_parent(b), "list")
+  expect_identical(mime_parent(b), list(NA_character_))
   expect_error(mime_register("text/x-zt-b", b), class = "zumime_registry_error")
 })

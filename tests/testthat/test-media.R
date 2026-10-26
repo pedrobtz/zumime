@@ -87,10 +87,12 @@ test_that("PNG and JPEG refine to APNG and JPEG-LS", {
     sniff_type(as.raw(c(0xff, 0xd8, 0xff, 0xf7, 0, 0))),
     "image/jls"
   )
-  expect_identical(
-    sniff_type(as.raw(c(0xff, 0xd8, 0xff, 0xe0, 0, 0))),
-    "image/jpeg"
-  )
+  for (marker in c(0xe0, 0xf6, 0xf8)) {
+    expect_identical(
+      sniff_type(as.raw(c(0xff, 0xd8, 0xff, marker, 0, 0))),
+      "image/jpeg"
+    )
+  }
 })
 
 test_that("MPEG-2 Layer III frames are 72 * bitrate / rate long", {
@@ -146,4 +148,20 @@ test_that("the WebM signature reads a DocType size longer than a byte", {
     x <- c(ebml(size), raw(16))
     expect_identical(sniff_type(x, context = "browsing"), "video/webm")
   }
+})
+
+test_that("a brand outside the ftyp box or in a short box is not read", {
+  # The box is 20 bytes; the M4A brand after it belongs to the next box.
+  outside <- c(
+    u32be(20),
+    charToRaw("ftypabcd"),
+    raw(4),
+    charToRaw("abcd"),
+    charToRaw("M4A "),
+    raw(8)
+  )
+  expect_identical(sniff_type(outside), "application/octet-stream")
+  # A box of 8 bytes has no room for a major brand.
+  short <- c(u32be(8), charToRaw("ftypM4A "), raw(4), charToRaw("M4A "), raw(8))
+  expect_identical(sniff_type(short), "application/octet-stream")
 })

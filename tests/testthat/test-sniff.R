@@ -172,6 +172,20 @@ test_that("MP3 without ID3 needs two consecutive frame headers", {
   expect_identical(mime_sniff(one)$type, "application/octet-stream")
 })
 
+test_that("an MP3 frame header with a reserved field is refused", {
+  # The second header has, in turn, sample-rate index 3, bitrate index 15
+  # and layer bits 00. The frame-size code relies on these refusals.
+  bad <- list(
+    as.raw(c(0xff, 0xfb, 0x9c, 0x00)),
+    as.raw(c(0xff, 0xfb, 0xf0, 0x00)),
+    as.raw(c(0xff, 0xf9, 0x90, 0x00))
+  )
+  for (second in bad) {
+    x <- c(mp3_frame(), raw(413), second, raw(8))
+    expect_identical(mime_sniff(x)$type, "application/octet-stream")
+  }
+})
+
 test_that("the floor is text/plain for text and octet-stream for binary", {
   r <- mime_sniff(raw())
   expect_identical(r$type, "text/plain")

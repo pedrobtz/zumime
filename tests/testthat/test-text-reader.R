@@ -311,3 +311,17 @@ test_that("a string left open past the depth limit is JSON only when cut", {
   cut <- paste0(strrep("[", 70), "\"", strrep("\\", 40))
   expect_identical(sniff_type(cut, limit = 100), "application/json")
 })
+
+test_that("text missing one marker of a format stays the coarser type", {
+  # GeoJSON needs features or geometry beside type.
+  expect_identical(sniff_type('{"type": "x"}'), "application/json")
+  # SPSSPORT counts only after the 440-byte header.
+  expect_identical(sniff_type("hello SPSSPORT\n"), "text/plain")
+  # A SubRip cue needs the arrow between its two times.
+  expect_identical(
+    sniff_type("1\n00:00:01,000 ==> 00:00:02,000\nhi\n"),
+    "text/plain"
+  )
+  # NDJSON needs a line end after every record.
+  expect_identical(sniff_type('{"a":1}\n{"a":2} {"a":3}'), "text/plain")
+})
