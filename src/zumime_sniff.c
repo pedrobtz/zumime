@@ -210,6 +210,8 @@ static long mp3_frame_size(const unsigned char *p) {
     freq >>= 1;
   else if (version == 0)
     freq >>= 2;
+  /* Not reachable from the tests: mp3_header_ok() refuses the reserved
+   * sample-rate index 3 before a frame size is asked for. */
   if (freq == 0) return 0;
   int pad = (p[2] & 0x02) >> 1;
   long scale = (version == 3) ? 144 : 72; /* MPEG-1 : MPEG-2 and 2.5 */

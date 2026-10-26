@@ -223,3 +223,91 @@ test_that("JSON nested past the depth limit is still JSON when it closes", {
   long <- deep(3000)
   expect_identical(mime_sniff(long, limit = 4096)$type, "application/json")
 })
+
+test_that("an interpreter name only matches whole or before a version", {
+  shebang <- function(line) mime_sniff(charToRaw(paste0(line, "\necho\n")))
+  # "python" is a prefix entry, but a letter after it is another program.
+  r <- shebang("#!/usr/bin/pythonista")
+  expect_identical(r$type, "text/plain")
+  expect_identical(r$interpreter, "pythonista")
+  # "sh" is not a prefix entry: "sh5" is not a shell.
+  expect_identical(shebang("#!/bin/sh5")$type, "text/plain")
+})
+
+test_that("a PEM first line needs its closing dashes", {
+  expect_identical(sniff_type("-----BEGIN CERTIFICATE\nMIIB\n"), "text/plain")
+  # The label is read for at most 80 bytes.
+  long <- paste0("-----BEGIN ", strrep("A", 80), "-----\n")
+  expect_identical(sniff_type(long), "text/plain")
+  expect_identical(
+    sniff_type("-----BEGIN RSA PRIVATE KEY-----\n"),
+    "application/x-pem-file"
+  )
+})
+
+test_that("rarer XML roots decide their dialect or stay XML", {
+  xml <- function(root) {
+    mime_sniff(charToRaw(paste0("<?xml version=\"1.0\"?>", root)))$type
+  }
+  # RDF without the RSS 1.0 namespace is not a feed.
+  expect_identical(
+    xml("<rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"/>"),
+    "application/xml"
+  )
+  expect_identical(
+    xml("<kml xmlns=\"http://earth.google.com/kml/2.1\"/>"),
+    "application/vnd.google-earth.kml+xml"
+  )
+  expect_identical(
+    xml("<kml xmlns=\"http://example.org/kml/\"/>"),
+    "application/xml"
+  )
+  odf <- function(kind) {
+    paste0(
+      "<office:document xmlns:office=\"urn:oasis:names:tc:",
+      "opendocument:xmlns:office:1.0\" office:mimetype=\"application/vnd.",
+      "oasis.opendocument.",
+      kind,
+      "\"/>"
+    )
+  }
+  for (kind in c("spreadsheet", "presentation", "graphics")) {
+    expect_identical(
+      xml(odf(kind)),
+      paste0("application/vnd.oasis.opendocument.", kind, "-flat-xml"),
+      info = kind
+    )
+  }
+  # A flat document of another kind stays XML.
+  expect_identical(xml(odf("chart")), "application/xml")
+})
+
+test_that("the JSON scan checks escapes, numbers and literals", {
+  expect_identical(
+    sniff_type("{\"a\": \"x\\n\\t\\\"\\\\\\/\"}"),
+    "application/json"
+  )
+  expect_identical(sniff_type("{\"a\": \"\\q\"}"), "text/plain")
+  expect_identical(sniff_type("[-1, -0.5]"), "application/json")
+  for (s in c("[-x]", "[-]", "[-,1]")) {
+    expect_identical(sniff_type(s), "text/plain", info = s)
+  }
+  expect_identical(sniff_type("[false, true]"), "application/json")
+  expect_identical(sniff_type("[folse]"), "text/plain")
+  expect_identical(sniff_type("[x]"), "text/plain")
+  # A value cannot be missing.
+  expect_identical(sniff_type("[,]"), "text/plain")
+  expect_identical(sniff_type("[1,]"), "text/plain")
+})
+
+test_that("a string left open past the depth limit is JSON only when cut", {
+  open <- paste0(strrep("[", 70), "\"abc")
+  expect_identical(sniff_type(open), "text/plain")
+  expect_identical(
+    sniff_type(paste0(open, strrep("d", 200)), limit = 100),
+    "application/json"
+  )
+  # An escape as the last byte in hand steps past the end.
+  cut <- paste0(strrep("[", 70), "\"", strrep("\\", 40))
+  expect_identical(sniff_type(cut, limit = 100), "application/json")
+})

@@ -199,3 +199,11 @@ test_that("an end record inside the archive comment is passed over", {
   dir <- local_tree(list("a.docx" = z))
   expect_identical(mime_type(file.path(dir, "a.docx"))$type, docx_type())
 })
+
+test_that("a directory offset past the end falls back to the local headers", {
+  # The end record's offset field is the 4 bytes before its comment length.
+  z <- build_zip(ooxml_entries("word"))
+  n <- length(z)
+  z[(n - 5):(n - 2)] <- u32(99999)
+  expect_identical(sniff_type(z), docx_type())
+})

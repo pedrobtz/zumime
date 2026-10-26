@@ -52,6 +52,9 @@ int zumime_type_parent(int id) {
   int k = id - ZUMIME_N_TYPES;
   if (k >= 0 && k < ZUMIME_MAX_REGISTERED && zumime_reg[k].active)
     return zumime_reg[k].parent;
+  /* Not reachable from the tests: every id comes from the generated table
+   * or a lookup of an active slot, and mime_unregister() refuses a type
+   * that is the parent of another registered type. */
   return -1;
 }
 
