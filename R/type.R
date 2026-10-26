@@ -203,7 +203,11 @@ path_result <- function(path, res, supplied = NULL) {
   }
   charset <- res$charset
   if (!is.null(supplied$charset)) {
-    text_rows <- supplied_rows | mime_is(type, "text/plain") %in% TRUE
+    # As in C: the supplied charset goes to a text answer only.
+    text_rows <- mime_is(type, "text/plain") %in% TRUE
+    if (is_text_type(supplied$essence)) {
+      text_rows <- text_rows | supplied_rows
+    }
     charset[text_rows & !is.na(type)] <- supplied$charset
   }
   new_result(

@@ -117,10 +117,10 @@ typedef struct {
   /* mime_check()'s first pass: the standard's answer and the extra rows
    * only, without readers, registered rules, charset or tail reads. */
   int base_only;
-  /* The caller applies the registered data rules itself, once its own
-   * probes past the buffer have run (the path loop's offset rows and OLE2
-   * directory). */
-  int defer_registered;
+  /* zumime_sniff() stops after the readers; the caller runs
+   * zumime_sniff_finish() itself, once its own probes past the buffer have
+   * run (the path loop's offset rows and OLE2 directory). */
+  int defer_finish;
 } zumime_input;
 
 typedef struct {
@@ -135,6 +135,10 @@ typedef struct {
 
 void zumime_sniff(const unsigned char *buf, size_t len, const zumime_input *in,
                   zumime_result *out);
+/* The registered data rules, then charset and line endings: the end of
+ * zumime_sniff(), for a caller that set defer_finish. */
+void zumime_sniff_finish(const unsigned char *buf, size_t len,
+                         const zumime_input *in, zumime_result *out);
 
 /* Exposed for tests and the incremental sniffer. */
 int zumime_match_mp4(const unsigned char *buf, size_t len);

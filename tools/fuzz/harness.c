@@ -127,12 +127,15 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     }
   }
 
-  /* The registered rules applied by the caller, as the path loop does. */
+  /* The finish run by the caller, as the path loop does. */
   zumime_input din = in;
-  din.defer_registered = 1;
+  din.defer_finish = 1;
   zumime_sniff(data, size, &din, &part);
-  if (part.type != ZUMIME_SUPPLIED) zumime_apply_registered(data, size, &part);
-  if (part.type != whole.type) abort();
+  zumime_sniff_finish(data, size, &din, &part);
+  if (part.type != whole.type || part.confidence != whole.confidence ||
+      part.charset != whole.charset || part.newline != whole.newline ||
+      strcmp(part.cs_label, whole.cs_label) != 0)
+    abort();
 
   /* The first half as the head and the second as a tail read separately,
    * as the path loop does for a ZIP longer than its head. */

@@ -433,6 +433,52 @@ test_that("a data rule sees a type found past the head on every route", {
   expect_true(mime_check(path, "application/x-zt-iso"))
 })
 
+test_that("a data rule under text/plain keeps a C1 guess probable on every route", {
+  withr::defer(try(mime_unregister("text/x-zt-log"), silent = TRUE))
+  mime_register(
+    "text/x-zt-log",
+    "text/plain",
+    rule = list(offset = 0, bytes = "ZTLOG")
+  )
+  x <- c(charToRaw("ZTLOG caf"), as.raw(0xe9), charToRaw("\n"))
+  path <- withr::local_tempfile()
+  writeBin(x, path)
+  s <- mime_sniffer()
+  mime_push(s, x)
+  routes <- list(
+    mime_sniff(x),
+    mime_sniff(path),
+    mime_type(path),
+    mime_finish(s)
+  )
+  for (r in routes) {
+    expect_identical(r$type, "text/x-zt-log")
+    expect_identical(as.character(r$confidence), "probable")
+    expect_identical(r$charset, "ISO-8859-1")
+  }
+  expect_false(mime_check(x, "text/x-zt-log", min_confidence = "definite"))
+  expect_false(mime_check(path, "text/x-zt-log", min_confidence = "definite"))
+})
+
+test_that("a data rule under text/html keeps the meta prescan on every route", {
+  withr::defer(try(mime_unregister("text/x-zt-html"), silent = TRUE))
+  mime_register(
+    "text/x-zt-html",
+    "text/html",
+    rule = list(offset = 15, bytes = "<!--zt-->")
+  )
+  x <- c(
+    charToRaw('<!DOCTYPE html><!--zt--><meta charset="koi8-r">caf'),
+    as.raw(0xe9)
+  )
+  path <- withr::local_tempfile()
+  writeBin(x, path)
+  for (r in list(mime_sniff(x), mime_sniff(path))) {
+    expect_identical(r$type, "text/x-zt-html")
+    expect_identical(r$charset, "koi8-r")
+  }
+})
+
 test_that("a rule under octet-stream does not pre-empt a type past the head", {
   withr::defer(try(mime_unregister("application/x-zt-any"), silent = TRUE))
   x <- raw(40000)
