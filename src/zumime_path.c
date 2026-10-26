@@ -541,6 +541,15 @@ static const char *path_chars(SEXP s) {
 #endif
 }
 
+/* path_chars() may R_alloc() a translated copy; release it once the path
+ * is done, so a long vector does not hold every copy until .Call returns.
+ * reserve_head() allocates after it on the same stack, so a head buffer
+ * that grew for this path keeps the copy with it: at most a few times per
+ * call, as the buffer only doubles. */
+static void release_path(const void *vmax, size_t cap, const head_buf *hb) {
+  if (hb->cap == cap) vmaxset(vmax);
+}
+
 /* paths: character (UTF-8, expanded); limit: double; complete: logical;
  * supplied, apache_bug, no_sniff, context as in zumime_sniff_raw().
  * Returns list(type, confidence, charset, encrypted, complete, newline,
@@ -590,10 +599,13 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
       pr.r.encrypted = -1;
       snprintf(pr.error, sizeof(pr.error), "%s", untranslatable);
     } else {
+      const void *vmax = vmaxget();
+      size_t cap = hb.cap;
       const char *p = path_chars(s);
       reserve_head(&hb, p, lim);
       sniff_path(p, lim, want_complete, &proto, hb.p, hb.cap, &pr, NULL, NULL,
                  NULL);
+      release_path(vmax, cap, &hb);
       if (pr.interrupted) {
         interrupted = 1;
         break;
@@ -733,6 +745,8 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
       LOGICAL(out)[i] = NA_LOGICAL;
       continue;
     }
+    const void *vmax = vmaxget();
+    size_t cap = hb.cap;
     const char *p = path_chars(s);
     path_result pr;
     int gated = 0;
@@ -741,6 +755,7 @@ SEXP zumime_check(SEXP x, SEXP limit, SEXP related, SEXP within,
     reserve_head(&hb, p, lim);
     sniff_path(p, lim, 0, &proto, hb.p, hb.cap, &pr, related_to_any,
                (void *) related, &gated);
+    release_path(vmax, cap, &hb);
     if (pr.failed)
       LOGICAL(out)[i] = NA_LOGICAL;
     else if (gated)

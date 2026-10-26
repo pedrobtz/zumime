@@ -139,26 +139,32 @@ static int walk_central(zip_scan *z, const unsigned char *b, size_t len,
 /* The end-of-central-directory record in buf, which ends where the file
  * does: the last signature whose comment length reaches the end, so a
  * signature inside the comment is passed over, else the last signature
- * (an archive with bytes after its comment). Its offset, or -1. */
-static long find_eocd(const unsigned char *buf, size_t len) {
-  if (len < 22) return -1;
+ * (an archive with bytes after its comment). 1 with its offset in *at,
+ * else 0; a size_t, since a buffer may pass 2 GiB where long is 32 bits. */
+static int find_eocd(const unsigned char *buf, size_t len, size_t *at) {
+  if (len < 22) return 0;
   size_t lo = len > EOCD_SEARCH ? len - EOCD_SEARCH : 0;
-  long first = -1;
+  int found = 0;
   for (size_t i = len - 22 + 1; i-- > lo;) {
     if (memcmp(buf + i, "PK\x05\x06", 4) != 0) continue;
-    if (first < 0) first = (long) i;
-    if (i + 22 + zumime_le16(buf + i + 20) == len) return (long) i;
+    if (!found) {
+      found = 1;
+      *at = i;
+    }
+    if (i + 22 + zumime_le16(buf + i + 20) == len) {
+      *at = i;
+      return 1;
+    }
   }
-  return first;
+  return found;
 }
 
 /* Find the end-of-central-directory record in buf, which ends at file
  * offset buf_off + len, and walk the directory if buf (or head) holds it. */
 static int from_eocd(zip_scan *z, const unsigned char *buf, size_t len,
                      uint64_t buf_off, const unsigned char *head, size_t hlen) {
-  long at = find_eocd(buf, len);
-  if (at >= 0) {
-    size_t i = (size_t) at;
+  size_t i;
+  if (find_eocd(buf, len, &i)) {
     unsigned count = zumime_le16(buf + i + 10);
     uint32_t cd_size = zumime_le32(buf + i + 12);
     uint32_t cd_off = zumime_le32(buf + i + 16);
@@ -273,8 +279,8 @@ int zumime_read_zip(const unsigned char *head, size_t hlen, int head_is_whole,
 int zumime_zip_cd_offset(const unsigned char *buf, size_t len, uint64_t buf_off,
                          uint64_t *cd_off) {
   (void) buf_off;
-  long at = find_eocd(buf, len);
-  if (at < 0) return 0;
+  size_t at;
+  if (!find_eocd(buf, len, &at)) return 0;
   uint32_t off = zumime_le32(buf + at + 16);
   if (off == 0xFFFFFFFFu) return 0;
   *cd_off = off;

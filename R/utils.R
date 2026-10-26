@@ -152,6 +152,19 @@ suggested_fun <- function(pkg, name) getExportedValue(pkg, name)
 # Installed, without loading it: for reports such as zumime_info().
 is_installed <- function(pkg) nzchar(system.file(package = pkg))
 
+# Strings in "bytes" encoding, which R will not translate, as UTF-8 with
+# each non-ASCII byte replaced by U+FFFD. No type, token or value holds
+# U+FFFD, so such a string parses as nothing and matches no type.
+bytes_to_utf8 <- function(x) {
+  b <- !is.na(x) & Encoding(x) == "bytes"
+  if (any(b)) {
+    fffd <- rawToChar(as.raw(c(0xef, 0xbf, 0xbd)))
+    x[b] <- iconv(x[b], "ASCII", "UTF-8", sub = fffd)
+    Encoding(x[b]) <- "UTF-8"
+  }
+  x
+}
+
 is_string <- function(x) is.character(x) && length(x) == 1L && !is.na(x)
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
