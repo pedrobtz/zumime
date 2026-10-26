@@ -136,9 +136,7 @@ sniff_paths <- function(
     no_sniff,
     context
   )
-  if (isTRUE(attr(res, "interrupted"))) {
-    resignal_interrupt()
-  }
+  raise_if_interrupted(res)
   names(res) <- path_fields
   res
 }
@@ -152,7 +150,14 @@ expand_paths <- function(path) {
 }
 
 # The C loop caught an interrupt inside a long read so it could close the
-# file first; raise it again as R would have.
+# file first, and marked its result; raise it again as R would have.
+raise_if_interrupted <- function(res) {
+  if (isTRUE(attr(res, "interrupted", exact = TRUE))) {
+    resignal_interrupt()
+  }
+  invisible(res)
+}
+
 resignal_interrupt <- function() {
   signalCondition(structure(list(), class = c("interrupt", "condition")))
   invokeRestart("abort")

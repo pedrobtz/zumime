@@ -188,8 +188,7 @@ static size_t file_reader(void *ctx, unsigned char *buf, size_t n) {
   r->since_check += n;
   if (r->since_check >= INTERRUPT_EVERY) {
     r->since_check = 0;
-    /* Not reachable from the tests: testthat cannot send an interrupt.
-     * The read after the check is covered by a gzip over 4 MiB. */
+    /* A test reaches this with a SIGINT the process sends itself. */
     if (!R_ToplevelExec(check_interrupt, NULL)) {
       r->interrupted = 1;
       return 0;
@@ -410,8 +409,7 @@ static void sniff_path(const char *path, size_t limit, int want_complete,
       head_len += got;
       if (got < want) break;
     }
-    /* Not reachable from the tests, which cannot send an interrupt; the
-     * caller raises it once the file is closed. */
+    /* The caller raises the interrupt once the file is closed. */
     if (rf.interrupted) {
       out->interrupted = 1;
       free(own);
@@ -572,8 +570,8 @@ SEXP zumime_sniff_paths(SEXP paths, SEXP limit, SEXP complete, SEXP supplied,
   int interrupted = 0;
 
   for (R_xlen_t i = 0; i < n; i++) {
-    /* testthat cannot send an interrupt; the check runs between files with
-     * nothing open, which is what makes it safe. */
+    /* Between files, with nothing open, R may raise an interrupt here
+     * directly. */
     if (i > 0 && i % 256 == 0) R_CheckUserInterrupt();
     SEXP s = STRING_ELT(paths, i);
     path_result pr;

@@ -10,6 +10,10 @@ test_that("mime_parse() unescapes quoted values and keeps the first duplicate", 
   rec <- mime_parse("text/plain; a=\"x\\\"y\\\\z\"; A=2; b=3")[[1]]
   expect_identical(rec$parameters, list(a = "x\"y\\z", b = "3"))
   expect_identical(mime_format(rec), "text/plain;a=\"x\\\"y\\\\z\";b=3")
+  # A backslash that ends the input is kept.
+  rec <- mime_parse("x/x;test=\"\\")[[1]]
+  expect_identical(rec$parameters, list(test = "\\"))
+  expect_identical(mime_format(rec), "x/x;test=\"\\\\\"")
 })
 
 test_that("mime_format() quotes empty and non-token values", {
