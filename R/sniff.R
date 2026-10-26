@@ -15,9 +15,10 @@
 #'
 #' A text result carries `charset`, from the first rule that answers: the
 #' supplied type's `charset` parameter, a byte-order mark, an XML
-#' declaration, an HTML `<meta>` prescan, valid UTF-8, then the C1 rule
-#' (`windows-1252` when a byte in 0x80 to 0x9F appears, else
-#' `ISO-8859-1`), which lowers `confidence` to `"probable"`.
+#' declaration, an HTML `<meta>` prescan, valid UTF-8, then the C1 rule.
+#' The C1 rule gives `windows-1252` when a byte in 0x80 to 0x9F appears,
+#' else `ISO-8859-1`. It is a guess, so it lowers `confidence` to
+#' `"probable"`.
 #'
 #' @param x A raw vector, or a character vector of paths, which are read as
 #'   [mime_type()] reads them; an unreadable path gives a row with `type`
@@ -37,7 +38,8 @@
 #'   canonical type), `confidence` (an ordered factor:
 #'   `none < extension < probable < definite`), `charset`, `inner`,
 #'   `encrypted`, `complete`, `newline` (`"lf"`, `"crlf"`, `"cr"`,
-#'   `"mixed"`, or `NA`) and `interpreter`.
+#'   `"mixed"`, or `NA`) and `interpreter`. `inner` and `complete` are
+#'   always `NA` here; [mime_type()] fills them.
 #' @references <https://mimesniff.spec.whatwg.org/>
 #' @seealso [mime_parse()] for the supplied type's grammar.
 #' @export

@@ -20,6 +20,7 @@ static const R_CallMethodDef call_methods[] = {
   {"zumime_probe_count", (DL_FUNC) &zumime_probe_count, 0},
   {"zumime_stream_new", (DL_FUNC) &zumime_stream_new, 1},
   {"zumime_stream_state", (DL_FUNC) &zumime_stream_state, 1},
+  {"zumime_stream_valid", (DL_FUNC) &zumime_stream_valid, 1},
   {"zumime_stream_buffer", (DL_FUNC) &zumime_stream_buffer, 1},
   {"zumime_stream_push", (DL_FUNC) &zumime_stream_push, 9},
   {"zumime_stream_bytewise", (DL_FUNC) &zumime_stream_bytewise, 6},

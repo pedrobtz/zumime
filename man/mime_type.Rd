@@ -21,10 +21,10 @@ mime_type(
 files.}
 
 \item{complete}{If \code{TRUE}, also read each file's end and fill
-\code{complete}: a ZIP needs its end-of-central-directory record, a PDF
-\verb{\%\%EOF} in its last kilobyte, a gzip stream must inflate to its
-trailer, and Parquet must end in \code{PAR1}. Other formats give \code{NA}. A
-PDF is \code{encrypted} when its trailer dictionary, found in the last 4 KB,
+\code{complete}. A ZIP needs its end-of-central-directory record. A PDF
+needs \verb{\%\%EOF} in its last kilobyte. A gzip stream must inflate to its
+trailer. Parquet must end in \code{PAR1}. Other formats give \code{NA}. A PDF
+is \code{encrypted} when its trailer dictionary, found in the last 4 KB,
 names \verb{/Encrypt}.}
 
 \item{inner}{How to find the type inside a compression wrapper (gzip,
@@ -56,7 +56,7 @@ encrypted or truncated, its line endings, and a script's interpreter.
 }
 \details{
 Unreadable and missing paths give a row with \code{type} \code{NA} and
-\code{confidence} \code{"none"}, so one bad entry does not abort a scan of a tree;
+\code{confidence} \code{"none"}, so one bad entry does not abort a scan of a tree.
 \code{strict = TRUE} raises \code{zumime_io_error} instead. A directory is
 \code{inode/directory}, and nothing is read from it.
 

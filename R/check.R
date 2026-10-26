@@ -7,16 +7,17 @@
 #' The answer always equals
 #' `mime_is(t$type, allowed) & t$confidence >= min_confidence`, with
 #' `t <- mime_type(x)`, or `mime_sniff(x)` for a raw vector. It is computed
-#' in one pass, with a shortcut that this equality hides. The container
-#' readers, text readers and tail reads are skipped for every input whose
-#' first answer could not end as an allowed type. No result frame is built.
+#' in one pass, with a shortcut that does not change the answer. The
+#' container readers, text readers and tail reads are skipped for every
+#' input whose first answer could not end as an allowed type. No result
+#' frame is built.
 #' Call [mime_type()] to learn why a file was refused.
 #'
 #' @param x A raw vector, or a character vector of paths.
 #' @param allowed A character vector of types, aliases or top-level types,
 #'   as [mime_is()] takes them.
-#' @param min_confidence The weakest evidence accepted: `"probable"` (the
-#'   default) accepts byte evidence of either kind; `"definite"` is for
+#' @param min_confidence The weakest evidence accepted. `"probable"`, the
+#'   default, accepts byte evidence of either kind. `"definite"` is for
 #'   allowlists that must not trust a text heuristic. `"extension"` and
 #'   `"none"` are accepted for completeness.
 #' @return A logical vector, one element per path (one for a raw vector);

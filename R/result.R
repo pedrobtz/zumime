@@ -31,6 +31,21 @@ path_fields <- c(
   "error"
 )
 
+# mime_type()'s columns, in their order.
+type_columns <- c(
+  "path",
+  "type",
+  "confidence",
+  "charset",
+  "by_name",
+  "agree",
+  "inner",
+  "encrypted",
+  "complete",
+  "newline",
+  "interpreter"
+)
+
 # The one-row result for bytes in hand, from zumime_sniff_raw or
 # zumime_stream_push, its elements named by `raw_fields`. A supplied type
 # that stands comes back as NA.

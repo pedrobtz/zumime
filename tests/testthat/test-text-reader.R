@@ -243,6 +243,19 @@ test_that("a PEM first line needs its closing dashes", {
     sniff_type("-----BEGIN RSA PRIVATE KEY-----\n"),
     "application/x-pem-file"
   )
+  # RFC 7468 allows a hyphen between label characters.
+  expect_identical(
+    sniff_type("-----BEGIN FOO-BAR-----\nMIIB\n-----END FOO-BAR-----\n"),
+    "application/x-pem-file"
+  )
+  expect_identical(
+    sniff_type("-----BEGIN CERTIFICATE-----\r\nMIIB\r\n"),
+    "application/x-pem-file"
+  )
+  # The longest label that fits closes at byte 80.
+  fits <- paste0("-----BEGIN ", strrep("A", 69), "-----\n")
+  expect_identical(sniff_type(fits), "application/x-pem-file")
+  expect_identical(sniff_type("-----BEGIN FOO------\n"), "text/plain")
 })
 
 test_that("rarer XML roots decide their dialect or stay XML", {
