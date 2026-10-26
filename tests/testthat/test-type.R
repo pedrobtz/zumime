@@ -472,23 +472,26 @@ test_that("an interrupt during a long read marks the C loop's result", {
   writeBin(readBin(big, "raw", file.size(big)), con)
   close(con)
   # The signal sets R's pending interrupt, and the read's check inside
-  # R_ToplevelExec() catches it. R also checks every thousand or so
-  # evaluations: when that comes first, the call never starts, so try
-  # again. Calling .Call directly keeps that window to a few evaluations.
+  # R_ToplevelExec() catches it. R also checks during ordinary evaluation:
+  # when that comes first, the call never starts, so try again. The signal
+  # is sent inside tryCatch(), so that check meets the handler; under
+  # gctorture it came before tryCatch() had installed it.
   interrupted <- function(path, limit, complete) {
     for (try in 1:50) {
-      tools::pskill(Sys.getpid(), tools::SIGINT)
       res <- tryCatch(
-        .Call(
-          zumime_sniff_paths,
-          path,
-          limit,
-          complete,
-          NULL,
-          FALSE,
-          FALSE,
-          0L
-        ),
+        {
+          tools::pskill(Sys.getpid(), tools::SIGINT)
+          .Call(
+            zumime_sniff_paths,
+            path,
+            limit,
+            complete,
+            NULL,
+            FALSE,
+            FALSE,
+            0L
+          )
+        },
         interrupt = function(c) NULL
       )
       if (!is.null(res)) {
