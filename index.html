@@ -62,9 +62,9 @@
 <li>
 <strong>A hierarchy.</strong> Every type has a parent, ending at <code>application/octet-stream</code>, so an unknown ZIP-based format is still a ZIP, and an allowlist of <code>"image"</code> accepts every image.</li>
 <li>
-<strong>What to know before opening.</strong> Encryption, completeness, line endings and a script’s interpreter, read from the same bytes, and the type inside a compression wrapper, from the name or, with <a href="https://github.com/pedrobtz/zukomp" class="external-link">zukomp</a>, from the decompressed bytes.</li>
+<strong>What to know before opening.</strong> Encryption, completeness, line endings and a script’s interpreter, read from the file’s bytes, and the type inside a compression wrapper, from the name or, with <a href="https://github.com/pedrobtz/zukomp" class="external-link">zukomp</a>, from the decompressed bytes.</li>
 <li>
-<strong>The same answer everywhere.</strong> No <code>mime.types</code>, no Windows registry, no libmagic: the extension table is generated from IANA’s registry and Apache httpd’s <code>mime.types</code>.</li>
+<strong>The same answer everywhere.</strong> No system <code>mime.types</code>, no Windows registry, no libmagic: the extension table is generated from IANA’s registry and Apache httpd’s <code>mime.types</code>.</li>
 </ul>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
@@ -126,7 +126,7 @@
 <span><span class="co">#&gt; [1] "application/zip"          "application/octet-stream"</span></span>
 <span><span class="fu"><a href="reference/mime_is.html">mime_is</a></span><span class="op">(</span><span class="va">docx</span>, <span class="st">"application/zip"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>Every function but <code><a href="reference/zumime_info.html">zumime_info()</a></code> starts with <code>mime_</code>, and every type it returns is a canonical name from the registry that <code><a href="reference/mime_types.html">mime_types()</a></code> lists.</p>
+<p>Every function but <code><a href="reference/zumime_info.html">zumime_info()</a></code> starts with <code>mime_</code>. Every type zumime finds is a canonical name from the registry that <code><a href="reference/mime_types.html">mime_types()</a></code> lists; a supplied type that stands comes back as its lower-cased essence.</p>
 </div>
 <div class="section level2">
 <h2 id="learn-more">Learn more<a class="anchor" aria-label="anchor" href="#learn-more"></a>

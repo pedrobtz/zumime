@@ -113,13 +113,13 @@ writeBin(
 )
 mime_type(list.files(dir, full.names = TRUE))
 #> <zumime_result: 3 rows>
-#>                                        path              type confidence
-#> 1 /tmp/RtmpymXTgn/file1a81652e8ee4/cars.rds application/x-rds   definite
-#> 2 /tmp/RtmpymXTgn/file1a81652e8ee4/data.csv        text/plain   probable
-#> 3 /tmp/RtmpymXTgn/file1a81652e8ee4/logo.txt         image/png   definite
-#>   charset           by_name agree inner encrypted complete newline interpreter
-#> 1    <NA> application/x-rds  TRUE  <NA>        NA       NA    <NA>        <NA>
-#> 2   UTF-8          text/csv  TRUE  <NA>        NA       NA      lf        <NA>
-#> 3    <NA>        text/plain FALSE  <NA>        NA       NA    <NA>        <NA>
+#>                                       path              type confidence charset
+#> 1 /tmp/Rtmp7QJVAX/file19fd400190c/cars.rds application/x-rds   definite    <NA>
+#> 2 /tmp/Rtmp7QJVAX/file19fd400190c/data.csv        text/plain   probable   UTF-8
+#> 3 /tmp/Rtmp7QJVAX/file19fd400190c/logo.txt         image/png   definite    <NA>
+#>             by_name agree inner encrypted complete newline interpreter
+#> 1 application/x-rds  TRUE  <NA>        NA       NA    <NA>        <NA>
+#> 2          text/csv  TRUE  <NA>        NA       NA      lf        <NA>
+#> 3        text/plain FALSE  <NA>        NA       NA    <NA>        <NA>
 unlink(dir, recursive = TRUE)
 ```
