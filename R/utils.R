@@ -144,7 +144,7 @@ read_bytes <- function(path, limit) {
 }
 
 # The one place a suggested package is looked up, so tests can stand in for
-# packages CI does not install (zuutf and zutoml are not on CRAN).
+# packages a CI leg does not install.
 has_package <- function(pkg) requireNamespace(pkg, quietly = TRUE)
 
 suggested_fun <- function(pkg, name) getExportedValue(pkg, name)

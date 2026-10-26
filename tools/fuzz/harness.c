@@ -15,8 +15,11 @@
  *     mime_check()'s base-only first pass;
  *   - the path loop's window arithmetic on the input as an in-memory file:
  *     the tail and central-directory windows stay inside the file;
- *   - the bounded and streaming inflaters and the ZIP reader with a tail
- *     survive arbitrary bytes. */
+ *   - the bounded and streaming inflaters, the ZIP reader with a tail and
+ *     the OLE2 reader over a byte source survive arbitrary bytes;
+ *   - registered data rules, seeded once under the floor, ISO 9660, OLE2
+ *     and GIF (one past any limit), give the same type whether the sniffer
+ *     applies them or the caller does afterwards, as the path loop does. */
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -24,9 +27,33 @@
 
 #include "zumime_sniff.h"
 
-static void check_result(const zumime_result *r) {
-  if (r->type != ZUMIME_SUPPLIED && (r->type < 0 || r->type >= ZUMIME_N_TYPES))
+/* Registered types, added on the first input. A zero mask matches any
+ * byte, so a rule under ISO 9660 or OLE2 matches whenever its parent does. */
+static void register_rules(void) {
+  static int done = 0;
+  if (done) return;
+  done = 1;
+  static const unsigned char zfz[3] = {'Z', 'F', 'Z'}, ff[3] = {255, 255, 255};
+  static const unsigned char any[1] = {0}, none[1] = {0};
+  if (zumime_reg_add("application/x-fuzz-floor",
+                     ZUMIME_T_APPLICATION_OCTET_STREAM, 1, 0, zfz, ff, 3) < 0 ||
+      zumime_reg_add("application/x-fuzz-iso", ZUMIME_T_APPLICATION_X_ISO9660_IMAGE,
+                     1, 0, any, none, 1) < 0 ||
+      zumime_reg_add("application/x-fuzz-ole", ZUMIME_T_APPLICATION_X_OLE_STORAGE,
+                     1, 0, any, none, 1) < 0 ||
+      zumime_reg_add("image/x-fuzz-far", ZUMIME_T_IMAGE_GIF, 1, 100000, zfz,
+                     ff, 3) < 0)
     abort();
+}
+
+static int known_type(int t) {
+  if (t >= 0 && t < ZUMIME_N_TYPES) return 1;
+  int k = t - ZUMIME_N_TYPES;
+  return k >= 0 && k < ZUMIME_MAX_REGISTERED && zumime_reg[k].active;
+}
+
+static void check_result(const zumime_result *r) {
+  if (r->type != ZUMIME_SUPPLIED && !known_type(r->type)) abort();
   if (r->confidence < ZUMIME_CONF_NONE || r->confidence > ZUMIME_CONF_DEFINITE)
     abort();
   if (r->charset < ZUMIME_CS_NONE || r->charset > ZUMIME_CS_DECLARED) abort();
@@ -65,7 +92,18 @@ static size_t mem_read(void *ctx, unsigned char *buf, size_t n) {
   return k;
 }
 
+/* The OLE2 reader's byte source over the input, copied into scratch as
+ * the path loop's file reads are. */
+static const unsigned char *mem_get(void *ctx, uint64_t off, size_t n,
+                                    unsigned char *scratch) {
+  const mem *m = (const mem *) ctx;
+  if (off > m->n || m->n - off < n) return NULL;
+  memcpy(scratch, m->p + off, n);
+  return scratch;
+}
+
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+  register_rules();
   for (int c = ZUMIME_CTX_NONE; c <= ZUMIME_CTX_FONT; c++)
     sniff(data, size, c, NULL, 0, 0);
   sniff(data, size, ZUMIME_CTX_NONE, "image/png", 0, 0);
@@ -88,6 +126,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       break;
     }
   }
+
+  /* The registered rules applied by the caller, as the path loop does. */
+  zumime_input din = in;
+  din.defer_registered = 1;
+  zumime_sniff(data, size, &din, &part);
+  if (part.type != ZUMIME_SUPPLIED) zumime_apply_registered(data, size, &part);
+  if (part.type != whole.type) abort();
 
   /* The first half as the head and the second as a tail read separately,
    * as the path loop does for a ZIP longer than its head. */
@@ -143,6 +188,10 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   int enc;
   (void) zumime_read_zip(data, size / 2, 0, data + size / 2, size - size / 2,
                          size / 2, &enc);
+
+  /* The OLE2 reader over the input as a byte source. */
+  mem src = {data, size, 0};
+  (void) zumime_read_ole2_at(mem_get, &src, &enc);
 
   /* The inflaters. */
   unsigned char out[256];

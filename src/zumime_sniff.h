@@ -117,6 +117,10 @@ typedef struct {
   /* mime_check()'s first pass: the standard's answer and the extra rows
    * only, without readers, registered rules, charset or tail reads. */
   int base_only;
+  /* The caller applies the registered data rules itself, once its own
+   * probes past the buffer have run (the path loop's offset rows and OLE2
+   * directory). */
+  int defer_registered;
 } zumime_input;
 
 typedef struct {

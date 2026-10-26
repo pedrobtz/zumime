@@ -20,7 +20,7 @@ mime_unregister(type)
 \item{rule}{\code{NULL} for a type known by name only; a list of \code{offset} (a
 whole number), \code{bytes} (a raw vector or a string, at most 64 bytes)
 and an optional \code{mask} (a raw vector as long as \code{bytes}); or a function
-of one raw vector.}
+of one raw vector, the bytes read.}
 }
 \value{
 \code{mime_register()} returns the type, invisibly.
@@ -30,17 +30,23 @@ of one raw vector.}
 Adds a type under a parent in the hierarchy, so that \code{\link[=mime_sniff]{mime_sniff()}},
 \code{\link[=mime_type]{mime_type()}}, \code{\link[=mime_check]{mime_check()}} and the registry functions know it until
 the session ends or \code{\link[=mime_unregister]{mime_unregister()}} removes it. A package that wants
-its format recognised registers it in its \code{.onLoad()}.
+its format recognised registers it in its \code{.onLoad()}. It unregisters it
+in its \code{.onUnload()}, since registering a type that exists is an error.
 }
 \details{
 A data rule, \code{list(offset, bytes, mask)}, runs in C whenever the bytes
 have been typed as the parent, costs what a built-in signature costs,
-and is reported at \code{"definite"}. A function rule is called from R with
-the bytes read and must return \code{TRUE} or \code{FALSE}; it runs last, only when
-the parent matched, and is reported at \code{"probable"}. A function rule that
-raises an error counts as \code{FALSE}, and the call warns once with a
-\code{zumime_rule_warning} naming the type. A data rule cannot sit under a type
-that a function rule decides, since data rules run first.
+and is reported at \code{"definite"}. It sees only the bytes read: a rule
+that ends past 4096 bytes needs a larger \code{limit}. A function rule is
+called from R with the bytes read and must return \code{TRUE} or \code{FALSE}. It
+runs last, only when the parent matched, and is reported at
+\code{"probable"}. A function rule that raises an error counts as \code{FALSE}, and
+the call warns once with a \code{zumime_rule_warning} naming the type. A data
+rule cannot sit under a type that a function rule decides, since data
+rules run first.
+
+Both kinds refine only what zumime sniffs in the \code{"none"} context. They
+never run in another context, nor on a supplied type that stands.
 }
 \examples{
 mime_register(
