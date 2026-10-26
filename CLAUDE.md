@@ -208,8 +208,10 @@ stage establishes it.
   builders), `helper-go-sniff.R` (Go's sniff cases), `helper-containers.R`
   (ZIP, OLE2, ftyp, Ogg and EBML builders), `helper-file-type.R`
   (file-type's answers and the unclaimed fixtures).
-- **Keep the suite inside the CRAN time budget.** Only the scaffold's
-  placeholder test exists; no runtime to report.
+- **Keep the suite inside the CRAN time budget.** With `NOT_CRAN=false`
+  the whole suite, load included, took 41 s on an Apple-silicon Mac
+  (2026-10-26). The translated-path memory test (about 20 s) and the
+  interrupt test skip on CRAN; the CI legs still run them.
 
 ## Definition of done
 

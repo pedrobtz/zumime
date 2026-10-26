@@ -478,6 +478,20 @@ test_that("a result marked interrupted is raised again as an interrupt", {
 test_that("an interrupt during a long read marks the C loop's result", {
   skip_on_os("windows")
   skip_on_cran()
+  # A process started with SIGINT ignored (a background job, nohup) never
+  # sees the signal. The probe leaves zumime out, so no zumime regression
+  # can reach this skip.
+  delivered <- tryCatch(
+    {
+      tools::pskill(Sys.getpid(), tools::SIGINT)
+      Sys.sleep(1)
+      FALSE
+    },
+    interrupt = function(c) TRUE
+  )
+  if (!delivered) {
+    skip("this process ignores SIGINT")
+  }
   withr::local_seed(1)
   dir <- withr::local_tempdir()
   big <- file.path(dir, "big")
@@ -520,11 +534,10 @@ test_that("an interrupt during a long read marks the C loop's result", {
   expect_true(interrupted(gz, 4096, TRUE))
 })
 
-test_that("a large limit costs nothing for small files", {
+test_that("a large limit gives the default answer for small files", {
+  # The allocation itself is guarded in test-path.R.
   dir <- local_tree(list(a.png = png_bytes(), b.txt = "hello\n"))
   paths <- file.path(dir, c("a.png", "b.txt"))
-  # 2e9 bytes were allocated up front before; now the buffer follows the
-  # files, so this is quick and gives the default answer.
   expect_identical(
     mime_type(paths, limit = 2e9)$type,
     mime_type(paths)$type

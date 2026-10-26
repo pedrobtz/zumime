@@ -165,6 +165,7 @@ test_that("a data rule cannot sit under a function-rule type", {
 
 test_that("an over-long name and a full table are registry errors", {
   long <- paste0("application/x-", strrep("a", 130))
+  withr::defer(try(mime_unregister(long), silent = TRUE))
   expect_error(
     mime_register(long, "application/octet-stream"),
     class = "zumime_registry_error"
@@ -221,6 +222,7 @@ test_that("a function rule under a binary parent holds a stream's decision", {
 })
 
 test_that("registration arguments are checked", {
+  withr::defer(try(mime_unregister("application/x-zt-c"), silent = TRUE))
   expect_error(
     mime_register("application/x-zt-c", 1),
     class = "zumime_type_error"
@@ -531,6 +533,7 @@ test_that("a stream does not wait for a data rule past its limit", {
 })
 
 test_that("a function rule must take an argument", {
+  withr::defer(try(mime_unregister("text/x-zt-arity"), silent = TRUE))
   expect_error(
     mime_register("text/x-zt-arity", "text/plain", rule = function() TRUE),
     class = "zumime_type_error"

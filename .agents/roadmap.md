@@ -166,6 +166,8 @@ lineage, categories, and the WHATWG MIME type record.
   in shuffled order.
 - `jsonlite` joins `Suggests`, for reading the WPT fixtures in a test
   helper; `R CMD check` warns about a `::` call to an undeclared package.
+  (Deviation: the helper now reads them with `zujson`, already in
+  `Suggests`, and `jsonlite` is gone.)
 - The `sanitizers` job deferred from Stage 0 is added here.
 
 **Design.** §4 layer 1, §6.3, §6.6, §6.8, §7.1, D8, D10, D11.

@@ -15,6 +15,8 @@ test_that("a head buffer is sized by what each path holds", {
 })
 
 test_that("translated paths are released path by path", {
+  # 800 MB of path strings take about 20 s; the CI legs still run it.
+  skip_on_cran()
   # One latin1 path of 100 kB, 4000 times: R translates each element for
   # fopen(), so holding every copy until the call returns takes 400 MB.
   # Released copies are garbage that the next collection frees, so the

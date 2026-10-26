@@ -128,3 +128,14 @@ test_that("native-endian RDS inside gzip is R's format", {
   rds <- c(charToRaw("B\n"), as.raw(c(0, 0, 0, 3)), raw(20))
   expect_identical(mime_sniff(gzip_bytes(rds))$type, "application/gzip")
 })
+
+test_that("an unknown format version inside gzip stays gzip", {
+  for (header in c("RDX9\n", "RDA1\n", "A\n9\n", "A\n1\n")) {
+    x <- c(charToRaw(header), raw(20))
+    expect_identical(
+      mime_sniff(gzip_bytes(x))$type,
+      "application/gzip",
+      info = header
+    )
+  }
+})

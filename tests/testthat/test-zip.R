@@ -207,3 +207,25 @@ test_that("a directory offset past the end falls back to the local headers", {
   z[(n - 5):(n - 2)] <- u32(99999)
   expect_identical(sniff_type(z), docx_type())
 })
+
+test_that("a ZIP missing one marker of a format stays the coarser type", {
+  # An APK needs classes.dex; without it the manifest makes a JAR.
+  expect_identical(
+    sniff_type(build_zip(list(
+      "AndroidManifest.xml" = "x",
+      "META-INF/MANIFEST.MF" = "z"
+    ))),
+    "application/java-archive"
+  )
+  # OOXML folders need [Content_Types].xml.
+  expect_identical(
+    sniff_type(build_zip(list("word/document.xml" = "<w/>"))),
+    "application/zip"
+  )
+  # The mimetype entry is read only when stored: here its local header says
+  # deflated while its bytes still spell the type.
+  epub <- list(mimetype = "application/epub+zip", "OEBPS/a.xhtml" = "<x/>")
+  x <- build_zip(epub)
+  x[9] <- as.raw(8)
+  expect_identical(sniff_type(x), "application/zip")
+})
