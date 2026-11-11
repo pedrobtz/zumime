@@ -3,8 +3,8 @@
 # tarball, and tools/ is not shipped. Also runs the suite in shuffled order,
 # which the definition of done in CLAUDE.md requires.
 on:
-  push:
-    branches: [main, master]
+  # No `push:`: a pull request already checks its merge with main,
+  # and the schedule checks main (r-actions README, "Pushes to main").
   pull_request:
 
 name: oracles

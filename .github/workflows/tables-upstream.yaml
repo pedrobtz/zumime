@@ -6,7 +6,7 @@
 # this repository does not let workflows open pull requests.
 on:
   schedule:
-    - cron: "17 6 * * 1"
+    - cron: "56 10 * * 0"
   workflow_dispatch:
 
 name: tables-upstream
