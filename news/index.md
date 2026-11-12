@@ -2,6 +2,8 @@
 
 ## zumime 0.1.0
 
+CRAN release: 2026-11-11
+
 - Initial CRAN submission.
 
 zumime tells what a file is from its bytes and from its name, with no

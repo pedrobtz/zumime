@@ -23,7 +23,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/pedrobtz/zumime/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/pedrobtz/zumime/blob/0.1.0/DESCRIPTION)
 
 Baltazar P (2026). *zumime: Media Type Detection from Bytes and File
 Names*. R package version 0.1.0, <https://github.com/pedrobtz/zumime>.
