@@ -27,7 +27,7 @@ for the arguments that use the family.
 ``` r
 zumime_info()
 #> $version
-#> [1] "0.1.0"
+#> [1] "0.1.0.9000"
 #> 
 #> $table_version
 #> [1] "2026-10-19"
