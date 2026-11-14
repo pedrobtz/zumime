@@ -7,7 +7,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, labeled]
   schedule:
-    - cron: "46 10 * * *"
+    - cron: "46 10 * * 6"  # weekly, Saturdays
   workflow_dispatch:
     inputs:
       seconds:
